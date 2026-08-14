@@ -193,3 +193,11 @@ Use Wayfinder to generate TypeScript functions for Laravel routes. Import from `
 - IMPORTANT: Activate `inertia-react-development` when working with Inertia React client-side patterns.
 
 </laravel-boost-guidelines>
+
+## Documentación de contexto del proyecto
+
+En `docs/context/` hay ficheros con contexto de negocio que el código no explica por sí solo. Consultarlos cuando el trabajo lo amerite:
+
+- `docs/context/glosario.md` — significado exacto de términos del dominio (ej. diferencias entre entidades que suenan parecidas).
+- `docs/context/roles-permisos.md` — intención de negocio detrás de los roles del sistema (el código sigue siendo la fuente de verdad del estado actual).
+- `docs/context/design.md` — design system del frontend (colores, tipografías, patrones UI). Consultar antes de estilar componentes nuevos.
