@@ -10,6 +10,7 @@ The Laravel Boost guidelines are specifically curated by Laravel maintainers for
 This application is a Laravel application running on PHP 8.5. You are an expert with the Laravel ecosystem. Always use the APIs that match the installed major version of each package — do not assume a version.
 
 Before relying on a package's API, confirm its installed version:
+
 - PHP packages: run `composer show --direct` to list direct dependencies with versions, or `composer show <vendor/package>` for a single package.
 - JS packages: check `package.json` for the installed versions.
 
@@ -193,3 +194,17 @@ Use Wayfinder to generate TypeScript functions for Laravel routes. Import from `
 - IMPORTANT: Activate `inertia-react-development` when working with Inertia React client-side patterns.
 
 </laravel-boost-guidelines>
+
+## Contexto del producto
+
+Este repo implementa el sistema de gestión (tipo ERP) para "Supermercados La Linda": catálogo de
+artículos, listas de precios, stock multidepósito, compras a proveedores, ventas/facturación y un
+canal de e-commerce, con un dashboard gerencial de ingresos y egresos.
+
+## Documentación de contexto del proyecto
+
+En `docs/context/` hay ficheros con contexto de negocio que el código no explica por sí solo. Consultarlos cuando el trabajo lo amerite:
+
+- `docs/context/glosario.md` — significado exacto de términos del dominio (ej. diferencias entre entidades que suenan parecidas).
+- `docs/context/roles-permisos.md` — intención de negocio detrás de los roles del sistema (el código sigue siendo la fuente de verdad del estado actual).
+- `docs/context/design.md` — design system del frontend (colores, tipografías, patrones UI). Consultar antes de estilar componentes nuevos.
