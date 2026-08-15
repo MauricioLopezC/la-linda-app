@@ -10,6 +10,7 @@ The Laravel Boost guidelines are specifically curated by Laravel maintainers for
 This application is a Laravel application running on PHP 8.5. You are an expert with the Laravel ecosystem. Always use the APIs that match the installed major version of each package — do not assume a version.
 
 Before relying on a package's API, confirm its installed version:
+
 - PHP packages: run `composer show --direct` to list direct dependencies with versions, or `composer show <vendor/package>` for a single package.
 - JS packages: check `package.json` for the installed versions.
 
@@ -193,3 +194,40 @@ Use Wayfinder to generate TypeScript functions for Laravel routes. Import from `
 - IMPORTANT: Activate `inertia-react-development` when working with Inertia React client-side patterns.
 
 </laravel-boost-guidelines>
+
+## Product context
+
+This repo implements the management system (ERP-style) for "Supermercados La Linda": product
+catalog, price lists, multi-warehouse stock, supplier purchasing, sales/invoicing, and an
+e-commerce channel, with a management dashboard for revenue and expenses.
+
+## Project context documentation
+
+`docs/context/` holds files with business context that the code doesn't explain on its own.
+Consult them when the work calls for it:
+
+- `docs/context/glosario.md` — exact meaning of domain terms (e.g. distinctions between
+  similarly-named entities).
+- `docs/context/roles-permisos.md` — business intent behind the system's roles (the code is still
+  the source of truth for current state).
+- `docs/context/design.md` — frontend design system (colors, typography, UI patterns). Check it
+  before styling new components.
+
+## Convention: where business logic lives
+
+Controllers must not contain business rules. We use `app/Actions/` (grouped by module, e.g.
+`app/Actions/Sales/RegisterSale.php`) to encapsulate use cases: one invokable class per
+operation, instead of generic Services with many unrelated methods. There's already precedent
+with `app/Actions/Fortify/`. See `.ai/rules/app.md` for the full module list and folder
+convention.
+
+Criteria for deciding whether something belongs in an Action:
+
+- **No Action needed** — a trivial Eloquent query with no business rules (`findAll`, a simple
+  `where`, `paginate`). This can stay inline in the controller, or become a model
+  scope/method if it's reused in more than one place.
+- **Action needed** — there's domain-rule validation, multi-step orchestration, a write with
+  side effects (events, notifications, stock updates, etc.), or something that deserves its own
+  unit test without going through HTTP.
+
+The question isn't "is this a `store`/`update`/`destroy`?" but "is there business logic here?".
