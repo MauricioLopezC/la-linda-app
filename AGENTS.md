@@ -215,10 +215,11 @@ Consult them when the work calls for it:
 
 ## Convention: where business logic lives
 
-Controllers must not contain business rules. We use `app/Actions/` (grouped by domain, e.g.
-`app/Actions/Ventas/RegistrarVenta.php`) to encapsulate use cases: one invokable class per
+Controllers must not contain business rules. We use `app/Actions/` (grouped by module, e.g.
+`app/Actions/Sales/RegisterSale.php`) to encapsulate use cases: one invokable class per
 operation, instead of generic Services with many unrelated methods. There's already precedent
-with `app/Actions/Fortify/`.
+with `app/Actions/Fortify/`. See `.ai/rules/app.md` for the full module list and folder
+convention.
 
 Criteria for deciding whether something belongs in an Action:
 
