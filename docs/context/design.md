@@ -38,11 +38,17 @@ Este color es exclusivo de la CTA de pago/cobro y usos puntuales (máx. 1-2 por 
 
 - 0: `oklch(100% 0 0)`
 - 50: `oklch(98% 0.004 75)`
+- 100: `oklch(94% 0.006 75)`
 - 200: `oklch(90% 0.008 75)`
+- 300: `oklch(80% 0.01 75)`
 - 400: `oklch(70% 0.012 75)`
+- 500: `oklch(58% 0.012 75)`
 - 600: `oklch(45% 0.012 75)`
+- 700: `oklch(35% 0.011 75)`
 - 800: `oklch(25% 0.009 75)`
 - 900: `oklch(17% 0.007 75)`
+
+Escala completa (10 pasos) para que ningún uso de `neutral-*` caiga en el gris frío por defecto de Tailwind.
 
 **Semánticos** (estado de inventario / feedback)
 
@@ -118,7 +124,7 @@ Reusar la paleta existente en vez de introducir colores nuevos:
 
 ## Tipografía
 
-Un solo tipo de letra: **Inter** (Google Fonts, weights 400/500/600/700/800), sans-serif como fallback.
+Un solo tipo de letra: **Instrument Sans** (ya integrada en el proyecto vía `resources/css/app.css` / `@fonts`), sans-serif como fallback.
 
 | Uso     | Tamaño / peso | Notas                                         |
 | ------- | ------------- | --------------------------------------------- |
@@ -184,9 +190,13 @@ Tailwind v4 acepta `oklch()` directamente como valor de token — no hace falta 
 
   --color-neutral-0: oklch(100% 0 0);
   --color-neutral-50: oklch(98% 0.004 75);
+  --color-neutral-100: oklch(94% 0.006 75);
   --color-neutral-200: oklch(90% 0.008 75);
+  --color-neutral-300: oklch(80% 0.01 75);
   --color-neutral-400: oklch(70% 0.012 75);
+  --color-neutral-500: oklch(58% 0.012 75);
   --color-neutral-600: oklch(45% 0.012 75);
+  --color-neutral-700: oklch(35% 0.011 75);
   --color-neutral-800: oklch(25% 0.009 75);
   --color-neutral-900: oklch(17% 0.007 75);
 
@@ -199,7 +209,7 @@ Tailwind v4 acepta `oklch()` directamente como valor de token — no hace falta 
   --color-info-bg: oklch(95% 0.02 240);
   --color-info-fg: oklch(45% 0.09 240);
 
-  --font-sans: 'Inter', sans-serif;
+  --font-sans: 'Instrument Sans', sans-serif;
 }
 ```
 
