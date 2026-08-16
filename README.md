@@ -8,9 +8,9 @@ Construido con Laravel 13 + Inertia/React.
 
 ## Requisitos
 
-- PHP ^8.3
-- Composer
-- Node.js + npm
+- PHP >= 8.3 (el CI corre sobre 8.5)
+- Composer 2.x
+- Node.js 22.x + npm
 
 ## Puesta en marcha
 
