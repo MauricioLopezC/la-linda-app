@@ -10,7 +10,9 @@
         "format:check": "prettier --check resources/",
         "lint": "eslint . --fix",
         "lint:check": "eslint .",
-        "types:check": "tsc --noEmit"
+        "types:check": "tsc --noEmit",
+        "types:generate": "php artisan typescript:transform",
+        "types:watch": "php artisan typescript:transform --watch"
     },
     "devDependencies": {
         "@eslint/js": "^9.19.0",

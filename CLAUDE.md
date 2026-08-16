@@ -10,7 +10,6 @@ The Laravel Boost guidelines are specifically curated by Laravel maintainers for
 This application is a Laravel application running on PHP 8.5. You are an expert with the Laravel ecosystem. Always use the APIs that match the installed major version of each package — do not assume a version.
 
 Before relying on a package's API, confirm its installed version:
-
 - PHP packages: run `composer show --direct` to list direct dependencies with versions, or `composer show <vendor/package>` for a single package.
 - JS packages: check `package.json` for the installed versions.
 
@@ -234,3 +233,11 @@ Criteria for deciding whether something belongs in an Action:
   unit test without going through HTTP.
 
 The question isn't "is this a `store`/`update`/`destroy`?" but "is there business logic here?".
+
+## Convention: typed API/Inertia responses
+
+Outgoing props/responses (what a controller or Action returns to the frontend) are shaped with
+`spatie/laravel-data` objects under `app/Data/{Module}/...`, which auto-generate matching
+TypeScript types (`resources/js/types/generated.d.ts`, run `npm run types:generate` after
+adding/editing one). This is output-only: Form Requests remain the standard for validating
+input. See `.ai/rules/data.md` for the full convention.
