@@ -238,3 +238,17 @@ Outgoing props/responses (what a controller or Action returns to the frontend) a
 TypeScript types (`resources/js/types/generated.d.ts`, run `npm run types:generate` after
 adding/editing one). This is output-only: Form Requests remain the standard for validating
 input. See `.ai/rules/data.md` for the full convention.
+
+## Verification before finishing a feature
+
+The Boost-managed guidelines above only cover Pint and Pest. Before considering a change done,
+also run whichever of these apply to what you touched — they're the same checks CI runs via
+`composer run ci:check`:
+
+- PHP static analysis: `composer run types:check` (PHPStan/Larastan).
+- Frontend lint: `npm run lint:check` (ESLint).
+- Frontend format: `npm run format:check` (Prettier).
+- Frontend types: `npm run types:check` (tsc).
+
+If the change touches both backend and frontend, `composer run ci:check` runs all of the above
+plus Pint and the test suite in one go.
