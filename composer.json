@@ -50,6 +50,7 @@
             "@php -r \"file_exists('.env') || copy('.env.example', '.env');\"",
             "@php artisan key:generate",
             "@php artisan migrate --force",
+            "@php artisan typescript:transform",
             "npm install",
             "npm run build"
         ],
@@ -65,6 +66,7 @@
         ],
         "ci:check": [
             "Composer\\Config::disableProcessTimeout",
+            "@php artisan typescript:transform",
             "npm run lint:check",
             "npm run format:check",
             "npm run types:check",
