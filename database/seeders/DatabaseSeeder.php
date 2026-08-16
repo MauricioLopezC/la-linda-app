@@ -3,6 +3,8 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use Database\Seeders\Inventory\StockAdjustmentReasonSeeder;
+use Database\Seeders\Inventory\StockMovementTypeSeeder;
 use Database\Seeders\Inventory\WarehouseSeeder;
 use Database\Seeders\Organization\BranchSeeder;
 use Database\Seeders\Sales\PointOfSaleSeeder;
@@ -31,6 +33,8 @@ class DatabaseSeeder extends Seeder
             BranchSeeder::class,
             WarehouseSeeder::class,
             PointOfSaleSeeder::class,
+            StockMovementTypeSeeder::class,
+            StockAdjustmentReasonSeeder::class,
         ]);
     }
 }

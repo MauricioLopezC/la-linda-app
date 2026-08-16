@@ -4,6 +4,7 @@ import {
   Building2,
   FolderGit2,
   LayoutGrid,
+  Sliders,
   Store,
   Warehouse,
 } from 'lucide-react';
@@ -46,6 +47,11 @@ const mainNavItems: NavItem[] = [
     title: 'Puntos de Venta',
     href: pointsOfSale(),
     icon: Store,
+  },
+  {
+    title: 'Parámetros de Stock',
+    href: '/inventory/parameters',
+    icon: Sliders,
   },
 ];
 
