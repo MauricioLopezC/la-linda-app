@@ -66,6 +66,7 @@
         ],
         "ci:check": [
             "Composer\\Config::disableProcessTimeout",
+            "@php artisan typescript:transform",
             "npm run lint:check",
             "npm run format:check",
             "npm run types:check",
