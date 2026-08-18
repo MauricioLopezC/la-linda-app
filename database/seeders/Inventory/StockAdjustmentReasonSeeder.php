@@ -45,11 +45,16 @@ class StockAdjustmentReasonSeeder extends Seeder
             ],
         ];
 
-        foreach ($reasons as $reason) {
-            StockAdjustmentReason::firstOrCreate(
-                ['name' => $reason['name']],
-                $reason
-            );
-        }
+        StockAdjustmentReason::unguarded(function () use ($reasons): void {
+            foreach ($reasons as $reason) {
+                StockAdjustmentReason::firstOrCreate(
+                    ['name_normalized' => StockAdjustmentReason::normalizeUniqueValue($reason['name'])],
+                    [
+                        ...$reason,
+                        'name_normalized' => StockAdjustmentReason::normalizeUniqueValue($reason['name']),
+                    ]
+                );
+            }
+        });
     }
 }

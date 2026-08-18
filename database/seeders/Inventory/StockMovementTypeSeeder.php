@@ -55,11 +55,16 @@ class StockMovementTypeSeeder extends Seeder
             ],
         ];
 
-        foreach ($types as $type) {
-            StockMovementType::updateOrCreate(
-                ['code' => $type['code']],
-                $type
-            );
-        }
+        StockMovementType::unguarded(function () use ($types): void {
+            foreach ($types as $type) {
+                StockMovementType::updateOrCreate(
+                    ['code' => $type['code']],
+                    [
+                        ...$type,
+                        'name_normalized' => StockMovementType::normalizeUniqueValue($type['name']),
+                    ]
+                );
+            }
+        });
     }
 }
