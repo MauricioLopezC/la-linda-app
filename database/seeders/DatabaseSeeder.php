@@ -3,6 +3,9 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use Database\Seeders\Catalog\BrandSeeder;
+use Database\Seeders\Catalog\CategorySeeder;
+use Database\Seeders\Catalog\UnitOfMeasureSeeder;
 use Database\Seeders\Inventory\WarehouseSeeder;
 use Database\Seeders\Organization\BranchSeeder;
 use Database\Seeders\Sales\PointOfSaleSeeder;
@@ -28,6 +31,9 @@ class DatabaseSeeder extends Seeder
         }
 
         $this->call([
+            CategorySeeder::class,
+            BrandSeeder::class,
+            UnitOfMeasureSeeder::class,
             BranchSeeder::class,
             WarehouseSeeder::class,
             PointOfSaleSeeder::class,
