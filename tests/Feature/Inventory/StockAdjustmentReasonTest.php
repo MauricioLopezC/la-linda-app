@@ -7,7 +7,7 @@ test('user can create a stock adjustment reason', function () {
     $user = User::factory()->create();
 
     $response = $this->actingAs($user)->post(route('inventory.parameters.adjustment-reasons.store'), [
-        'name' => 'Mercadería caída en pasillo',
+        'name' => '  Mercadería caída en pasillo  ',
         'description' => 'Rotura accidental por cliente o personal',
         'is_active' => true,
     ]);
@@ -17,17 +17,18 @@ test('user can create a stock adjustment reason', function () {
 
     $this->assertDatabaseHas('stock_adjustment_reasons', [
         'name' => 'Mercadería caída en pasillo',
+        'name_normalized' => 'mercadería caída en pasillo',
         'description' => 'Rotura accidental por cliente o personal',
         'is_active' => true,
     ]);
 });
 
-test('user cannot create adjustment reason with duplicate name', function () {
+test('user cannot create adjustment reason with duplicate name ignoring case and outer spaces', function () {
     $user = User::factory()->create();
     StockAdjustmentReason::factory()->create(['name' => 'Motivo Existente']);
 
     $response = $this->actingAs($user)->post(route('inventory.parameters.adjustment-reasons.store'), [
-        'name' => 'Motivo Existente',
+        'name' => '  MOTIVO EXISTENTE  ',
     ]);
 
     $response->assertSessionHasErrors(['name']);
@@ -49,6 +50,7 @@ test('user can update adjustment reason', function () {
     $this->assertDatabaseHas('stock_adjustment_reasons', [
         'id' => $reason->id,
         'name' => 'Motivo Editado',
+        'name_normalized' => 'motivo editado',
         'description' => 'Nueva descripción',
         'is_active' => false,
     ]);

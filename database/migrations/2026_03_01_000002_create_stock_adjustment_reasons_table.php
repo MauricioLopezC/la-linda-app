@@ -13,9 +13,10 @@ return new class extends Migration
     {
         Schema::create('stock_adjustment_reasons', function (Blueprint $table) {
             $table->id();
-            $table->string('name')->unique();
+            $table->string('name', 100);
+            $table->string('name_normalized', 100)->unique();
             $table->string('description')->nullable();
-            $table->boolean('is_active')->default(true);
+            $table->boolean('is_active')->default(true)->index();
             $table->timestamps();
         });
     }

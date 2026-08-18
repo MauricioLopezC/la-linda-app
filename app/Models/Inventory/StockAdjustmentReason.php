@@ -2,6 +2,7 @@
 
 namespace App\Models\Inventory;
 
+use App\Concerns\NormalizesUniqueAttributes;
 use Database\Factories\Inventory\StockAdjustmentReasonFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -12,6 +13,7 @@ use Illuminate\Support\Carbon;
 /**
  * @property int $id
  * @property string $name
+ * @property string $name_normalized
  * @property string|null $description
  * @property bool $is_active
  * @property Carbon|null $created_at
@@ -22,6 +24,8 @@ class StockAdjustmentReason extends Model
 {
     /** @use HasFactory<StockAdjustmentReasonFactory> */
     use HasFactory;
+
+    use NormalizesUniqueAttributes;
 
     /**
      * Get the attributes that should be cast.
@@ -54,5 +58,13 @@ class StockAdjustmentReason extends Model
         // Future relation with StockAdjustment (HU-017)
         // When stock_adjustments table exists, return $this->stockAdjustments()->exists();
         return false;
+    }
+
+    /** @return array<string, string> */
+    protected function uniqueAttributesToNormalize(): array
+    {
+        return [
+            'name' => 'name_normalized',
+        ];
     }
 }

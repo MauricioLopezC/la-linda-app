@@ -3,6 +3,8 @@
 namespace App\Http\Requests\Inventory;
 
 use App\Models\Inventory\StockMovementType;
+use App\Rules\UniqueNormalizedValue;
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -19,13 +21,13 @@ class UpdateStockMovementTypeRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, array<int, mixed>>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
         /** @var StockMovementType|int|string|null $movementType */
         $movementType = $this->route('movement_type');
-        $movementTypeId = $movementType instanceof StockMovementType ? $movementType->id : $movementType;
+        $movementTypeId = $movementType instanceof StockMovementType ? $movementType->id : (int) $movementType;
 
         return [
             'name' => [
@@ -33,7 +35,7 @@ class UpdateStockMovementTypeRequest extends FormRequest
                 'string',
                 'min:3',
                 'max:100',
-                Rule::unique('stock_movement_types', 'name')->ignore($movementTypeId),
+                new UniqueNormalizedValue(StockMovementType::class, 'name_normalized', $movementTypeId),
             ],
             'sign' => ['required', 'integer', Rule::in([1, -1])],
             'description' => ['nullable', 'string', 'max:255'],
@@ -54,5 +56,12 @@ class UpdateStockMovementTypeRequest extends FormRequest
             'description' => 'descripción',
             'is_active' => 'estado',
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        if (is_string($this->input('name'))) {
+            $this->merge(['name' => trim($this->input('name'))]);
+        }
     }
 }

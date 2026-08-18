@@ -2,6 +2,9 @@
 
 namespace App\Http\Requests\Inventory;
 
+use App\Models\Inventory\StockMovementType;
+use App\Rules\UniqueNormalizedValue;
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -18,12 +21,18 @@ class StoreStockMovementTypeRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, array<int, mixed>>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'min:3', 'max:100', 'unique:stock_movement_types,name'],
+            'name' => [
+                'required',
+                'string',
+                'min:3',
+                'max:100',
+                new UniqueNormalizedValue(StockMovementType::class, 'name_normalized'),
+            ],
             'sign' => ['required', 'integer', Rule::in([1, -1])],
             'description' => ['nullable', 'string', 'max:255'],
             'is_active' => ['nullable', 'boolean'],
@@ -43,5 +52,12 @@ class StoreStockMovementTypeRequest extends FormRequest
             'description' => 'descripción',
             'is_active' => 'estado',
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        if (is_string($this->input('name'))) {
+            $this->merge(['name' => trim($this->input('name'))]);
+        }
     }
 }

@@ -3,8 +3,9 @@
 namespace App\Http\Requests\Inventory;
 
 use App\Models\Inventory\StockAdjustmentReason;
+use App\Rules\UniqueNormalizedValue;
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class UpdateStockAdjustmentReasonRequest extends FormRequest
 {
@@ -19,13 +20,13 @@ class UpdateStockAdjustmentReasonRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, array<int, mixed>>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
         /** @var StockAdjustmentReason|int|string|null $reason */
         $reason = $this->route('adjustment_reason');
-        $reasonId = $reason instanceof StockAdjustmentReason ? $reason->id : $reason;
+        $reasonId = $reason instanceof StockAdjustmentReason ? $reason->id : (int) $reason;
 
         return [
             'name' => [
@@ -33,7 +34,7 @@ class UpdateStockAdjustmentReasonRequest extends FormRequest
                 'string',
                 'min:3',
                 'max:100',
-                Rule::unique('stock_adjustment_reasons', 'name')->ignore($reasonId),
+                new UniqueNormalizedValue(StockAdjustmentReason::class, 'name_normalized', $reasonId),
             ],
             'description' => ['nullable', 'string', 'max:255'],
             'is_active' => ['nullable', 'boolean'],
@@ -52,5 +53,12 @@ class UpdateStockAdjustmentReasonRequest extends FormRequest
             'description' => 'descripción',
             'is_active' => 'estado',
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        if (is_string($this->input('name'))) {
+            $this->merge(['name' => trim($this->input('name'))]);
+        }
     }
 }

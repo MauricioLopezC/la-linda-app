@@ -2,6 +2,7 @@
 
 namespace App\Models\Inventory;
 
+use App\Concerns\NormalizesUniqueAttributes;
 use Database\Factories\Inventory\StockMovementTypeFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -12,6 +13,7 @@ use Illuminate\Support\Carbon;
 /**
  * @property int $id
  * @property string $name
+ * @property string $name_normalized
  * @property string $code
  * @property int $sign
  * @property string|null $description
@@ -25,6 +27,8 @@ class StockMovementType extends Model
 {
     /** @use HasFactory<StockMovementTypeFactory> */
     use HasFactory;
+
+    use NormalizesUniqueAttributes;
 
     /**
      * Standard system codes.
@@ -94,5 +98,13 @@ class StockMovementType extends Model
         // Future relation with StockMovement (HU-017 / HU-018)
         // When stock_movements table exists, return $this->stockMovements()->exists();
         return false;
+    }
+
+    /** @return array<string, string> */
+    protected function uniqueAttributesToNormalize(): array
+    {
+        return [
+            'name' => 'name_normalized',
+        ];
     }
 }

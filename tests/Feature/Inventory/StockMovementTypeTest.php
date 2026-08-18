@@ -26,7 +26,7 @@ test('user can create a custom stock movement type', function () {
     $user = User::factory()->create();
 
     $response = $this->actingAs($user)->post(route('inventory.parameters.movement-types.store'), [
-        'name' => 'Consumo interno para exhibición',
+        'name' => '  Consumo interno para exhibición  ',
         'sign' => -1,
         'description' => 'Salida de mercadería para exhibición en góndola',
         'is_active' => true,
@@ -37,18 +37,19 @@ test('user can create a custom stock movement type', function () {
 
     $this->assertDatabaseHas('stock_movement_types', [
         'name' => 'Consumo interno para exhibición',
+        'name_normalized' => 'consumo interno para exhibición',
         'sign' => -1,
         'is_system' => false,
         'is_active' => true,
     ]);
 });
 
-test('user cannot create movement type with duplicate name', function () {
+test('user cannot create movement type with duplicate name ignoring case and outer spaces', function () {
     $user = User::factory()->create();
     StockMovementType::factory()->create(['name' => 'Tipo Duplicado']);
 
     $response = $this->actingAs($user)->post(route('inventory.parameters.movement-types.store'), [
-        'name' => 'Tipo Duplicado',
+        'name' => '  TIPO DUPLICADO  ',
         'sign' => 1,
     ]);
 
@@ -87,6 +88,7 @@ test('user can update a custom movement type', function () {
     $this->assertDatabaseHas('stock_movement_types', [
         'id' => $type->id,
         'name' => 'Nombre Nuevo',
+        'name_normalized' => 'nombre nuevo',
         'sign' => -1,
         'description' => 'Descripción actualizada',
     ]);

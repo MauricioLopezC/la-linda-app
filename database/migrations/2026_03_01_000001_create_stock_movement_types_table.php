@@ -13,12 +13,13 @@ return new class extends Migration
     {
         Schema::create('stock_movement_types', function (Blueprint $table) {
             $table->id();
-            $table->string('name')->unique();
-            $table->string('code')->unique();
+            $table->string('name', 100);
+            $table->string('name_normalized', 100)->unique();
+            $table->string('code', 100)->unique();
             $table->smallInteger('sign')->comment('1 for addition (suma), -1 for deduction (resta)');
             $table->string('description')->nullable();
             $table->boolean('is_system')->default(false)->comment('Protected system types that cannot be deleted');
-            $table->boolean('is_active')->default(true);
+            $table->boolean('is_active')->default(true)->index();
             $table->timestamps();
         });
     }

@@ -13,6 +13,15 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import {
+  destroyAdjustmentReason,
+  destroyMovementType,
+  storeAdjustmentReason,
+  storeMovementType,
+  toggleAdjustmentReason,
+  updateAdjustmentReason,
+  updateMovementType,
+} from '@/actions/App/Http/Controllers/Inventory/StockParameterController';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
 import { Badge } from '@/components/ui/badge';
@@ -34,6 +43,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { dashboard } from '@/routes';
+import { index } from '@/routes/inventory/parameters';
 import type { BreadcrumbItem } from '@/types';
 
 type StockMovementType = App.Data.Inventory.StockMovementTypeData;
@@ -124,7 +143,7 @@ export default function StockParametersIndex({
 
   const handleCreateReasonSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    createReasonForm.post('/inventory/parameters/adjustment-reasons', {
+    createReasonForm.post(storeAdjustmentReason.url(), {
       preserveScroll: true,
       onSuccess: () => {
         setIsCreateReasonOpen(false);
@@ -155,7 +174,7 @@ export default function StockParametersIndex({
     }
 
     editReasonForm.put(
-      `/inventory/parameters/adjustment-reasons/${editingReason.id}`,
+      updateAdjustmentReason.url({ adjustment_reason: editingReason.id }),
       {
         preserveScroll: true,
         onSuccess: () => {
@@ -171,7 +190,7 @@ export default function StockParametersIndex({
 
   const handleToggleReasonStatus = (reason: StockAdjustmentReason) => {
     router.patch(
-      `/inventory/parameters/adjustment-reasons/${reason.id}/toggle`,
+      toggleAdjustmentReason.url({ adjustment_reason: reason.id }),
       {},
       {
         preserveScroll: true,
@@ -188,7 +207,7 @@ export default function StockParametersIndex({
     }
 
     router.delete(
-      `/inventory/parameters/adjustment-reasons/${deletingReason.id}`,
+      destroyAdjustmentReason.url({ adjustment_reason: deletingReason.id }),
       {
         preserveScroll: true,
         onSuccess: () => {
@@ -218,7 +237,7 @@ export default function StockParametersIndex({
       ...data,
       sign: Number(data.sign),
     }));
-    createTypeForm.post('/inventory/parameters/movement-types', {
+    createTypeForm.post(storeMovementType.url(), {
       preserveScroll: true,
       onSuccess: () => {
         setIsCreateTypeOpen(false);
@@ -254,16 +273,19 @@ export default function StockParametersIndex({
       sign: Number(data.sign),
     }));
 
-    editTypeForm.put(`/inventory/parameters/movement-types/${editingType.id}`, {
-      preserveScroll: true,
-      onSuccess: () => {
-        setEditingType(null);
-        toast.success('Tipo de movimiento actualizado');
+    editTypeForm.put(
+      updateMovementType.url({ movement_type: editingType.id }),
+      {
+        preserveScroll: true,
+        onSuccess: () => {
+          setEditingType(null);
+          toast.success('Tipo de movimiento actualizado');
+        },
+        onError: () => {
+          toast.error('Error al actualizar el tipo de movimiento');
+        },
       },
-      onError: () => {
-        toast.error('Error al actualizar el tipo de movimiento');
-      },
-    });
+    );
   };
 
   const handleDeleteTypeConfirm = () => {
@@ -271,7 +293,7 @@ export default function StockParametersIndex({
       return;
     }
 
-    router.delete(`/inventory/parameters/movement-types/${deletingType.id}`, {
+    router.delete(destroyMovementType.url({ movement_type: deletingType.id }), {
       preserveScroll: true,
       onSuccess: () => {
         setDeletingType(null);
@@ -379,215 +401,205 @@ export default function StockParametersIndex({
           {/* TAB 1: Motivos de Ajuste */}
           {activeTab === 'reasons' && (
             <div className="overflow-hidden rounded-xl border border-sidebar-border bg-card shadow-sm">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead className="border-b border-sidebar-border bg-muted/50 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                    <tr>
-                      <th className="px-6 py-3.5">Nombre del Motivo</th>
-                      <th className="px-6 py-3.5">Descripción</th>
-                      <th className="px-6 py-3.5">Estado</th>
-                      <th className="px-6 py-3.5">Fecha de Alta</th>
-                      <th className="px-6 py-3.5 text-right">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-sidebar-border">
-                    {filteredReasons.length === 0 ? (
-                      <tr>
-                        <td
-                          colSpan={5}
-                          className="px-6 py-12 text-center text-muted-foreground"
-                        >
-                          No se encontraron motivos de ajuste registrados.
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredReasons.map((reason) => (
-                        <tr
-                          key={reason.id}
-                          className="transition-colors hover:bg-muted/30"
-                        >
-                          <td className="px-6 py-4 font-medium text-foreground">
-                            {reason.name}
-                          </td>
-                          <td className="px-6 py-4 text-muted-foreground">
-                            {reason.description || '—'}
-                          </td>
-                          <td className="px-6 py-4">
-                            {reason.is_active ? (
-                              <Badge
-                                variant="outline"
-                                className="border-emerald-600/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
-                              >
-                                <CheckCircle2 className="mr-1 size-3" />
-                                Activo
-                              </Badge>
-                            ) : (
-                              <Badge
-                                variant="outline"
-                                className="border-neutral-400/30 bg-neutral-500/10 text-neutral-600 dark:text-neutral-400"
-                              >
-                                <XCircle className="mr-1 size-3" />
-                                Inactivo
-                              </Badge>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 text-muted-foreground">
-                            {reason.created_at || '—'}
-                          </td>
-                          <td className="px-6 py-4 text-right">
-                            <div className="flex items-center justify-end gap-1.5">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleToggleReasonStatus(reason)}
-                                title={
-                                  reason.is_active ? 'Desactivar' : 'Activar'
-                                }
-                                className="text-xs"
-                              >
-                                {reason.is_active ? 'Desactivar' : 'Activar'}
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleOpenEditReason(reason)}
-                                title="Editar motivo"
-                              >
-                                <Pencil className="size-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => setDeletingReason(reason)}
-                                title="Eliminar motivo"
-                                className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                              >
-                                <Trash2 className="size-4" />
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nombre del Motivo</TableHead>
+                    <TableHead>Descripción</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead>Fecha de Alta</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredReasons.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={5}
+                        className="py-12 text-center text-muted-foreground"
+                      >
+                        No se encontraron motivos de ajuste registrados.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredReasons.map((reason) => (
+                      <TableRow key={reason.id}>
+                        <TableCell className="font-medium text-foreground">
+                          {reason.name}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {reason.description || '—'}
+                        </TableCell>
+                        <TableCell>
+                          {reason.is_active ? (
+                            <Badge
+                              variant="outline"
+                              className="border-emerald-600/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                            >
+                              <CheckCircle2 className="mr-1 size-3" />
+                              Activo
+                            </Badge>
+                          ) : (
+                            <Badge
+                              variant="outline"
+                              className="border-neutral-400/30 bg-neutral-500/10 text-neutral-600 dark:text-neutral-400"
+                            >
+                              <XCircle className="mr-1 size-3" />
+                              Inactivo
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {reason.created_at || '—'}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleToggleReasonStatus(reason)}
+                              title={
+                                reason.is_active ? 'Desactivar' : 'Activar'
+                              }
+                              className="text-xs"
+                            >
+                              {reason.is_active ? 'Desactivar' : 'Activar'}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleOpenEditReason(reason)}
+                              title="Editar motivo"
+                            >
+                              <Pencil className="size-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setDeletingReason(reason)}
+                              title="Eliminar motivo"
+                              className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            >
+                              <Trash2 className="size-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
             </div>
           )}
 
           {/* TAB 2: Tipos de Movimiento */}
           {activeTab === 'movement_types' && (
             <div className="overflow-hidden rounded-xl border border-sidebar-border bg-card shadow-sm">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead className="border-b border-sidebar-border bg-muted/50 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                    <tr>
-                      <th className="px-6 py-3.5">Nombre</th>
-                      <th className="px-6 py-3.5">Código</th>
-                      <th className="px-6 py-3.5">Signo / Afectación</th>
-                      <th className="px-6 py-3.5">Tipo</th>
-                      <th className="px-6 py-3.5">Descripción</th>
-                      <th className="px-6 py-3.5 text-right">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-sidebar-border">
-                    {filteredTypes.length === 0 ? (
-                      <tr>
-                        <td
-                          colSpan={6}
-                          className="px-6 py-12 text-center text-muted-foreground"
-                        >
-                          No se encontraron tipos de movimiento registrados.
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredTypes.map((type) => (
-                        <tr
-                          key={type.id}
-                          className="transition-colors hover:bg-muted/30"
-                        >
-                          <td className="px-6 py-4 font-medium text-foreground">
-                            {type.name}
-                          </td>
-                          <td className="px-6 py-4 font-mono text-xs text-muted-foreground">
-                            {type.code}
-                          </td>
-                          <td className="px-6 py-4">
-                            {type.sign === 1 ? (
-                              <Badge
-                                variant="outline"
-                                className="border-emerald-600/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
-                              >
-                                <ArrowUpCircle className="mr-1 size-3" />
-                                (+1) Suma / Ingreso
-                              </Badge>
-                            ) : (
-                              <Badge
-                                variant="outline"
-                                className="border-amber-600/30 bg-amber-500/10 text-amber-700 dark:text-amber-400"
-                              >
-                                <ArrowDownCircle className="mr-1 size-3" />
-                                (-1) Resta / Egreso
-                              </Badge>
-                            )}
-                          </td>
-                          <td className="px-6 py-4">
-                            {type.is_system ? (
-                              <Badge
-                                variant="secondary"
-                                className="gap-1 font-normal"
-                              >
-                                <Lock className="size-3" />
-                                Sistema
-                              </Badge>
-                            ) : (
-                              <Badge
-                                variant="outline"
-                                className="text-muted-foreground"
-                              >
-                                Personalizado
-                              </Badge>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 text-muted-foreground">
-                            {type.description || '—'}
-                          </td>
-                          <td className="px-6 py-4 text-right">
-                            <div className="flex items-center justify-end gap-1.5">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleOpenEditType(type)}
-                                title="Editar tipo"
-                              >
-                                <Pencil className="size-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                disabled={type.is_system}
-                                onClick={() => setDeletingType(type)}
-                                title={
-                                  type.is_system
-                                    ? 'Los tipos del sistema no pueden eliminarse'
-                                    : 'Eliminar tipo'
-                                }
-                                className={
-                                  type.is_system
-                                    ? 'cursor-not-allowed opacity-40'
-                                    : 'text-destructive hover:bg-destructive/10 hover:text-destructive'
-                                }
-                              >
-                                <Trash2 className="size-4" />
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nombre</TableHead>
+                    <TableHead>Código</TableHead>
+                    <TableHead>Signo / Afectación</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Descripción</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredTypes.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={6}
+                        className="py-12 text-center text-muted-foreground"
+                      >
+                        No se encontraron tipos de movimiento registrados.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredTypes.map((type) => (
+                      <TableRow key={type.id}>
+                        <TableCell className="font-medium text-foreground">
+                          {type.name}
+                        </TableCell>
+                        <TableCell className="font-mono text-xs text-muted-foreground">
+                          {type.code}
+                        </TableCell>
+                        <TableCell>
+                          {type.sign === 1 ? (
+                            <Badge
+                              variant="outline"
+                              className="border-emerald-600/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                            >
+                              <ArrowUpCircle className="mr-1 size-3" />
+                              (+1) Suma / Ingreso
+                            </Badge>
+                          ) : (
+                            <Badge
+                              variant="outline"
+                              className="border-amber-600/30 bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                            >
+                              <ArrowDownCircle className="mr-1 size-3" />
+                              (-1) Resta / Egreso
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {type.is_system ? (
+                            <Badge
+                              variant="secondary"
+                              className="gap-1 font-normal"
+                            >
+                              <Lock className="size-3" />
+                              Sistema
+                            </Badge>
+                          ) : (
+                            <Badge
+                              variant="outline"
+                              className="text-muted-foreground"
+                            >
+                              Personalizado
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {type.description || '—'}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleOpenEditType(type)}
+                              title="Editar tipo"
+                            >
+                              <Pencil className="size-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              disabled={type.is_system}
+                              onClick={() => setDeletingType(type)}
+                              title={
+                                type.is_system
+                                  ? 'Los tipos del sistema no pueden eliminarse'
+                                  : 'Eliminar tipo'
+                              }
+                              className={
+                                type.is_system
+                                  ? 'cursor-not-allowed opacity-40'
+                                  : 'text-destructive hover:bg-destructive/10 hover:text-destructive'
+                              }
+                            >
+                              <Trash2 className="size-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
             </div>
           )}
         </div>
@@ -965,11 +977,11 @@ StockParametersIndex.layout = {
   breadcrumbs: [
     {
       title: 'Dashboard',
-      href: '/dashboard',
+      href: dashboard(),
     },
     {
       title: 'Parámetros de Stock',
-      href: '/inventory/parameters',
+      href: index(),
     },
   ] satisfies BreadcrumbItem[],
 };
