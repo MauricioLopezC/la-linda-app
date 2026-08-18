@@ -2,7 +2,10 @@ import { Link } from '@inertiajs/react';
 import {
   BookOpen,
   Building2,
+  FolderTree,
   FolderGit2,
+  Ruler,
+  Tags,
   LayoutGrid,
   Sliders,
   Store,
@@ -22,6 +25,10 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import { index as brands } from '@/routes/catalog/brands';
+import { index as categories } from '@/routes/catalog/categories';
+import { index as unitsOfMeasure } from '@/routes/catalog/units-of-measure';
+import { index as stockParameters } from '@/routes/inventory/parameters';
 import { index as warehouses } from '@/routes/inventory/warehouses';
 import { index as branches } from '@/routes/organization/branches';
 import { index as pointsOfSale } from '@/routes/sales/points-of-sale';
@@ -49,8 +56,23 @@ const mainNavItems: NavItem[] = [
     icon: Store,
   },
   {
+    title: 'Categorías',
+    href: categories(),
+    icon: FolderTree,
+  },
+  {
+    title: 'Marcas',
+    href: brands(),
+    icon: Tags,
+  },
+  {
+    title: 'Unidades de medida',
+    href: unitsOfMeasure(),
+    icon: Ruler,
+  },
+  {
     title: 'Parámetros de Stock',
-    href: '/inventory/parameters',
+    href: stockParameters(),
     icon: Sliders,
   },
 ];
