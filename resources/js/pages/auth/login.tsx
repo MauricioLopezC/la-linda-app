@@ -7,7 +7,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
-import { register } from '@/routes';
 import { store } from '@/routes/login';
 import { request } from '@/routes/password';
 
@@ -83,13 +82,6 @@ export default function Login({ status, canResetPassword }: Props) {
                 {processing && <Spinner />}
                 Iniciar sesión
               </Button>
-            </div>
-
-            <div className="text-center text-sm text-muted-foreground">
-              ¿No tenés una cuenta?{' '}
-              <TextLink href={register()} tabIndex={5}>
-                Registrate
-              </TextLink>
             </div>
           </>
         )}

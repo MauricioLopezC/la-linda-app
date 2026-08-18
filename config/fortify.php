@@ -143,7 +143,9 @@ return [
     */
 
     'features' => [
-        Features::registration(),
+        // Features::registration() disabled: this is a staff-only ERP, not a
+        // public app. Accounts are provisioned manually. Safe to re-enable
+        // when e-commerce needs public customer registration.
         Features::resetPasswords(),
         Features::emailVerification(),
     ],
