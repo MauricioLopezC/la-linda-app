@@ -6,6 +6,8 @@ use App\Models\User;
 use Database\Seeders\Catalog\BrandSeeder;
 use Database\Seeders\Catalog\CategorySeeder;
 use Database\Seeders\Catalog\UnitOfMeasureSeeder;
+use Database\Seeders\Inventory\StockAdjustmentReasonSeeder;
+use Database\Seeders\Inventory\StockMovementTypeSeeder;
 use Database\Seeders\Inventory\WarehouseSeeder;
 use Database\Seeders\Organization\BranchSeeder;
 use Database\Seeders\Sales\PointOfSaleSeeder;
@@ -24,10 +26,14 @@ class DatabaseSeeder extends Seeder
         // User::factory(10)->create();
 
         if (! app()->isProduction()) {
-            User::factory()->create([
-                'name' => 'Test User',
-                'email' => 'test@example.com',
-            ]);
+            User::firstOrCreate(
+                ['email' => 'test@example.com'],
+                [
+                    'name' => 'Test User',
+                    'password' => 'password',
+                    'email_verified_at' => now(),
+                ]
+            );
         }
 
         $this->call([
@@ -37,6 +43,8 @@ class DatabaseSeeder extends Seeder
             BranchSeeder::class,
             WarehouseSeeder::class,
             PointOfSaleSeeder::class,
+            StockMovementTypeSeeder::class,
+            StockAdjustmentReasonSeeder::class,
         ]);
     }
 }

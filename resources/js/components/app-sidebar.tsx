@@ -7,6 +7,7 @@ import {
   Ruler,
   Tags,
   LayoutGrid,
+  Sliders,
   Store,
   Warehouse,
 } from 'lucide-react';
@@ -27,6 +28,7 @@ import { dashboard } from '@/routes';
 import { index as brands } from '@/routes/catalog/brands';
 import { index as categories } from '@/routes/catalog/categories';
 import { index as unitsOfMeasure } from '@/routes/catalog/units-of-measure';
+import { index as stockParameters } from '@/routes/inventory/parameters';
 import { index as warehouses } from '@/routes/inventory/warehouses';
 import { index as branches } from '@/routes/organization/branches';
 import { index as pointsOfSale } from '@/routes/sales/points-of-sale';
@@ -67,6 +69,11 @@ const mainNavItems: NavItem[] = [
     title: 'Unidades de medida',
     href: unitsOfMeasure(),
     icon: Ruler,
+  },
+  {
+    title: 'Parámetros de Stock',
+    href: stockParameters(),
+    icon: Sliders,
   },
 ];
 
