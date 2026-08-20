@@ -38,6 +38,19 @@ composer run dev
 
 La app queda disponible en `http://localhost:8000`.
 
+## Sincronización tras `git pull`
+
+Cuando bajes cambios del repositorio remoto (`git pull`), corre:
+
+```
+composer run sync
+```
+
+Este comando instala nuevas dependencias de PHP y Node (`composer install` y `npm install`) y aplica migraciones pendientes (`php artisan migrate --force`).
+
+> [!TIP]
+> Al ejecutar `composer run dev`, las migraciones pendientes también se ejecutan automáticamente antes de levantar el servidor.
+
 ## Problemas comunes
 
 - **`Database file at path ... does not exist`**: significa que no se corrió `composer run setup`
