@@ -10,6 +10,8 @@ use Database\Seeders\Inventory\StockAdjustmentReasonSeeder;
 use Database\Seeders\Inventory\StockMovementTypeSeeder;
 use Database\Seeders\Inventory\WarehouseSeeder;
 use Database\Seeders\Organization\BranchSeeder;
+use Database\Seeders\Pricing\VatRateSeeder;
+use Database\Seeders\Sales\PaymentMethodSeeder;
 use Database\Seeders\Sales\PointOfSaleSeeder;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -45,6 +47,8 @@ class DatabaseSeeder extends Seeder
             PointOfSaleSeeder::class,
             StockMovementTypeSeeder::class,
             StockAdjustmentReasonSeeder::class,
+            VatRateSeeder::class,
+            PaymentMethodSeeder::class,
         ]);
     }
 }

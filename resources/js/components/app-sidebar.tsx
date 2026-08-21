@@ -2,8 +2,10 @@ import { Link } from '@inertiajs/react';
 import {
   BookOpen,
   Building2,
+  CreditCard,
   FolderTree,
   FolderGit2,
+  Percent,
   Ruler,
   Tags,
   LayoutGrid,
@@ -31,6 +33,8 @@ import { index as unitsOfMeasure } from '@/routes/catalog/units-of-measure';
 import { index as stockParameters } from '@/routes/inventory/parameters';
 import { index as warehouses } from '@/routes/inventory/warehouses';
 import { index as branches } from '@/routes/organization/branches';
+import { index as vatRates } from '@/routes/pricing/vat-rates';
+import { index as paymentMethods } from '@/routes/sales/payment-methods';
 import { index as pointsOfSale } from '@/routes/sales/points-of-sale';
 import type { NavItem } from '@/types';
 
@@ -54,6 +58,16 @@ const mainNavItems: NavItem[] = [
     title: 'Puntos de Venta',
     href: pointsOfSale(),
     icon: Store,
+  },
+  {
+    title: 'Medios de Pago',
+    href: paymentMethods(),
+    icon: CreditCard,
+  },
+  {
+    title: 'Alícuotas de IVA',
+    href: vatRates(),
+    icon: Percent,
   },
   {
     title: 'Categorías',

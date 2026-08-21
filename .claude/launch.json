@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "dev",
+      "runtimeExecutable": "composer",
+      "runtimeArgs": ["run", "dev"],
+      "port": 8000,
+      "url": "http://localhost:8000"
+    }
+  ]
+}
