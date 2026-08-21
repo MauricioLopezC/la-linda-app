@@ -4,6 +4,7 @@ namespace App\Models\Catalog;
 
 use App\Concerns\NormalizesUniqueAttributes;
 use App\Enums\Catalog\ArticleStatus;
+use App\Models\Inventory\WarehouseStock;
 use App\Models\Pricing\VatRate;
 use Database\Factories\Catalog\ArticleFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -11,6 +12,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 /**
@@ -83,6 +85,12 @@ class Article extends Model
     public function vatRate(): BelongsTo
     {
         return $this->belongsTo(VatRate::class);
+    }
+
+    /** @return HasMany<WarehouseStock, $this> */
+    public function stocks(): HasMany
+    {
+        return $this->hasMany(WarehouseStock::class);
     }
 
     public function hasStockMovements(): bool

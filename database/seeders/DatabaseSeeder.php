@@ -10,6 +10,7 @@ use Database\Seeders\Catalog\UnitOfMeasureSeeder;
 use Database\Seeders\Inventory\StockAdjustmentReasonSeeder;
 use Database\Seeders\Inventory\StockMovementTypeSeeder;
 use Database\Seeders\Inventory\WarehouseSeeder;
+use Database\Seeders\Inventory\WarehouseStockSeeder;
 use Database\Seeders\Organization\BranchSeeder;
 use Database\Seeders\Pricing\VatRateSeeder;
 use Database\Seeders\Sales\PaymentMethodSeeder;
@@ -51,6 +52,7 @@ class DatabaseSeeder extends Seeder
             VatRateSeeder::class,
             PaymentMethodSeeder::class,
             ArticleSeeder::class,
+            WarehouseStockSeeder::class,
         ]);
     }
 }

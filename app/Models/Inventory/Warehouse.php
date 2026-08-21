@@ -73,12 +73,20 @@ class Warehouse extends Model
     }
 
     /**
+     * Get all stock records for this warehouse.
+     *
+     * @return HasMany<WarehouseStock, $this>
+     */
+    public function stocks(): HasMany
+    {
+        return $this->hasMany(WarehouseStock::class);
+    }
+
+    /**
      * Check if this warehouse has registered stock or movements that block deactivation.
      */
     public function hasRegisteredStock(): bool
     {
-        // Future relation with WarehouseStock/StockMovement/StockAdjustment (HU-017).
-        // When those tables exist, check: $this->stocks()->exists() || $this->movements()->exists()
-        return false;
+        return $this->stocks()->exists();
     }
 }
