@@ -6,6 +6,8 @@ use App\Http\Controllers\Catalog\UnitOfMeasureController;
 use App\Http\Controllers\Inventory\StockParameterController;
 use App\Http\Controllers\Inventory\WarehouseController;
 use App\Http\Controllers\Organization\BranchController;
+use App\Http\Controllers\Pricing\VatRateController;
+use App\Http\Controllers\Sales\PaymentMethodController;
 use App\Http\Controllers\Sales\PointOfSaleController;
 use Illuminate\Support\Facades\Route;
 
@@ -66,6 +68,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('adjustment-reasons/{adjustment_reason}', [StockParameterController::class, 'updateAdjustmentReason'])->name('adjustment-reasons.update');
         Route::delete('adjustment-reasons/{adjustment_reason}', [StockParameterController::class, 'destroyAdjustmentReason'])->name('adjustment-reasons.destroy');
         Route::patch('adjustment-reasons/{adjustment_reason}/toggle', [StockParameterController::class, 'toggleAdjustmentReason'])->name('adjustment-reasons.toggle');
+    });
+
+    Route::prefix('pricing/vat-rates')->name('pricing.vat-rates.')->group(function () {
+        Route::get('/', [VatRateController::class, 'index'])->name('index');
+        Route::post('/', [VatRateController::class, 'store'])->name('store');
+        Route::put('{vat_rate}', [VatRateController::class, 'update'])->name('update');
+        Route::patch('{vat_rate}/toggle', [VatRateController::class, 'toggleStatus'])->name('toggle');
+    });
+
+    Route::prefix('sales/payment-methods')->name('sales.payment-methods.')->group(function () {
+        Route::get('/', [PaymentMethodController::class, 'index'])->name('index');
+        Route::post('/', [PaymentMethodController::class, 'store'])->name('store');
+        Route::put('{payment_method}', [PaymentMethodController::class, 'update'])->name('update');
+        Route::patch('{payment_method}/toggle', [PaymentMethodController::class, 'toggleStatus'])->name('toggle');
     });
 });
 
