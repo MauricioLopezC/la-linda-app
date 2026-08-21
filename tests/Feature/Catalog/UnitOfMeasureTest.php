@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Catalog\Article;
 use App\Models\Catalog\UnitOfMeasure;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -49,7 +50,7 @@ test('unit name and abbreviation are unique ignoring case and outer spaces', fun
     ])->assertSessionHasErrors(['abbreviation']);
 });
 
-test('unit status can be toggled while articles are not implemented', function () {
+test('unit status can be toggled when it has no associated articles', function () {
     $user = User::factory()->create();
     $unit = UnitOfMeasure::factory()->create();
 
@@ -57,4 +58,15 @@ test('unit status can be toggled while articles are not implemented', function (
         ->assertSessionHasNoErrors();
 
     expect($unit->fresh()->is_active)->toBeFalse();
+});
+
+test('unit cannot be deactivated while it has associated articles', function () {
+    $user = User::factory()->create();
+    $unit = UnitOfMeasure::factory()->create();
+    Article::factory()->create(['unit_of_measure_id' => $unit->id]);
+
+    $this->actingAs($user)->patch(route('catalog.units-of-measure.toggle', $unit))
+        ->assertSessionHasErrors(['unit_of_measure']);
+
+    expect($unit->fresh()->is_active)->toBeTrue();
 });

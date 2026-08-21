@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use Database\Seeders\Catalog\ArticleSeeder;
 use Database\Seeders\Catalog\BrandSeeder;
 use Database\Seeders\Catalog\CategorySeeder;
 use Database\Seeders\Catalog\UnitOfMeasureSeeder;
@@ -49,6 +50,7 @@ class DatabaseSeeder extends Seeder
             StockAdjustmentReasonSeeder::class,
             VatRateSeeder::class,
             PaymentMethodSeeder::class,
+            ArticleSeeder::class,
         ]);
     }
 }
