@@ -52,7 +52,7 @@ class VatRate extends Model
 
     public function isInUse(): bool
     {
-        // Future relation with PriceList/Sale once pricing/invoicing is implemented.
+        // TODO: check Article/PriceList/Sale once each relation is (re)implemented.
         return false;
     }
 

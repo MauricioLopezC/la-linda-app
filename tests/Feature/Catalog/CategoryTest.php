@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Catalog\Article;
 use App\Models\Catalog\Category;
 use App\Models\User;
 use Illuminate\Database\QueryException;
@@ -143,6 +144,17 @@ test('root cannot be deactivated while it has active children', function () {
         ->assertSessionHasErrors(['category']);
 
     expect($root->fresh()->is_active)->toBeTrue();
+});
+
+test('category cannot be deactivated while it has associated articles', function () {
+    $user = User::factory()->create();
+    $category = Category::factory()->create();
+    Article::factory()->create(['category_id' => $category->id]);
+
+    $this->actingAs($user)->patch(route('catalog.categories.toggle', $category))
+        ->assertSessionHasErrors(['category']);
+
+    expect($category->fresh()->is_active)->toBeTrue();
 });
 
 test('category status can be toggled when business restrictions allow it', function () {

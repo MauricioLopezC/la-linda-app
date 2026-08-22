@@ -69,10 +69,15 @@ class Category extends Model
         return $this->parent_id === null;
     }
 
+    /** @return HasMany<Article, $this> */
+    public function articles(): HasMany
+    {
+        return $this->hasMany(Article::class);
+    }
+
     public function hasArticles(): bool
     {
-        // Future relation with Article.
-        return false;
+        return $this->articles()->exists();
     }
 
     /** @return array<string, string> */

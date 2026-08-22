@@ -17,6 +17,12 @@ trait NormalizesUniqueAttributes
             foreach ($model->uniqueAttributesToNormalize() as $attribute => $normalizedAttribute) {
                 $value = $model->getAttribute($attribute);
 
+                if ($value === null) {
+                    $model->setAttribute($normalizedAttribute, null);
+
+                    continue;
+                }
+
                 if (! is_string($value)) {
                     continue;
                 }
