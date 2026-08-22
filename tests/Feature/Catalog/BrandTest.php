@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Catalog\Article;
 use App\Models\Catalog\Brand;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -41,7 +42,7 @@ test('brand name is unique ignoring case and outer spaces', function () {
     ])->assertSessionHasErrors(['name']);
 });
 
-test('brand status can be toggled while articles are not implemented', function () {
+test('brand status can be toggled when it has no associated articles', function () {
     $user = User::factory()->create();
     $brand = Brand::factory()->create();
 
@@ -49,4 +50,15 @@ test('brand status can be toggled while articles are not implemented', function 
         ->assertSessionHasNoErrors();
 
     expect($brand->fresh()->is_active)->toBeFalse();
+});
+
+test('brand cannot be deactivated while it has associated articles', function () {
+    $user = User::factory()->create();
+    $brand = Brand::factory()->create();
+    Article::factory()->create(['brand_id' => $brand->id]);
+
+    $this->actingAs($user)->patch(route('catalog.brands.toggle', $brand))
+        ->assertSessionHasErrors(['brand']);
+
+    expect($brand->fresh()->is_active)->toBeTrue();
 });

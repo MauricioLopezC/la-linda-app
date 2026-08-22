@@ -1,8 +1,10 @@
 <?php
 
+use App\Http\Controllers\Catalog\ArticleController;
 use App\Http\Controllers\Catalog\BrandController;
 use App\Http\Controllers\Catalog\CategoryController;
 use App\Http\Controllers\Catalog\UnitOfMeasureController;
+use App\Http\Controllers\Inventory\StockConsultationController;
 use App\Http\Controllers\Inventory\StockParameterController;
 use App\Http\Controllers\Inventory\WarehouseController;
 use App\Http\Controllers\Organization\BranchController;
@@ -37,6 +39,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::patch('{unit_of_measure}/toggle', [UnitOfMeasureController::class, 'toggleStatus'])->name('toggle');
     });
 
+    Route::prefix('catalog/articles')->name('catalog.articles.')->group(function () {
+        Route::get('/', [ArticleController::class, 'index'])->name('index');
+        Route::post('/', [ArticleController::class, 'store'])->name('store');
+        Route::put('{article}', [ArticleController::class, 'update'])->name('update');
+        Route::delete('{article}', [ArticleController::class, 'destroy'])->name('destroy');
+    });
+
     Route::prefix('organization/branches')->name('organization.branches.')->group(function () {
         Route::get('/', [BranchController::class, 'index'])->name('index');
         Route::post('/', [BranchController::class, 'store'])->name('store');
@@ -49,6 +58,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/', [WarehouseController::class, 'store'])->name('store');
         Route::put('{warehouse}', [WarehouseController::class, 'update'])->name('update');
         Route::patch('{warehouse}/toggle', [WarehouseController::class, 'toggleStatus'])->name('toggle');
+    });
+
+    Route::prefix('inventory/stocks')->name('inventory.stocks.')->group(function () {
+        Route::get('/', [StockConsultationController::class, 'index'])->name('index');
+        Route::get('export', [StockConsultationController::class, 'export'])->name('export');
     });
 
     Route::prefix('sales/points-of-sale')->name('sales.points-of-sale.')->group(function () {

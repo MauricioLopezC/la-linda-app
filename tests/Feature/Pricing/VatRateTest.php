@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Catalog\Article;
 use App\Models\Pricing\VatRate;
 use App\Models\User;
 use Illuminate\Database\QueryException;
@@ -73,7 +74,7 @@ test('vat rate percentage must be between 0 and 100', function () {
     ])->assertSessionHasErrors(['percentage']);
 });
 
-test('vat rate status can be toggled while pricing usage is not implemented', function () {
+test('vat rate status can be toggled when it has no associated articles', function () {
     $user = User::factory()->create();
     $vatRate = VatRate::factory()->create();
 
@@ -81,4 +82,15 @@ test('vat rate status can be toggled while pricing usage is not implemented', fu
         ->assertSessionHasNoErrors();
 
     expect($vatRate->fresh()->is_active)->toBeFalse();
+});
+
+test('vat rate cannot be deactivated while it has associated articles', function () {
+    $user = User::factory()->create();
+    $vatRate = VatRate::factory()->create();
+    Article::factory()->create(['vat_rate_id' => $vatRate->id]);
+
+    $this->actingAs($user)->patch(route('pricing.vat-rates.toggle', $vatRate))
+        ->assertSessionHasErrors(['vat_rate']);
+
+    expect($vatRate->fresh()->is_active)->toBeTrue();
 });

@@ -1,10 +1,12 @@
 import { Link } from '@inertiajs/react';
 import {
   BookOpen,
+  Boxes,
   Building2,
   CreditCard,
   FolderTree,
   FolderGit2,
+  Package,
   Percent,
   Ruler,
   Tags,
@@ -27,10 +29,12 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import { index as articles } from '@/routes/catalog/articles';
 import { index as brands } from '@/routes/catalog/brands';
 import { index as categories } from '@/routes/catalog/categories';
 import { index as unitsOfMeasure } from '@/routes/catalog/units-of-measure';
 import { index as stockParameters } from '@/routes/inventory/parameters';
+import { index as stocks } from '@/routes/inventory/stocks';
 import { index as warehouses } from '@/routes/inventory/warehouses';
 import { index as branches } from '@/routes/organization/branches';
 import { index as vatRates } from '@/routes/pricing/vat-rates';
@@ -43,6 +47,11 @@ const mainNavItems: NavItem[] = [
     title: 'Dashboard',
     href: dashboard(),
     icon: LayoutGrid,
+  },
+  {
+    title: 'Existencias',
+    href: stocks(),
+    icon: Boxes,
   },
   {
     title: 'Sucursales',
@@ -68,6 +77,11 @@ const mainNavItems: NavItem[] = [
     title: 'Alícuotas de IVA',
     href: vatRates(),
     icon: Percent,
+  },
+  {
+    title: 'Artículos',
+    href: articles(),
+    icon: Package,
   },
   {
     title: 'Categorías',

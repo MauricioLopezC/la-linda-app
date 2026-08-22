@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 /**
@@ -52,10 +53,15 @@ class UnitOfMeasure extends Model
         return $query->where('is_active', true);
     }
 
+    /** @return HasMany<Article, $this> */
+    public function articles(): HasMany
+    {
+        return $this->hasMany(Article::class);
+    }
+
     public function hasArticles(): bool
     {
-        // Future relation with Article.
-        return false;
+        return $this->articles()->exists();
     }
 
     /** @return array<string, string> */
