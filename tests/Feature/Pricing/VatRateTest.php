@@ -73,7 +73,7 @@ test('vat rate percentage must be between 0 and 100', function () {
     ])->assertSessionHasErrors(['percentage']);
 });
 
-test('vat rate status can be toggled while pricing usage is not implemented', function () {
+test('vat rate status can be toggled', function () {
     $user = User::factory()->create();
     $vatRate = VatRate::factory()->create();
 

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Catalog\ArticleController;
 use App\Http\Controllers\Catalog\BrandController;
 use App\Http\Controllers\Catalog\CategoryController;
 use App\Http\Controllers\Catalog\UnitOfMeasureController;
@@ -35,6 +36,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/', [UnitOfMeasureController::class, 'store'])->name('store');
         Route::put('{unit_of_measure}', [UnitOfMeasureController::class, 'update'])->name('update');
         Route::patch('{unit_of_measure}/toggle', [UnitOfMeasureController::class, 'toggleStatus'])->name('toggle');
+    });
+
+    Route::prefix('catalog/articles')->name('catalog.articles.')->group(function () {
+        Route::get('/', [ArticleController::class, 'index'])->name('index');
+        Route::post('/', [ArticleController::class, 'store'])->name('store');
+        Route::put('{article}', [ArticleController::class, 'update'])->name('update');
+        Route::delete('{article}', [ArticleController::class, 'destroy'])->name('destroy');
     });
 
     Route::prefix('organization/branches')->name('organization.branches.')->group(function () {

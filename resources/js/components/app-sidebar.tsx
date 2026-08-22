@@ -5,6 +5,7 @@ import {
   CreditCard,
   FolderTree,
   FolderGit2,
+  Package,
   Percent,
   Ruler,
   Tags,
@@ -27,6 +28,7 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import { index as articles } from '@/routes/catalog/articles';
 import { index as brands } from '@/routes/catalog/brands';
 import { index as categories } from '@/routes/catalog/categories';
 import { index as unitsOfMeasure } from '@/routes/catalog/units-of-measure';
@@ -68,6 +70,11 @@ const mainNavItems: NavItem[] = [
     title: 'Alícuotas de IVA',
     href: vatRates(),
     icon: Percent,
+  },
+  {
+    title: 'Artículos',
+    href: articles(),
+    icon: Package,
   },
   {
     title: 'Categorías',
