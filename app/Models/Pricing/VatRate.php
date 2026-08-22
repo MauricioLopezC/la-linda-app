@@ -3,13 +3,11 @@
 namespace App\Models\Pricing;
 
 use App\Concerns\NormalizesUniqueAttributes;
-use App\Models\Catalog\Article;
 use Database\Factories\Pricing\VatRateFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 /**
@@ -52,16 +50,10 @@ class VatRate extends Model
         return $query->where('is_active', true);
     }
 
-    /** @return HasMany<Article, $this> */
-    public function articles(): HasMany
-    {
-        return $this->hasMany(Article::class);
-    }
-
     public function isInUse(): bool
     {
-        // TODO: also check PriceList/Sale once pricing/invoicing is implemented.
-        return $this->articles()->exists();
+        // TODO: check Article/PriceList/Sale once each relation is (re)implemented.
+        return false;
     }
 
     /** @return array<string, string> */

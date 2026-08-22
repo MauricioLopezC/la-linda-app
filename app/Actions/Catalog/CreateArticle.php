@@ -19,7 +19,6 @@ class CreateArticle
             'category_id' => (int) $data['category_id'],
             'brand_id' => empty($data['brand_id']) ? null : (int) $data['brand_id'],
             'unit_of_measure_id' => (int) $data['unit_of_measure_id'],
-            'vat_rate_id' => (int) $data['vat_rate_id'],
             'status' => isset($data['status']) ? ArticleStatus::from($data['status']) : ArticleStatus::Active,
             'is_online_publishable' => isset($data['is_online_publishable']) ? (bool) $data['is_online_publishable'] : false,
         ]);

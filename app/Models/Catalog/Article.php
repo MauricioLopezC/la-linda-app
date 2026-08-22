@@ -4,7 +4,6 @@ namespace App\Models\Catalog;
 
 use App\Concerns\NormalizesUniqueAttributes;
 use App\Enums\Catalog\ArticleStatus;
-use App\Models\Pricing\VatRate;
 use Database\Factories\Catalog\ArticleFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -23,13 +22,12 @@ use Illuminate\Support\Carbon;
  * @property int $category_id
  * @property int|null $brand_id
  * @property int $unit_of_measure_id
- * @property int $vat_rate_id
  * @property ArticleStatus $status
  * @property bool $is_online_publishable
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['description', 'internal_code', 'barcode', 'category_id', 'brand_id', 'unit_of_measure_id', 'vat_rate_id', 'status', 'is_online_publishable'])]
+#[Fillable(['description', 'internal_code', 'barcode', 'category_id', 'brand_id', 'unit_of_measure_id', 'status', 'is_online_publishable'])]
 class Article extends Model
 {
     /** @use HasFactory<ArticleFactory> */
@@ -77,12 +75,6 @@ class Article extends Model
     public function unitOfMeasure(): BelongsTo
     {
         return $this->belongsTo(UnitOfMeasure::class);
-    }
-
-    /** @return BelongsTo<VatRate, $this> */
-    public function vatRate(): BelongsTo
-    {
-        return $this->belongsTo(VatRate::class);
     }
 
     public function hasStockMovements(): bool

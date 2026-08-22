@@ -9,7 +9,6 @@ use App\Data\Catalog\ArticleData;
 use App\Data\Catalog\BrandData;
 use App\Data\Catalog\CategoryData;
 use App\Data\Catalog\UnitOfMeasureData;
-use App\Data\Pricing\VatRateData;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Catalog\StoreArticleRequest;
 use App\Http\Requests\Catalog\UpdateArticleRequest;
@@ -17,7 +16,6 @@ use App\Models\Catalog\Article;
 use App\Models\Catalog\Brand;
 use App\Models\Catalog\Category;
 use App\Models\Catalog\UnitOfMeasure;
-use App\Models\Pricing\VatRate;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -27,7 +25,7 @@ class ArticleController extends Controller
     public function index(): Response
     {
         $articles = Article::query()
-            ->with(['category', 'brand', 'unitOfMeasure', 'vatRate'])
+            ->with(['category', 'brand', 'unitOfMeasure'])
             ->orderBy('description')
             ->get();
 
@@ -36,7 +34,6 @@ class ArticleController extends Controller
             'categories' => CategoryData::collect(Category::query()->orderBy('name')->get()),
             'brands' => BrandData::collect(Brand::query()->orderBy('name')->get()),
             'unitsOfMeasure' => UnitOfMeasureData::collect(UnitOfMeasure::query()->orderBy('name')->get()),
-            'vatRates' => VatRateData::collect(VatRate::query()->orderBy('description')->get()),
         ]);
     }
 
