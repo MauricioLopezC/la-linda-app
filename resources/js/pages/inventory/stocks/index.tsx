@@ -15,6 +15,15 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -33,12 +42,30 @@ import { index } from '@/routes/inventory/stocks';
 import type { BreadcrumbItem } from '@/types';
 
 type StockBalance = App.Data.Inventory.StockBalanceData;
+
+/**
+ * Shape of a `spatie/laravel-data` `PaginatedDataCollection`, which wraps
+ * `Illuminate\Pagination\LengthAwarePaginator::toArray()` verbatim: flat pagination
+ * fields alongside `data`, not nested under a `meta` key. The auto-generated
+ * `Spatie.LaravelData.PaginatedDataCollection` TS type models the API-resource-style
+ * nested `{ data, links, meta }` shape instead, which doesn't match this runtime output.
+ */
+type StockBalancePage = {
+  data: StockBalance[];
+  current_page: number;
+  last_page: number;
+  per_page: number;
+  total: number;
+  from: number | null;
+  to: number | null;
+  links: { url: string | null; label: string; active: boolean }[];
+};
 type StockTotals = App.Data.Inventory.StockTotalsData;
 type Category = App.Data.Catalog.CategoryData;
 type Warehouse = App.Data.Inventory.WarehouseData;
 
 type Props = {
-  stocks: StockBalance[];
+  stocks: StockBalancePage;
   totals: StockTotals;
   categories: Category[];
   warehouses: Warehouse[];
@@ -71,7 +98,7 @@ function formatStockQuantity(quantity: number, unitName: string): string {
 }
 
 export default function StockConsultationIndex({
-  stocks = [],
+  stocks,
   totals,
   categories = [],
   warehouses = [],
@@ -161,6 +188,22 @@ export default function StockConsultationIndex({
 
     router.get(
       index.url(),
+      {},
+      {
+        preserveState: true,
+        preserveScroll: true,
+        replace: true,
+      },
+    );
+  };
+
+  const goToPage = (url: string | null) => {
+    if (!url) {
+      return;
+    }
+
+    router.get(
+      url,
       {},
       {
         preserveState: true,
@@ -393,7 +436,7 @@ export default function StockConsultationIndex({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {stocks.length === 0 ? (
+              {stocks.data.length === 0 ? (
                 <TableRow>
                   <TableCell
                     colSpan={6}
@@ -404,7 +447,7 @@ export default function StockConsultationIndex({
                   </TableCell>
                 </TableRow>
               ) : (
-                stocks.map((stock) => (
+                stocks.data.map((stock) => (
                   <TableRow key={stock.id}>
                     <TableCell className="font-mono text-xs font-semibold text-muted-foreground">
                       {stock.article_code}
@@ -462,6 +505,74 @@ export default function StockConsultationIndex({
             </TableBody>
           </Table>
         </div>
+
+        {/* Pagination */}
+        {stocks.last_page > 1 && (
+          <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-between">
+            <p className="text-sm text-muted-foreground">
+              Mostrando {stocks.from ?? 0}–{stocks.to ?? 0} de {stocks.total}{' '}
+              existencias
+            </p>
+            <Pagination className="mx-0 w-auto">
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    href={stocks.links[0]?.url ?? '#'}
+                    aria-disabled={!stocks.links[0]?.url}
+                    className={
+                      !stocks.links[0]?.url
+                        ? 'pointer-events-none opacity-50'
+                        : undefined
+                    }
+                    onClick={(e) => {
+                      e.preventDefault();
+                      goToPage(stocks.links[0]?.url ?? null);
+                    }}
+                  />
+                </PaginationItem>
+
+                {stocks.links.slice(1, -1).map((link, index) =>
+                  link.url === null ? (
+                    <PaginationItem key={`ellipsis-${index}`}>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  ) : (
+                    <PaginationItem key={link.label}>
+                      <PaginationLink
+                        href={link.url}
+                        isActive={link.active}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          goToPage(link.url);
+                        }}
+                      >
+                        {link.label}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ),
+                )}
+
+                <PaginationItem>
+                  <PaginationNext
+                    href={stocks.links[stocks.links.length - 1]?.url ?? '#'}
+                    aria-disabled={!stocks.links[stocks.links.length - 1]?.url}
+                    className={
+                      !stocks.links[stocks.links.length - 1]?.url
+                        ? 'pointer-events-none opacity-50'
+                        : undefined
+                    }
+                    onClick={(e) => {
+                      e.preventDefault();
+                      goToPage(
+                        stocks.links[stocks.links.length - 1]?.url ?? null,
+                      );
+                    }}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
+        )}
       </div>
     </>
   );

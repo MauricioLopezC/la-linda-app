@@ -52,7 +52,7 @@ test('user can view stock consultation with all warehouses across system', funct
     $response->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('inventory/stocks/index')
-            ->has('stocks', 2)
+            ->has('stocks.data', 2)
             ->has('categories')
             ->has('warehouses', 2)
             ->where('totals.grand_total_items', 2)
@@ -117,7 +117,7 @@ test('totals accurately calculate in stock and out of stock metrics for articles
 
     $response->assertOk()
         ->assertInertia(fn (Assert $page) => $page
-            ->has('stocks', 3)
+            ->has('stocks.data', 3)
             ->where('totals.grand_total_items', 3)
             ->where('totals.total_in_stock', 2)
             ->where('totals.total_out_of_stock', 1)
@@ -158,22 +158,22 @@ test('user can filter stock by article code, description or barcode', function (
     // Search by description
     $response = $this->actingAs($user)->get(route('inventory.stocks.index', ['search' => 'Yerba']));
     $response->assertOk()->assertInertia(fn (Assert $page) => $page
-        ->has('stocks', 1)
-        ->where('stocks.0.article_code', 'ART-SEARCH-1')
+        ->has('stocks.data', 1)
+        ->where('stocks.data.0.article_code', 'ART-SEARCH-1')
     );
 
     // Search by internal code
     $response = $this->actingAs($user)->get(route('inventory.stocks.index', ['search' => 'SEARCH-1']));
     $response->assertOk()->assertInertia(fn (Assert $page) => $page
-        ->has('stocks', 1)
-        ->where('stocks.0.article_description', 'Yerba Mate Especial 1kg')
+        ->has('stocks.data', 1)
+        ->where('stocks.data.0.article_description', 'Yerba Mate Especial 1kg')
     );
 
     // Search by barcode
     $response = $this->actingAs($user)->get(route('inventory.stocks.index', ['search' => '7791234567890']));
     $response->assertOk()->assertInertia(fn (Assert $page) => $page
-        ->has('stocks', 1)
-        ->where('stocks.0.article_code', 'ART-SEARCH-1')
+        ->has('stocks.data', 1)
+        ->where('stocks.data.0.article_code', 'ART-SEARCH-1')
     );
 });
 
@@ -194,8 +194,8 @@ test('user can filter stock by category', function () {
     $response = $this->actingAs($user)->get(route('inventory.stocks.index', ['category_id' => $categoryA->id]));
 
     $response->assertOk()->assertInertia(fn (Assert $page) => $page
-        ->has('stocks', 1)
-        ->where('stocks.0.category_name', 'Bebidas')
+        ->has('stocks.data', 1)
+        ->where('stocks.data.0.category_name', 'Bebidas')
     );
 });
 
@@ -213,8 +213,8 @@ test('user can filter stock by warehouse', function () {
     $response = $this->actingAs($user)->get(route('inventory.stocks.index', ['warehouse_id' => $wh1->id]));
 
     $response->assertOk()->assertInertia(fn (Assert $page) => $page
-        ->has('stocks', 1)
-        ->where('stocks.0.warehouse_name', 'Depósito 1')
+        ->has('stocks.data', 1)
+        ->where('stocks.data.0.warehouse_name', 'Depósito 1')
     );
 });
 
@@ -242,15 +242,15 @@ test('user can filter stock by stock status', function () {
     // Filter in_stock
     $responseIn = $this->actingAs($user)->get(route('inventory.stocks.index', ['status' => 'in_stock']));
     $responseIn->assertOk()->assertInertia(fn (Assert $page) => $page
-        ->has('stocks', 1)
-        ->where('stocks.0.article_code', 'ART-IN')
+        ->has('stocks.data', 1)
+        ->where('stocks.data.0.article_code', 'ART-IN')
     );
 
     // Filter out_of_stock
     $responseOut = $this->actingAs($user)->get(route('inventory.stocks.index', ['status' => 'out_of_stock']));
     $responseOut->assertOk()->assertInertia(fn (Assert $page) => $page
-        ->has('stocks', 1)
-        ->where('stocks.0.article_code', 'ART-OUT')
+        ->has('stocks.data', 1)
+        ->where('stocks.data.0.article_code', 'ART-OUT')
     );
 });
 
@@ -301,6 +301,42 @@ test('branch totals accurately aggregate warehouse stock quantities and alerts',
         ->where('totals.branch_totals.1.total_items', 1)
         ->where('totals.branch_totals.1.in_stock_count', 0)
         ->where('totals.branch_totals.1.out_of_stock_count', 1)
+    );
+});
+
+test('stock list is paginated while totals still reflect every matching row', function () {
+    $user = User::factory()->create();
+    $warehouse = Warehouse::factory()->create();
+
+    StockBalance::factory()
+        ->count(30)
+        ->sequence(fn ($sequence) => [
+            'article_id' => Article::factory()->create([
+                'internal_code' => sprintf('ART-PAG-%02d', $sequence->index),
+            ])->id,
+        ])
+        ->create([
+            'warehouse_id' => $warehouse->id,
+            'quantity' => 10,
+        ]);
+
+    $firstPage = $this->actingAs($user)->get(route('inventory.stocks.index'));
+
+    $firstPage->assertOk()->assertInertia(fn (Assert $page) => $page
+        ->has('stocks.data', 25)
+        ->where('stocks.total', 30)
+        ->where('stocks.current_page', 1)
+        ->where('stocks.last_page', 2)
+        ->where('totals.grand_total_items', 30)
+        ->where('totals.total_in_stock', 30)
+        ->where('totals.branch_totals.0.total_items', 30)
+    );
+
+    $secondPage = $this->actingAs($user)->get(route('inventory.stocks.index', ['page' => 2]));
+
+    $secondPage->assertOk()->assertInertia(fn (Assert $page) => $page
+        ->has('stocks.data', 5)
+        ->where('stocks.current_page', 2)
     );
 });
 
