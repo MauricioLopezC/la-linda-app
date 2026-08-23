@@ -56,17 +56,19 @@ test('user can view stock consultation with all warehouses across system', funct
             ->has('categories')
             ->has('warehouses', 2)
             ->where('totals.grand_total_items', 2)
+            ->where('totals.total_in_stock', 2)
             ->where('totals.total_out_of_stock', 0)
-            ->has('totals.quantities_by_unit', 1)
-            ->where('totals.quantities_by_unit.0.unit_abbreviation', 'u')
-            ->where('totals.quantities_by_unit.0.quantity', 150)
             ->has('totals.branch_totals', 2)
-            ->where('totals.branch_totals.0.quantities_by_unit.0.quantity', 100)
-            ->where('totals.branch_totals.1.quantities_by_unit.0.quantity', 50)
+            ->where('totals.branch_totals.0.total_items', 1)
+            ->where('totals.branch_totals.0.in_stock_count', 1)
+            ->where('totals.branch_totals.0.out_of_stock_count', 0)
+            ->where('totals.branch_totals.1.total_items', 1)
+            ->where('totals.branch_totals.1.in_stock_count', 1)
+            ->where('totals.branch_totals.1.out_of_stock_count', 0)
         );
 });
 
-test('totals group quantities by distinct units of measure for articles in the same warehouse', function () {
+test('totals accurately calculate in stock and out of stock metrics for articles in same warehouse', function () {
     $user = User::factory()->create();
 
     $unitUnits = UnitOfMeasure::factory()->create(['name' => 'Unidad', 'abbreviation' => 'u']);
@@ -87,7 +89,12 @@ test('totals group quantities by distinct units of measure for articles in the s
         'unit_of_measure_id' => $unitKg->id,
     ]);
 
-    // 120 units and 200.500 kg in the same warehouse
+    $outArticle = Article::factory()->create([
+        'internal_code' => 'ACE-01',
+        'description' => 'Aceite Girasol 1.5L',
+    ]);
+
+    // 2 articles with stock, 1 out of stock
     StockBalance::factory()->create([
         'article_id' => $cannedArticle->id,
         'warehouse_id' => $warehouse->id,
@@ -100,23 +107,24 @@ test('totals group quantities by distinct units of measure for articles in the s
         'quantity' => 200.500,
     ]);
 
+    StockBalance::factory()->create([
+        'article_id' => $outArticle->id,
+        'warehouse_id' => $warehouse->id,
+        'quantity' => 0.000,
+    ]);
+
     $response = $this->actingAs($user)->get(route('inventory.stocks.index'));
 
     $response->assertOk()
         ->assertInertia(fn (Assert $page) => $page
-            ->has('stocks', 2)
-            ->where('totals.grand_total_items', 2)
-            ->where('totals.total_out_of_stock', 0)
-            ->has('totals.quantities_by_unit', 2)
-            ->where('totals.quantities_by_unit.0.unit_abbreviation', 'kg')
-            ->where('totals.quantities_by_unit.0.quantity', 200.5)
-            ->where('totals.quantities_by_unit.1.unit_abbreviation', 'u')
-            ->where('totals.quantities_by_unit.1.quantity', 120)
+            ->has('stocks', 3)
+            ->where('totals.grand_total_items', 3)
+            ->where('totals.total_in_stock', 2)
+            ->where('totals.total_out_of_stock', 1)
             ->has('totals.branch_totals', 1)
-            ->where('totals.branch_totals.0.quantities_by_unit.0.unit_abbreviation', 'kg')
-            ->where('totals.branch_totals.0.quantities_by_unit.0.quantity', 200.5)
-            ->where('totals.branch_totals.0.quantities_by_unit.1.unit_abbreviation', 'u')
-            ->where('totals.branch_totals.0.quantities_by_unit.1.quantity', 120)
+            ->where('totals.branch_totals.0.total_items', 3)
+            ->where('totals.branch_totals.0.in_stock_count', 2)
+            ->where('totals.branch_totals.0.out_of_stock_count', 1)
         );
 });
 
@@ -284,14 +292,14 @@ test('branch totals accurately aggregate warehouse stock quantities and alerts',
 
     $response->assertOk()->assertInertia(fn (Assert $page) => $page
         ->where('totals.grand_total_items', 3)
+        ->where('totals.total_in_stock', 2)
         ->where('totals.total_out_of_stock', 1)
-        ->has('totals.quantities_by_unit', 1)
-        ->where('totals.quantities_by_unit.0.quantity', 105)
         ->has('totals.branch_totals', 2)
-        ->where('totals.branch_totals.0.quantities_by_unit.0.quantity', 105)
+        ->where('totals.branch_totals.0.total_items', 2)
+        ->where('totals.branch_totals.0.in_stock_count', 2)
         ->where('totals.branch_totals.0.out_of_stock_count', 0)
-        ->has('totals.branch_totals.1.quantities_by_unit', 1)
-        ->where('totals.branch_totals.1.quantities_by_unit.0.quantity', 0)
+        ->where('totals.branch_totals.1.total_items', 1)
+        ->where('totals.branch_totals.1.in_stock_count', 0)
         ->where('totals.branch_totals.1.out_of_stock_count', 1)
     );
 });

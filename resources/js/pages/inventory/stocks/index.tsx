@@ -4,7 +4,6 @@ import {
   CheckCircle2,
   FilterX,
   Layers,
-  Package,
   Search,
   Warehouse as WarehouseIcon,
   XCircle,
@@ -35,7 +34,6 @@ import type { BreadcrumbItem } from '@/types';
 
 type StockBalance = App.Data.Inventory.StockBalanceData;
 type StockTotals = App.Data.Inventory.StockTotalsData;
-type StockUnitTotal = App.Data.Inventory.StockUnitTotalData;
 type Category = App.Data.Catalog.CategoryData;
 type Warehouse = App.Data.Inventory.WarehouseData;
 
@@ -52,21 +50,24 @@ type Props = {
   };
 };
 
-function formatUnitQuantities(quantities: StockUnitTotal[] = []): string {
-  if (!quantities || quantities.length === 0) {
-    return '0';
+function formatStockQuantity(quantity: number, unitName: string): string {
+  const isDiscrete =
+    unitName.toLowerCase().includes('unidad') ||
+    unitName.toLowerCase() === 'u' ||
+    unitName.toLowerCase() === 'un' ||
+    Number.isInteger(quantity);
+
+  if (isDiscrete) {
+    return quantity.toLocaleString('es-AR', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    });
   }
 
-  return quantities
-    .map((q) => {
-      const formattedQty = q.quantity.toLocaleString('es-AR', {
-        minimumFractionDigits: Number.isInteger(q.quantity) ? 0 : 1,
-        maximumFractionDigits: 3,
-      });
-
-      return `${formattedQty} ${q.unit_abbreviation}`;
-    })
-    .join(' · ');
+  return quantity.toLocaleString('es-AR', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 3,
+  });
 }
 
 export default function StockConsultationIndex({
@@ -188,29 +189,12 @@ export default function StockConsultationIndex({
           />
         </div>
 
-        {/* Global Summary Cards */}
+        {/* Global Summary Cards (Consolidated Operational Metrics) */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Total en Existencia
-              </CardTitle>
-              <Package className="size-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl font-bold text-foreground sm:text-2xl">
-                {formatUnitQuantities(totals?.quantities_by_unit)}
-              </div>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Desglose físico por unidad de medida
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Artículos Registrados
+                Artículos / SKUs Registrados
               </CardTitle>
               <Layers className="size-4 text-muted-foreground" />
             </CardHeader>
@@ -219,7 +203,24 @@ export default function StockConsultationIndex({
                 {totals?.grand_total_items ?? 0}
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
-                Registros de inventario consultados
+                Total de registros de stock consultados
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Con Existencia (Disponibles)
+              </CardTitle>
+              <CheckCircle2 className="size-4 text-emerald-600 dark:text-emerald-400" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                {totals?.total_in_stock ?? 0}
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Artículos con stock mayor a cero
               </p>
             </CardContent>
           </Card>
@@ -236,7 +237,7 @@ export default function StockConsultationIndex({
                 {totals?.total_out_of_stock ?? 0}
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
-                Artículos con existencia cero
+                Artículos con existencia en cero
               </p>
             </CardContent>
           </Card>
@@ -253,28 +254,31 @@ export default function StockConsultationIndex({
               {totals.branch_totals.map((branch) => (
                 <div
                   key={branch.branch_id}
-                  className="flex items-center justify-between rounded-lg border border-sidebar-border bg-card p-3 shadow-xs"
+                  className="flex items-center justify-between rounded-lg border border-sidebar-border bg-card p-3.5 shadow-xs"
                 >
                   <div className="flex flex-col">
                     <span className="font-medium text-foreground">
                       {branch.branch_name}
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      {branch.total_items} registros
-                      {branch.out_of_stock_count > 0 && (
-                        <span className="ml-1 font-medium text-destructive">
-                          ({branch.out_of_stock_count} agotados)
-                        </span>
-                      )}
+                      {branch.total_items} artículos consultados
                     </span>
                   </div>
-                  <div className="text-right">
-                    <span className="font-mono text-base font-bold text-foreground">
-                      {formatUnitQuantities(branch.quantities_by_unit)}
-                    </span>
-                    <span className="block text-xs text-muted-foreground">
-                      existencias
-                    </span>
+                  <div className="flex items-center gap-2 text-right">
+                    <Badge
+                      variant="outline"
+                      className="border-emerald-500 bg-emerald-50 text-xs font-semibold text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400"
+                    >
+                      {branch.in_stock_count} con stock
+                    </Badge>
+                    {branch.out_of_stock_count > 0 && (
+                      <Badge
+                        variant="destructive"
+                        className="text-xs font-semibold"
+                      >
+                        {branch.out_of_stock_count} sin stock
+                      </Badge>
+                    )}
                   </div>
                 </div>
               ))}
@@ -431,10 +435,10 @@ export default function StockConsultationIndex({
                       </span>
                     </TableCell>
                     <TableCell className="text-right font-mono text-base font-bold text-foreground">
-                      {stock.quantity.toLocaleString('es-AR', {
-                        minimumFractionDigits: 3,
-                        maximumFractionDigits: 3,
-                      })}
+                      {formatStockQuantity(
+                        stock.quantity,
+                        stock.unit_of_measure_name,
+                      )}
                     </TableCell>
                     <TableCell className="text-center">
                       {stock.is_out_of_stock ? (
