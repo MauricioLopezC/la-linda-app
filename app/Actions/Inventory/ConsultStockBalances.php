@@ -4,6 +4,7 @@ namespace App\Actions\Inventory;
 
 use App\Data\Inventory\StockBranchTotalData;
 use App\Data\Inventory\StockTotalsData;
+use App\Data\Inventory\StockUnitTotalData;
 use App\Models\Inventory\StockBalance;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -77,28 +78,41 @@ class ConsultStockBalances
     }
 
     /**
-     * Calculate global and branch-level totals.
+     * Calculate global and branch-level totals grouped by unit of measure.
      *
      * @param  Collection<int, StockBalance>  $stocks
      */
     private function calculateTotals(Collection $stocks): StockTotalsData
     {
-        $grandTotalQuantity = 0.0;
         $grandTotalItems = $stocks->count();
         $totalOutOfStock = 0;
 
-        /** @var array<int, array{branch_id: int, branch_name: string, total_quantity: float, total_items: int, out_of_stock_count: int}> $branchGroups */
+        /** @var array<int, array{unit_id: int, unit_name: string, unit_abbreviation: string, quantity: float}> $globalUnitTotals */
+        $globalUnitTotals = [];
+
+        /** @var array<int, array{branch_id: int, branch_name: string, total_items: int, out_of_stock_count: int, units: array<int, array{unit_id: int, unit_name: string, unit_abbreviation: string, quantity: float}>}> $branchGroups */
         $branchGroups = [];
 
         foreach ($stocks as $stock) {
             $qty = (float) $stock->quantity;
-            $grandTotalQuantity += $qty;
-
             $isOutOfStock = $qty <= 0;
 
             if ($isOutOfStock) {
                 $totalOutOfStock++;
             }
+
+            $unit = $stock->article->unitOfMeasure;
+            $unitId = $unit->id;
+
+            if (! isset($globalUnitTotals[$unitId])) {
+                $globalUnitTotals[$unitId] = [
+                    'unit_id' => $unitId,
+                    'unit_name' => $unit->name,
+                    'unit_abbreviation' => $unit->abbreviation,
+                    'quantity' => 0.0,
+                ];
+            }
+            $globalUnitTotals[$unitId]['quantity'] += $qty;
 
             $branch = $stock->warehouse->branch;
             $branchId = $branch->id;
@@ -107,35 +121,69 @@ class ConsultStockBalances
                 $branchGroups[$branchId] = [
                     'branch_id' => $branchId,
                     'branch_name' => $branch->name,
-                    'total_quantity' => 0.0,
                     'total_items' => 0,
                     'out_of_stock_count' => 0,
+                    'units' => [],
                 ];
             }
 
-            $branchGroups[$branchId]['total_quantity'] += $qty;
             $branchGroups[$branchId]['total_items']++;
 
             if ($isOutOfStock) {
                 $branchGroups[$branchId]['out_of_stock_count']++;
             }
+
+            if (! isset($branchGroups[$branchId]['units'][$unitId])) {
+                $branchGroups[$branchId]['units'][$unitId] = [
+                    'unit_id' => $unitId,
+                    'unit_name' => $unit->name,
+                    'unit_abbreviation' => $unit->abbreviation,
+                    'quantity' => 0.0,
+                ];
+            }
+            $branchGroups[$branchId]['units'][$unitId]['quantity'] += $qty;
         }
+
+        uasort($globalUnitTotals, fn (array $a, array $b): int => strcmp($a['unit_name'], $b['unit_name']));
+
+        foreach ($branchGroups as &$group) {
+            uasort($group['units'], fn (array $a, array $b): int => strcmp($a['unit_name'], $b['unit_name']));
+        }
+        unset($group);
+
+        $quantitiesByUnit = array_map(
+            fn (array $u): StockUnitTotalData => new StockUnitTotalData(
+                unit_id: $u['unit_id'],
+                unit_name: $u['unit_name'],
+                unit_abbreviation: $u['unit_abbreviation'],
+                quantity: round($u['quantity'], 3),
+            ),
+            array_values($globalUnitTotals)
+        );
 
         $branchTotals = array_map(
             fn (array $group): StockBranchTotalData => new StockBranchTotalData(
                 branch_id: $group['branch_id'],
                 branch_name: $group['branch_name'],
-                total_quantity: round($group['total_quantity'], 3),
                 total_items: $group['total_items'],
                 out_of_stock_count: $group['out_of_stock_count'],
+                quantities_by_unit: array_map(
+                    fn (array $u): StockUnitTotalData => new StockUnitTotalData(
+                        unit_id: $u['unit_id'],
+                        unit_name: $u['unit_name'],
+                        unit_abbreviation: $u['unit_abbreviation'],
+                        quantity: round($u['quantity'], 3),
+                    ),
+                    array_values($group['units'])
+                ),
             ),
             array_values($branchGroups)
         );
 
         return new StockTotalsData(
-            grand_total_quantity: round($grandTotalQuantity, 3),
             grand_total_items: $grandTotalItems,
             total_out_of_stock: $totalOutOfStock,
+            quantities_by_unit: $quantitiesByUnit,
             branch_totals: $branchTotals,
         );
     }

@@ -62,7 +62,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::prefix('inventory/stocks')->name('inventory.stocks.')->group(function () {
         Route::get('/', [StockConsultationController::class, 'index'])->name('index');
-        Route::get('export', [StockConsultationController::class, 'export'])->name('export');
     });
 
     Route::prefix('sales/points-of-sale')->name('sales.points-of-sale.')->group(function () {

@@ -2,6 +2,7 @@
 
 use App\Models\Catalog\Article;
 use App\Models\Catalog\Category;
+use App\Models\Catalog\UnitOfMeasure;
 use App\Models\Inventory\StockBalance;
 use App\Models\Inventory\Warehouse;
 use App\Models\Organization\Branch;
@@ -10,11 +11,12 @@ use Inertia\Testing\AssertableInertia as Assert;
 
 test('guest cannot access stock balances consultation', function () {
     $this->get(route('inventory.stocks.index'))->assertRedirect(route('login'));
-    $this->get(route('inventory.stocks.export'))->assertRedirect(route('login'));
 });
 
 test('user can view stock consultation with all warehouses across system', function () {
     $user = User::factory()->create();
+
+    $unit = UnitOfMeasure::factory()->create(['name' => 'Unidad', 'abbreviation' => 'u']);
 
     $branch1 = Branch::factory()->create(['name' => 'Sucursal Centro']);
     $branch2 = Branch::factory()->create(['name' => 'Sucursal Norte']);
@@ -22,8 +24,16 @@ test('user can view stock consultation with all warehouses across system', funct
     $wh1 = Warehouse::factory()->create(['branch_id' => $branch1->id, 'name' => 'Depósito Centro']);
     $wh2 = Warehouse::factory()->create(['branch_id' => $branch2->id, 'name' => 'Depósito Norte']);
 
-    $article1 = Article::factory()->create(['internal_code' => 'ART-001', 'description' => 'Arroz 1kg']);
-    $article2 = Article::factory()->create(['internal_code' => 'ART-002', 'description' => 'Fideos 500g']);
+    $article1 = Article::factory()->create([
+        'internal_code' => 'ART-001',
+        'description' => 'Arroz 1kg',
+        'unit_of_measure_id' => $unit->id,
+    ]);
+    $article2 = Article::factory()->create([
+        'internal_code' => 'ART-002',
+        'description' => 'Fideos 500g',
+        'unit_of_measure_id' => $unit->id,
+    ]);
 
     StockBalance::factory()->create([
         'article_id' => $article1->id,
@@ -45,10 +55,68 @@ test('user can view stock consultation with all warehouses across system', funct
             ->has('stocks', 2)
             ->has('categories')
             ->has('warehouses', 2)
-            ->where('totals.grand_total_quantity', 150)
             ->where('totals.grand_total_items', 2)
             ->where('totals.total_out_of_stock', 0)
+            ->has('totals.quantities_by_unit', 1)
+            ->where('totals.quantities_by_unit.0.unit_abbreviation', 'u')
+            ->where('totals.quantities_by_unit.0.quantity', 150)
             ->has('totals.branch_totals', 2)
+            ->where('totals.branch_totals.0.quantities_by_unit.0.quantity', 100)
+            ->where('totals.branch_totals.1.quantities_by_unit.0.quantity', 50)
+        );
+});
+
+test('totals group quantities by distinct units of measure for articles in the same warehouse', function () {
+    $user = User::factory()->create();
+
+    $unitUnits = UnitOfMeasure::factory()->create(['name' => 'Unidad', 'abbreviation' => 'u']);
+    $unitKg = UnitOfMeasure::factory()->create(['name' => 'Kilogramo', 'abbreviation' => 'kg']);
+
+    $branch = Branch::factory()->create(['name' => 'Sucursal Principal']);
+    $warehouse = Warehouse::factory()->create(['branch_id' => $branch->id, 'name' => 'Depósito Central']);
+
+    $cannedArticle = Article::factory()->create([
+        'internal_code' => 'LATA-01',
+        'description' => 'Atún en lata 170g',
+        'unit_of_measure_id' => $unitUnits->id,
+    ]);
+
+    $bulkArticle = Article::factory()->create([
+        'internal_code' => 'HAR-01',
+        'description' => 'Harina 000 a granel',
+        'unit_of_measure_id' => $unitKg->id,
+    ]);
+
+    // 120 units and 200.500 kg in the same warehouse
+    StockBalance::factory()->create([
+        'article_id' => $cannedArticle->id,
+        'warehouse_id' => $warehouse->id,
+        'quantity' => 120.000,
+    ]);
+
+    StockBalance::factory()->create([
+        'article_id' => $bulkArticle->id,
+        'warehouse_id' => $warehouse->id,
+        'quantity' => 200.500,
+    ]);
+
+    $response = $this->actingAs($user)->get(route('inventory.stocks.index'));
+
+    $response->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('stocks', 2)
+            ->where('totals.grand_total_items', 2)
+            ->where('totals.total_out_of_stock', 0)
+            ->has('totals.quantities_by_unit', 2)
+            ->where('totals.quantities_by_unit.0.unit_abbreviation', 'kg')
+            ->where('totals.quantities_by_unit.0.quantity', 200.5)
+            ->where('totals.quantities_by_unit.1.unit_abbreviation', 'u')
+            ->where('totals.quantities_by_unit.1.quantity', 120)
+            ->has('totals.branch_totals', 1)
+            ->where('totals.branch_totals.0.quantities_by_unit.0.unit_abbreviation', 'kg')
+            ->where('totals.branch_totals.0.quantities_by_unit.0.quantity', 200.5)
+            ->where('totals.branch_totals.0.quantities_by_unit.1.unit_abbreviation', 'u')
+            ->where('totals.branch_totals.0.quantities_by_unit.1.quantity', 120)
         );
 });
 
@@ -181,6 +249,8 @@ test('user can filter stock by stock status', function () {
 test('branch totals accurately aggregate warehouse stock quantities and alerts', function () {
     $user = User::factory()->create();
 
+    $unit = UnitOfMeasure::factory()->create(['name' => 'Unidad', 'abbreviation' => 'u']);
+
     $branchA = Branch::factory()->create(['name' => 'Sucursal A']);
     $branchB = Branch::factory()->create(['name' => 'Sucursal B']);
 
@@ -188,8 +258,8 @@ test('branch totals accurately aggregate warehouse stock quantities and alerts',
     $whA2 = Warehouse::factory()->create(['branch_id' => $branchA->id]);
     $whB1 = Warehouse::factory()->create(['branch_id' => $branchB->id]);
 
-    $art1 = Article::factory()->create();
-    $art2 = Article::factory()->create();
+    $art1 = Article::factory()->create(['unit_of_measure_id' => $unit->id]);
+    $art2 = Article::factory()->create(['unit_of_measure_id' => $unit->id]);
 
     // Branch A Wh 1: 100 in stock
     StockBalance::factory()->create([
@@ -213,50 +283,17 @@ test('branch totals accurately aggregate warehouse stock quantities and alerts',
     $response = $this->actingAs($user)->get(route('inventory.stocks.index'));
 
     $response->assertOk()->assertInertia(fn (Assert $page) => $page
-        ->where('totals.grand_total_quantity', 105)
         ->where('totals.grand_total_items', 3)
         ->where('totals.total_out_of_stock', 1)
+        ->has('totals.quantities_by_unit', 1)
+        ->where('totals.quantities_by_unit.0.quantity', 105)
         ->has('totals.branch_totals', 2)
-        ->where('totals.branch_totals.0.total_quantity', 105)
+        ->where('totals.branch_totals.0.quantities_by_unit.0.quantity', 105)
         ->where('totals.branch_totals.0.out_of_stock_count', 0)
-        ->where('totals.branch_totals.1.total_quantity', 0)
+        ->has('totals.branch_totals.1.quantities_by_unit', 1)
+        ->where('totals.branch_totals.1.quantities_by_unit.0.quantity', 0)
         ->where('totals.branch_totals.1.out_of_stock_count', 1)
     );
-});
-
-test('user can export stock balances to CSV with UTF-8 BOM and headers', function () {
-    $user = User::factory()->create();
-    $branch = Branch::factory()->create(['name' => 'Sucursal Central']);
-    $warehouse = Warehouse::factory()->create(['branch_id' => $branch->id, 'name' => 'Depósito Principal']);
-    $category = Category::factory()->create(['name' => 'Conservas']);
-    $article = Article::factory()->create([
-        'internal_code' => 'EXP-001',
-        'description' => 'Tomates Pelados 400g',
-        'category_id' => $category->id,
-    ]);
-
-    StockBalance::factory()->create([
-        'article_id' => $article->id,
-        'warehouse_id' => $warehouse->id,
-        'quantity' => 75.500,
-    ]);
-
-    $response = $this->actingAs($user)->get(route('inventory.stocks.export'));
-
-    $response->assertOk();
-    $response->assertHeader('Content-Type', 'text/csv; charset=UTF-8');
-
-    $content = $response->streamedContent();
-
-    // Contains UTF-8 BOM
-    expect(str_starts_with($content, "\xEF\xBB\xBF"))->toBeTrue();
-
-    // Contains Header Row (without Stock Mínimo)
-    expect($content)->toContain('Código;Artículo;Categoría;Marca;"Unidad de Medida";Sucursal;Depósito;Existencia;Estado');
-
-    // Contains Data Row
-    expect($content)->toContain('EXP-001;"Tomates Pelados 400g";Conservas');
-    expect($content)->toContain('"Sucursal Central";"Depósito Principal";75,500;"En stock"');
 });
 
 test('warehouse cannot be deactivated when it has registered stock', function () {

@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Inventory;
 
 use App\Actions\Inventory\ConsultStockBalances;
-use App\Actions\Inventory\ExportStockBalances;
 use App\Data\Catalog\CategoryData;
 use App\Data\Inventory\StockBalanceData;
 use App\Data\Inventory\WarehouseData;
@@ -13,7 +12,6 @@ use App\Models\Inventory\Warehouse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class StockConsultationController extends Controller
 {
@@ -41,22 +39,5 @@ class StockConsultationController extends Controller
             'warehouses' => WarehouseData::collect($warehouses),
             'filters' => $filters,
         ]);
-    }
-
-    /**
-     * Export the filtered stock balances report.
-     */
-    public function export(Request $request, ConsultStockBalances $consultAction, ExportStockBalances $exportAction): StreamedResponse
-    {
-        $filters = [
-            'search' => $request->query('search'),
-            'category_id' => $request->filled('category_id') ? (int) $request->query('category_id') : null,
-            'warehouse_id' => $request->filled('warehouse_id') ? (int) $request->query('warehouse_id') : null,
-            'status' => $request->query('status', 'all'),
-        ];
-
-        $stocks = $consultAction->buildQuery($filters)->get();
-
-        return $exportAction->execute($stocks);
     }
 }

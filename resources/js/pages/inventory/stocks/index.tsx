@@ -2,7 +2,6 @@ import { Head, router } from '@inertiajs/react';
 import {
   Building2,
   CheckCircle2,
-  Download,
   FilterX,
   Layers,
   Package,
@@ -31,11 +30,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { exportMethod, index } from '@/routes/inventory/stocks';
+import { index } from '@/routes/inventory/stocks';
 import type { BreadcrumbItem } from '@/types';
 
 type StockBalance = App.Data.Inventory.StockBalanceData;
 type StockTotals = App.Data.Inventory.StockTotalsData;
+type StockUnitTotal = App.Data.Inventory.StockUnitTotalData;
 type Category = App.Data.Catalog.CategoryData;
 type Warehouse = App.Data.Inventory.WarehouseData;
 
@@ -51,6 +51,23 @@ type Props = {
     status?: string | null;
   };
 };
+
+function formatUnitQuantities(quantities: StockUnitTotal[] = []): string {
+  if (!quantities || quantities.length === 0) {
+    return '0';
+  }
+
+  return quantities
+    .map((q) => {
+      const formattedQty = q.quantity.toLocaleString('es-AR', {
+        minimumFractionDigits: Number.isInteger(q.quantity) ? 0 : 1,
+        maximumFractionDigits: 3,
+      });
+
+      return `${formattedQty} ${q.unit_abbreviation}`;
+    })
+    .join(' · ');
+}
 
 export default function StockConsultationIndex({
   stocks = [],
@@ -158,17 +175,6 @@ export default function StockConsultationIndex({
     selectedWarehouse !== 'all' ||
     selectedStatus !== 'all';
 
-  const exportUrl = exportMethod.url({
-    query: {
-      ...(searchTerm.trim() ? { search: searchTerm.trim() } : {}),
-      ...(selectedCategory !== 'all' ? { category_id: selectedCategory } : {}),
-      ...(selectedWarehouse !== 'all'
-        ? { warehouse_id: selectedWarehouse }
-        : {}),
-      ...(selectedStatus !== 'all' ? { status: selectedStatus } : {}),
-    },
-  });
-
   return (
     <>
       <Head title="Existencias por Depósito" />
@@ -180,15 +186,6 @@ export default function StockConsultationIndex({
             title="Existencias por Depósito"
             description="Consulta el inventario físico disponible en cada depósito y sucursal en modo de solo lectura."
           />
-
-          <div className="flex items-center gap-2">
-            <Button variant="outline" asChild>
-              <a href={exportUrl} download>
-                <Download className="mr-2 size-4" />
-                Exportar a Excel / CSV
-              </a>
-            </Button>
-          </div>
         </div>
 
         {/* Global Summary Cards */}
@@ -196,19 +193,16 @@ export default function StockConsultationIndex({
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Total Unidades en Stock
+                Total en Existencia
               </CardTitle>
               <Package className="size-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-foreground">
-                {totals?.grand_total_quantity?.toLocaleString('es-AR', {
-                  minimumFractionDigits: 3,
-                  maximumFractionDigits: 3,
-                }) ?? '0,000'}
+              <div className="text-xl font-bold text-foreground sm:text-2xl">
+                {formatUnitQuantities(totals?.quantities_by_unit)}
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
-                Sumatoria de existencias físicas
+                Desglose físico por unidad de medida
               </p>
             </CardContent>
           </Card>
@@ -275,14 +269,11 @@ export default function StockConsultationIndex({
                     </span>
                   </div>
                   <div className="text-right">
-                    <span className="text-lg font-bold text-foreground">
-                      {branch.total_quantity.toLocaleString('es-AR', {
-                        minimumFractionDigits: 3,
-                        maximumFractionDigits: 3,
-                      })}
+                    <span className="font-mono text-base font-bold text-foreground">
+                      {formatUnitQuantities(branch.quantities_by_unit)}
                     </span>
                     <span className="block text-xs text-muted-foreground">
-                      unidades
+                      existencias
                     </span>
                   </div>
                 </div>
