@@ -76,8 +76,9 @@ class Branch extends Model
      */
     public function hasRegisteredStock(): bool
     {
-        // Future relation with WarehouseStock/StockMovement through warehouses (HU-017).
-        // When those tables exist, check: $this->warehouses->contains(fn (Warehouse $w) => $w->hasRegisteredStock())
-        return false;
+        return $this->warehouses()
+            ->whereHas('stockBalances', fn (Builder $query) => $query->where('quantity', '>', 0))
+            ->exists()
+            || $this->warehouses()->has('stockMovements')->exists();
     }
 }

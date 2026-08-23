@@ -30,6 +30,7 @@ class StockParameterController extends Controller
     public function index(): Response
     {
         $movementTypes = StockMovementType::query()
+            ->withExists('stockMovements')
             ->orderByDesc('is_system')
             ->orderBy('name')
             ->get();

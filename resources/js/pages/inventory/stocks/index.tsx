@@ -1,6 +1,5 @@
 import { Head, router } from '@inertiajs/react';
 import {
-  AlertTriangle,
   Building2,
   CheckCircle2,
   Download,
@@ -193,7 +192,7 @@ export default function StockConsultationIndex({
         </div>
 
         {/* Global Summary Cards */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -204,9 +203,9 @@ export default function StockConsultationIndex({
             <CardContent>
               <div className="text-2xl font-bold text-foreground">
                 {totals?.grand_total_quantity?.toLocaleString('es-AR', {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                }) ?? '0,00'}
+                  minimumFractionDigits: 3,
+                  maximumFractionDigits: 3,
+                }) ?? '0,000'}
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
                 Sumatoria de existencias físicas
@@ -227,23 +226,6 @@ export default function StockConsultationIndex({
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
                 Registros de inventario consultados
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Bajo Stock Mínimo
-              </CardTitle>
-              <AlertTriangle className="size-4 text-amber-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">
-                {totals?.total_low_stock ?? 0}
-              </div>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Artículos que requieren reposición
               </p>
             </CardContent>
           </Card>
@@ -285,11 +267,6 @@ export default function StockConsultationIndex({
                     </span>
                     <span className="text-xs text-muted-foreground">
                       {branch.total_items} registros
-                      {branch.low_stock_count > 0 && (
-                        <span className="ml-1 font-medium text-amber-600">
-                          ({branch.low_stock_count} bajos)
-                        </span>
-                      )}
                       {branch.out_of_stock_count > 0 && (
                         <span className="ml-1 font-medium text-destructive">
                           ({branch.out_of_stock_count} agotados)
@@ -300,8 +277,8 @@ export default function StockConsultationIndex({
                   <div className="text-right">
                     <span className="text-lg font-bold text-foreground">
                       {branch.total_quantity.toLocaleString('es-AR', {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
+                        minimumFractionDigits: 3,
+                        maximumFractionDigits: 3,
                       })}
                     </span>
                     <span className="block text-xs text-muted-foreground">
@@ -381,9 +358,6 @@ export default function StockConsultationIndex({
                 <SelectContent>
                   <SelectItem value="all">Todos los estados</SelectItem>
                   <SelectItem value="in_stock">Con stock</SelectItem>
-                  <SelectItem value="below_min">
-                    Por debajo del mínimo
-                  </SelectItem>
                   <SelectItem value="out_of_stock">
                     Sin stock (Agotados)
                   </SelectItem>
@@ -420,7 +394,6 @@ export default function StockConsultationIndex({
                 <TableHead>Categoría</TableHead>
                 <TableHead>Sucursal / Depósito</TableHead>
                 <TableHead className="text-right">Existencia</TableHead>
-                <TableHead className="text-right">Stock Mínimo</TableHead>
                 <TableHead className="w-[140px] text-center">Estado</TableHead>
               </TableRow>
             </TableHeader>
@@ -428,7 +401,7 @@ export default function StockConsultationIndex({
               {stocks.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={7}
+                    colSpan={6}
                     className="py-12 text-center text-muted-foreground"
                   >
                     No se encontraron existencias para los criterios
@@ -468,14 +441,8 @@ export default function StockConsultationIndex({
                     </TableCell>
                     <TableCell className="text-right font-mono text-base font-bold text-foreground">
                       {stock.quantity.toLocaleString('es-AR', {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </TableCell>
-                    <TableCell className="text-right font-mono text-sm text-muted-foreground">
-                      {stock.min_stock.toLocaleString('es-AR', {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
+                        minimumFractionDigits: 3,
+                        maximumFractionDigits: 3,
                       })}
                     </TableCell>
                     <TableCell className="text-center">
@@ -483,14 +450,6 @@ export default function StockConsultationIndex({
                         <Badge variant="destructive" className="gap-1">
                           <XCircle className="size-3" />
                           Sin stock
-                        </Badge>
-                      ) : stock.is_below_min ? (
-                        <Badge
-                          variant="outline"
-                          className="gap-1 border-amber-500 bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400"
-                        >
-                          <AlertTriangle className="size-3" />
-                          Bajo mínimo
                         </Badge>
                       ) : (
                         <Badge

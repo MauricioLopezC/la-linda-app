@@ -12,7 +12,6 @@ class StockTotalsData extends Data
     public function __construct(
         public float $grand_total_quantity,
         public int $grand_total_items,
-        public int $total_low_stock,
         public int $total_out_of_stock,
         public array $branch_totals,
     ) {}

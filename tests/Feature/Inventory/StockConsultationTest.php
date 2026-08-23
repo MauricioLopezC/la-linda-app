@@ -2,8 +2,8 @@
 
 use App\Models\Catalog\Article;
 use App\Models\Catalog\Category;
+use App\Models\Inventory\StockBalance;
 use App\Models\Inventory\Warehouse;
-use App\Models\Inventory\WarehouseStock;
 use App\Models\Organization\Branch;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -25,18 +25,16 @@ test('user can view stock consultation with all warehouses across system', funct
     $article1 = Article::factory()->create(['internal_code' => 'ART-001', 'description' => 'Arroz 1kg']);
     $article2 = Article::factory()->create(['internal_code' => 'ART-002', 'description' => 'Fideos 500g']);
 
-    WarehouseStock::factory()->create([
+    StockBalance::factory()->create([
         'article_id' => $article1->id,
         'warehouse_id' => $wh1->id,
         'quantity' => 100,
-        'min_stock' => 20,
     ]);
 
-    WarehouseStock::factory()->create([
+    StockBalance::factory()->create([
         'article_id' => $article2->id,
         'warehouse_id' => $wh2->id,
         'quantity' => 50,
-        'min_stock' => 10,
     ]);
 
     $response = $this->actingAs($user)->get(route('inventory.stocks.index'));
@@ -49,7 +47,6 @@ test('user can view stock consultation with all warehouses across system', funct
             ->has('warehouses', 2)
             ->where('totals.grand_total_quantity', 150)
             ->where('totals.grand_total_items', 2)
-            ->where('totals.total_low_stock', 0)
             ->where('totals.total_out_of_stock', 0)
             ->has('totals.branch_totals', 2)
         );
@@ -71,12 +68,12 @@ test('user can filter stock by article code, description or barcode', function (
 
     $warehouse = Warehouse::factory()->create();
 
-    WarehouseStock::factory()->create([
+    StockBalance::factory()->create([
         'article_id' => $article1->id,
         'warehouse_id' => $warehouse->id,
         'quantity' => 40,
     ]);
-    WarehouseStock::factory()->create([
+    StockBalance::factory()->create([
         'article_id' => $article2->id,
         'warehouse_id' => $warehouse->id,
         'quantity' => 20,
@@ -115,8 +112,8 @@ test('user can filter stock by category', function () {
 
     $warehouse = Warehouse::factory()->create();
 
-    WarehouseStock::factory()->create(['article_id' => $articleA->id, 'warehouse_id' => $warehouse->id]);
-    WarehouseStock::factory()->create(['article_id' => $articleB->id, 'warehouse_id' => $warehouse->id]);
+    StockBalance::factory()->create(['article_id' => $articleA->id, 'warehouse_id' => $warehouse->id]);
+    StockBalance::factory()->create(['article_id' => $articleB->id, 'warehouse_id' => $warehouse->id]);
 
     $response = $this->actingAs($user)->get(route('inventory.stocks.index', ['category_id' => $categoryA->id]));
 
@@ -134,8 +131,8 @@ test('user can filter stock by warehouse', function () {
 
     $article = Article::factory()->create();
 
-    WarehouseStock::factory()->create(['article_id' => $article->id, 'warehouse_id' => $wh1->id]);
-    WarehouseStock::factory()->create(['article_id' => $article->id, 'warehouse_id' => $wh2->id]);
+    StockBalance::factory()->create(['article_id' => $article->id, 'warehouse_id' => $wh1->id]);
+    StockBalance::factory()->create(['article_id' => $article->id, 'warehouse_id' => $wh2->id]);
 
     $response = $this->actingAs($user)->get(route('inventory.stocks.index', ['warehouse_id' => $wh1->id]));
 
@@ -150,44 +147,27 @@ test('user can filter stock by stock status', function () {
     $warehouse = Warehouse::factory()->create();
 
     $inStockArticle = Article::factory()->create(['internal_code' => 'ART-IN']);
-    $belowMinArticle = Article::factory()->create(['internal_code' => 'ART-LOW']);
     $outOfStockArticle = Article::factory()->create(['internal_code' => 'ART-OUT']);
 
-    // In stock (> min_stock)
-    WarehouseStock::factory()->create([
+    // In stock (quantity > 0)
+    StockBalance::factory()->create([
         'article_id' => $inStockArticle->id,
         'warehouse_id' => $warehouse->id,
         'quantity' => 50,
-        'min_stock' => 10,
     ]);
 
-    // Below minimum (> 0 and <= min_stock)
-    WarehouseStock::factory()->create([
-        'article_id' => $belowMinArticle->id,
-        'warehouse_id' => $warehouse->id,
-        'quantity' => 5,
-        'min_stock' => 10,
-    ]);
-
-    // Out of stock (0)
-    WarehouseStock::factory()->create([
+    // Out of stock (quantity = 0)
+    StockBalance::factory()->create([
         'article_id' => $outOfStockArticle->id,
         'warehouse_id' => $warehouse->id,
         'quantity' => 0,
-        'min_stock' => 10,
     ]);
 
     // Filter in_stock
     $responseIn = $this->actingAs($user)->get(route('inventory.stocks.index', ['status' => 'in_stock']));
     $responseIn->assertOk()->assertInertia(fn (Assert $page) => $page
-        ->has('stocks', 2) // quantity > 0 (both 50 and 5)
-    );
-
-    // Filter below_min
-    $responseLow = $this->actingAs($user)->get(route('inventory.stocks.index', ['status' => 'below_min']));
-    $responseLow->assertOk()->assertInertia(fn (Assert $page) => $page
         ->has('stocks', 1)
-        ->where('stocks.0.article_code', 'ART-LOW')
+        ->where('stocks.0.article_code', 'ART-IN')
     );
 
     // Filter out_of_stock
@@ -212,25 +192,22 @@ test('branch totals accurately aggregate warehouse stock quantities and alerts',
     $art2 = Article::factory()->create();
 
     // Branch A Wh 1: 100 in stock
-    WarehouseStock::factory()->create([
+    StockBalance::factory()->create([
         'article_id' => $art1->id,
         'warehouse_id' => $whA1->id,
         'quantity' => 100,
-        'min_stock' => 10,
     ]);
-    // Branch A Wh 2: 5 low stock
-    WarehouseStock::factory()->create([
+    // Branch A Wh 2: 5 in stock
+    StockBalance::factory()->create([
         'article_id' => $art2->id,
         'warehouse_id' => $whA2->id,
         'quantity' => 5,
-        'min_stock' => 10,
     ]);
     // Branch B Wh 1: 0 out of stock
-    WarehouseStock::factory()->create([
+    StockBalance::factory()->create([
         'article_id' => $art1->id,
         'warehouse_id' => $whB1->id,
         'quantity' => 0,
-        'min_stock' => 10,
     ]);
 
     $response = $this->actingAs($user)->get(route('inventory.stocks.index'));
@@ -238,11 +215,10 @@ test('branch totals accurately aggregate warehouse stock quantities and alerts',
     $response->assertOk()->assertInertia(fn (Assert $page) => $page
         ->where('totals.grand_total_quantity', 105)
         ->where('totals.grand_total_items', 3)
-        ->where('totals.total_low_stock', 1)
         ->where('totals.total_out_of_stock', 1)
         ->has('totals.branch_totals', 2)
         ->where('totals.branch_totals.0.total_quantity', 105)
-        ->where('totals.branch_totals.0.low_stock_count', 1)
+        ->where('totals.branch_totals.0.out_of_stock_count', 0)
         ->where('totals.branch_totals.1.total_quantity', 0)
         ->where('totals.branch_totals.1.out_of_stock_count', 1)
     );
@@ -259,11 +235,10 @@ test('user can export stock balances to CSV with UTF-8 BOM and headers', functio
         'category_id' => $category->id,
     ]);
 
-    WarehouseStock::factory()->create([
+    StockBalance::factory()->create([
         'article_id' => $article->id,
         'warehouse_id' => $warehouse->id,
-        'quantity' => 75.50,
-        'min_stock' => 15.00,
+        'quantity' => 75.500,
     ]);
 
     $response = $this->actingAs($user)->get(route('inventory.stocks.export'));
@@ -276,12 +251,12 @@ test('user can export stock balances to CSV with UTF-8 BOM and headers', functio
     // Contains UTF-8 BOM
     expect(str_starts_with($content, "\xEF\xBB\xBF"))->toBeTrue();
 
-    // Contains Header Row
-    expect($content)->toContain('Código;Artículo;Categoría;Marca;"Unidad de Medida";Sucursal;Depósito;Existencia;"Stock Mínimo";Estado');
+    // Contains Header Row (without Stock Mínimo)
+    expect($content)->toContain('Código;Artículo;Categoría;Marca;"Unidad de Medida";Sucursal;Depósito;Existencia;Estado');
 
     // Contains Data Row
     expect($content)->toContain('EXP-001;"Tomates Pelados 400g";Conservas');
-    expect($content)->toContain('"Sucursal Central";"Depósito Principal";75,50;15,00;"En stock"');
+    expect($content)->toContain('"Sucursal Central";"Depósito Principal";75,500;"En stock"');
 });
 
 test('warehouse cannot be deactivated when it has registered stock', function () {
@@ -289,7 +264,7 @@ test('warehouse cannot be deactivated when it has registered stock', function ()
     $warehouse = Warehouse::factory()->create(['is_active' => true]);
     $article = Article::factory()->create();
 
-    WarehouseStock::factory()->create([
+    StockBalance::factory()->create([
         'article_id' => $article->id,
         'warehouse_id' => $warehouse->id,
         'quantity' => 10,

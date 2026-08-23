@@ -3,8 +3,8 @@
 namespace Database\Seeders\Inventory;
 
 use App\Models\Catalog\Article;
+use App\Models\Inventory\StockBalance;
 use App\Models\Inventory\Warehouse;
-use App\Models\Inventory\WarehouseStock;
 use Illuminate\Database\Seeder;
 
 class WarehouseStockSeeder extends Seeder
@@ -21,47 +21,47 @@ class WarehouseStockSeeder extends Seeder
             return;
         }
 
-        // Seed stock for articles in different warehouses with various stock levels
+        // Seed stock balances for articles in different warehouses with various stock levels
         $sampleStockConfig = [
             'ART-0001' => [
-                'Depósito Central' => ['quantity' => 120, 'min_stock' => 20],
-                'Depósito Norte' => ['quantity' => 45, 'min_stock' => 15],
-                'Depósito E-commerce' => ['quantity' => 8, 'min_stock' => 10], // low_stock
+                'Depósito Central' => 120,
+                'Depósito Norte' => 45,
+                'Depósito E-commerce' => 8,
             ],
             'ART-0002' => [
-                'Depósito Central' => ['quantity' => 80, 'min_stock' => 15],
-                'Depósito Norte' => ['quantity' => 5, 'min_stock' => 10], // low_stock
-                'Depósito E-commerce' => ['quantity' => 0, 'min_stock' => 5], // out_of_stock
+                'Depósito Central' => 80,
+                'Depósito Norte' => 5,
+                'Depósito E-commerce' => 0,
             ],
             'ART-0003' => [
-                'Depósito Central' => ['quantity' => 200, 'min_stock' => 30],
-                'Depósito Norte' => ['quantity' => 110, 'min_stock' => 25],
-                'Depósito E-commerce' => ['quantity' => 50, 'min_stock' => 15],
+                'Depósito Central' => 200,
+                'Depósito Norte' => 110,
+                'Depósito E-commerce' => 50,
             ],
             'ART-0004' => [
-                'Depósito Central' => ['quantity' => 150, 'min_stock' => 25],
-                'Depósito Norte' => ['quantity' => 0, 'min_stock' => 15], // out_of_stock
-                'Depósito E-commerce' => ['quantity' => 30, 'min_stock' => 10],
+                'Depósito Central' => 150,
+                'Depósito Norte' => 0,
+                'Depósito E-commerce' => 30,
             ],
             'ART-0005' => [
-                'Depósito Central' => ['quantity' => 90, 'min_stock' => 20],
-                'Depósito Norte' => ['quantity' => 12, 'min_stock' => 15], // low_stock
-                'Depósito E-commerce' => ['quantity' => 40, 'min_stock' => 10],
+                'Depósito Central' => 90,
+                'Depósito Norte' => 12,
+                'Depósito E-commerce' => 40,
             ],
             'ART-0006' => [
-                'Depósito Central' => ['quantity' => 60, 'min_stock' => 15],
-                'Depósito Norte' => ['quantity' => 25, 'min_stock' => 10],
-                'Depósito E-commerce' => ['quantity' => 0, 'min_stock' => 10], // out_of_stock
+                'Depósito Central' => 60,
+                'Depósito Norte' => 25,
+                'Depósito E-commerce' => 0,
             ],
             'ART-0007' => [
-                'Depósito Central' => ['quantity' => 180, 'min_stock' => 30],
-                'Depósito Norte' => ['quantity' => 95, 'min_stock' => 20],
-                'Depósito E-commerce' => ['quantity' => 70, 'min_stock' => 15],
+                'Depósito Central' => 180,
+                'Depósito Norte' => 95,
+                'Depósito E-commerce' => 70,
             ],
             'ART-0008' => [
-                'Depósito Central' => ['quantity' => 250, 'min_stock' => 50],
-                'Depósito Norte' => ['quantity' => 140, 'min_stock' => 30],
-                'Depósito E-commerce' => ['quantity' => 85, 'min_stock' => 20],
+                'Depósito Central' => 250,
+                'Depósito Norte' => 140,
+                'Depósito E-commerce' => 85,
             ],
         ];
 
@@ -74,21 +74,18 @@ class WarehouseStockSeeder extends Seeder
                 continue;
             }
 
-            foreach ($warehouseConfigs as $whName => $stockData) {
+            foreach ($warehouseConfigs as $whName => $quantity) {
                 $warehouse = $warehousesByName->get($whName);
                 if (! $warehouse) {
                     continue;
                 }
 
-                WarehouseStock::firstOrCreate(
+                StockBalance::firstOrCreate(
                     [
                         'article_id' => $article->id,
                         'warehouse_id' => $warehouse->id,
                     ],
-                    [
-                        'quantity' => $stockData['quantity'],
-                        'min_stock' => $stockData['min_stock'],
-                    ]
+                    ['quantity' => $quantity]
                 );
             }
         }

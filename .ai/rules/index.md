@@ -7,6 +7,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | app/** | .ai/rules/app.md |
 | app/Concerns/NormalizesUniqueAttributes.php | .ai/rules/concerns.md |
 | app/Data/** | .ai/rules/data.md |
+| app/Models/Inventory/** | .ai/rules/inventory.md |
 | resources/js/** | .ai/rules/js.md |
 | database/migrations/** | .ai/rules/migrations.md |
 | app/Models/** | .ai/rules/models.md |

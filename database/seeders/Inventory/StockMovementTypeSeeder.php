@@ -40,7 +40,7 @@ class StockMovementTypeSeeder extends Seeder
             [
                 'name' => 'Transferencia entre depósitos',
                 'code' => StockMovementType::CODE_WAREHOUSE_TRANSFER,
-                'sign' => 1,
+                'sign' => null,
                 'description' => 'Movimiento de mercadería entre depósitos del sistema',
                 'is_system' => true,
                 'is_active' => true,
@@ -48,7 +48,7 @@ class StockMovementTypeSeeder extends Seeder
             [
                 'name' => 'Ajuste de inventario',
                 'code' => StockMovementType::CODE_INVENTORY_ADJUSTMENT,
-                'sign' => 1,
+                'sign' => null,
                 'description' => 'Ajuste de existencias por diferencia física documentada',
                 'is_system' => true,
                 'is_active' => true,

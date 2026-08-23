@@ -73,13 +73,23 @@ class Warehouse extends Model
     }
 
     /**
-     * Get all stock records for this warehouse.
+     * Get the stock balances held in this warehouse.
      *
-     * @return HasMany<WarehouseStock, $this>
+     * @return HasMany<StockBalance, $this>
      */
-    public function stocks(): HasMany
+    public function stockBalances(): HasMany
     {
-        return $this->hasMany(WarehouseStock::class);
+        return $this->hasMany(StockBalance::class);
+    }
+
+    /**
+     * Get the stock movements that affected this warehouse.
+     *
+     * @return HasMany<StockMovement, $this>
+     */
+    public function stockMovements(): HasMany
+    {
+        return $this->hasMany(StockMovement::class);
     }
 
     /**
@@ -87,6 +97,7 @@ class Warehouse extends Model
      */
     public function hasRegisteredStock(): bool
     {
-        return $this->stocks()->exists();
+        return $this->stockBalances()->where('quantity', '>', 0)->exists()
+            || $this->stockMovements()->exists();
     }
 }

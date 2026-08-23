@@ -2,7 +2,7 @@
 
 namespace App\Data\Inventory;
 
-use App\Models\Inventory\WarehouseStock;
+use App\Models\Inventory\StockBalance;
 use Spatie\LaravelData\Data;
 
 class StockBalanceData extends Data
@@ -20,13 +20,10 @@ class StockBalanceData extends Data
         public int $branch_id,
         public string $branch_name,
         public float $quantity,
-        public float $min_stock,
-        public string $status,
-        public bool $is_below_min,
         public bool $is_out_of_stock,
     ) {}
 
-    public static function fromModel(WarehouseStock $stock): self
+    public static function fromModel(StockBalance $stock): self
     {
         return new self(
             id: $stock->id,
@@ -40,11 +37,8 @@ class StockBalanceData extends Data
             warehouse_name: $stock->warehouse->name,
             branch_id: $stock->warehouse->branch_id,
             branch_name: $stock->warehouse->branch->name,
-            quantity: $stock->quantity,
-            min_stock: $stock->min_stock,
-            status: $stock->stockStatus(),
-            is_below_min: $stock->isBelowMinimum(),
-            is_out_of_stock: $stock->isOutOfStock(),
+            quantity: (float) $stock->quantity,
+            is_out_of_stock: (float) $stock->quantity <= 0,
         );
     }
 }

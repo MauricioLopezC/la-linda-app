@@ -4,7 +4,7 @@ namespace App\Actions\Inventory;
 
 use App\Data\Inventory\StockBranchTotalData;
 use App\Data\Inventory\StockTotalsData;
-use App\Models\Inventory\WarehouseStock;
+use App\Models\Inventory\StockBalance;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 
@@ -14,7 +14,7 @@ class ConsultStockBalances
      * Consult and calculate stock balances and aggregated totals.
      *
      * @param  array{search?: ?string, category_id?: ?int, warehouse_id?: ?int, status?: ?string}  $filters
-     * @return array{stocks: Collection<int, WarehouseStock>, totals: StockTotalsData}
+     * @return array{stocks: Collection<int, StockBalance>, totals: StockTotalsData}
      */
     public function execute(array $filters = []): array
     {
@@ -30,14 +30,14 @@ class ConsultStockBalances
     }
 
     /**
-     * Build the filtered query for warehouse stocks.
+     * Build the filtered query for stock balances.
      *
      * @param  array{search?: ?string, category_id?: ?int, warehouse_id?: ?int, status?: ?string}  $filters
-     * @return Builder<WarehouseStock>
+     * @return Builder<StockBalance>
      */
     public function buildQuery(array $filters = []): Builder
     {
-        return WarehouseStock::query()
+        return StockBalance::query()
             ->with([
                 'article.category',
                 'article.brand',
@@ -64,41 +64,40 @@ class ConsultStockBalances
                 match ($filters['status']) {
                     'in_stock' => $query->where('quantity', '>', 0),
                     'out_of_stock' => $query->where('quantity', '<=', 0),
-                    'below_min' => $query->where('quantity', '>', 0)->whereColumn('quantity', '<=', 'min_stock'),
                     default => $query,
                 };
             })
-            ->join('articles', 'warehouse_stocks.article_id', '=', 'articles.id')
-            ->join('warehouses', 'warehouse_stocks.warehouse_id', '=', 'warehouses.id')
+            ->join('articles', 'stock_balances.article_id', '=', 'articles.id')
+            ->join('warehouses', 'stock_balances.warehouse_id', '=', 'warehouses.id')
             ->join('branches', 'warehouses.branch_id', '=', 'branches.id')
             ->orderBy('branches.name')
             ->orderBy('warehouses.name')
             ->orderBy('articles.internal_code')
-            ->select('warehouse_stocks.*');
+            ->select('stock_balances.*');
     }
 
     /**
      * Calculate global and branch-level totals.
      *
-     * @param  Collection<int, WarehouseStock>  $stocks
+     * @param  Collection<int, StockBalance>  $stocks
      */
     private function calculateTotals(Collection $stocks): StockTotalsData
     {
         $grandTotalQuantity = 0.0;
         $grandTotalItems = $stocks->count();
-        $totalLowStock = 0;
         $totalOutOfStock = 0;
 
-        /** @var array<int, array{branch_id: int, branch_name: string, total_quantity: float, total_items: int, low_stock_count: int, out_of_stock_count: int}> $branchGroups */
+        /** @var array<int, array{branch_id: int, branch_name: string, total_quantity: float, total_items: int, out_of_stock_count: int}> $branchGroups */
         $branchGroups = [];
 
         foreach ($stocks as $stock) {
-            $grandTotalQuantity += $stock->quantity;
+            $qty = (float) $stock->quantity;
+            $grandTotalQuantity += $qty;
 
-            if ($stock->isOutOfStock()) {
+            $isOutOfStock = $qty <= 0;
+
+            if ($isOutOfStock) {
                 $totalOutOfStock++;
-            } elseif ($stock->isBelowMinimum()) {
-                $totalLowStock++;
             }
 
             $branch = $stock->warehouse->branch;
@@ -110,18 +109,15 @@ class ConsultStockBalances
                     'branch_name' => $branch->name,
                     'total_quantity' => 0.0,
                     'total_items' => 0,
-                    'low_stock_count' => 0,
                     'out_of_stock_count' => 0,
                 ];
             }
 
-            $branchGroups[$branchId]['total_quantity'] += $stock->quantity;
+            $branchGroups[$branchId]['total_quantity'] += $qty;
             $branchGroups[$branchId]['total_items']++;
 
-            if ($stock->isOutOfStock()) {
+            if ($isOutOfStock) {
                 $branchGroups[$branchId]['out_of_stock_count']++;
-            } elseif ($stock->isBelowMinimum()) {
-                $branchGroups[$branchId]['low_stock_count']++;
             }
         }
 
@@ -129,18 +125,16 @@ class ConsultStockBalances
             fn (array $group): StockBranchTotalData => new StockBranchTotalData(
                 branch_id: $group['branch_id'],
                 branch_name: $group['branch_name'],
-                total_quantity: round($group['total_quantity'], 2),
+                total_quantity: round($group['total_quantity'], 3),
                 total_items: $group['total_items'],
-                low_stock_count: $group['low_stock_count'],
                 out_of_stock_count: $group['out_of_stock_count'],
             ),
             array_values($branchGroups)
         );
 
         return new StockTotalsData(
-            grand_total_quantity: round($grandTotalQuantity, 2),
+            grand_total_quantity: round($grandTotalQuantity, 3),
             grand_total_items: $grandTotalItems,
-            total_low_stock: $totalLowStock,
             total_out_of_stock: $totalOutOfStock,
             branch_totals: $branchTotals,
         );

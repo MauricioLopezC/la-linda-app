@@ -19,9 +19,15 @@ class UpdateStockMovementType
             'is_active' => isset($data['is_active']) ? (bool) $data['is_active'] : $movementType->is_active,
         ];
 
-        // For system types, do not allow changing the sign as it would corrupt core business operations
-        if (! $movementType->is_system && isset($data['sign'])) {
-            $payload['sign'] = (int) $data['sign'];
+        /*
+         * The sign is only editable while the type is untouched. System types are protected
+         * outright, and once a type has recorded movements flipping its sign would mean "from now
+         * on this type means the opposite", which makes the history unreadable. It never changes
+         * what already happened -- the signed delta lives in stock_movement_items.quantity -- but
+         * it does invalidate the rule the past movements were written under.
+         */
+        if (! $movementType->is_system && ! $movementType->isInUse() && array_key_exists('sign', $data)) {
+            $payload['sign'] = isset($data['sign']) ? (int) $data['sign'] : null;
         }
 
         $movementType->update($payload);

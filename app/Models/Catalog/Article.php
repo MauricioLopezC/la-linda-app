@@ -4,7 +4,8 @@ namespace App\Models\Catalog;
 
 use App\Concerns\NormalizesUniqueAttributes;
 use App\Enums\Catalog\ArticleStatus;
-use App\Models\Inventory\WarehouseStock;
+use App\Models\Inventory\StockBalance;
+use App\Models\Inventory\StockMovementItem;
 use Database\Factories\Catalog\ArticleFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -79,16 +80,29 @@ class Article extends Model
         return $this->belongsTo(UnitOfMeasure::class);
     }
 
-    /** @return HasMany<WarehouseStock, $this> */
-    public function stocks(): HasMany
+    /**
+     * Get the stock this article holds across every warehouse.
+     *
+     * @return HasMany<StockBalance, $this>
+     */
+    public function stockBalances(): HasMany
     {
-        return $this->hasMany(WarehouseStock::class);
+        return $this->hasMany(StockBalance::class);
+    }
+
+    /**
+     * Get the movement lines this article appears in.
+     *
+     * @return HasMany<StockMovementItem, $this>
+     */
+    public function stockMovementItems(): HasMany
+    {
+        return $this->hasMany(StockMovementItem::class);
     }
 
     public function hasStockMovements(): bool
     {
-        // Future relation with StockMovement (HU-017 / HU-018).
-        return false;
+        return $this->stockMovementItems()->exists();
     }
 
     public function hasSales(): bool

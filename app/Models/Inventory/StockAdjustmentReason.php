@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 /**
@@ -51,13 +52,21 @@ class StockAdjustmentReason extends Model
     }
 
     /**
+     * Get the movements recorded with this adjustment reason.
+     *
+     * @return HasMany<StockMovement, $this>
+     */
+    public function stockMovements(): HasMany
+    {
+        return $this->hasMany(StockMovement::class);
+    }
+
+    /**
      * Check if this adjustment reason is currently used in recorded adjustments.
      */
     public function isInUse(): bool
     {
-        // Future relation with StockAdjustment (HU-017)
-        // When stock_adjustments table exists, return $this->stockAdjustments()->exists();
-        return false;
+        return $this->stockMovements()->exists();
     }
 
     /** @return array<string, string> */

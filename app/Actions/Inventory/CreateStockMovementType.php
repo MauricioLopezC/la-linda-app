@@ -28,7 +28,7 @@ class CreateStockMovementType
         return StockMovementType::create([
             'name' => $name,
             'code' => $code,
-            'sign' => (int) $data['sign'],
+            'sign' => isset($data['sign']) ? (int) $data['sign'] : null,
             'description' => isset($data['description']) ? (string) $data['description'] : null,
             'is_system' => false,
             'is_active' => isset($data['is_active']) ? (bool) $data['is_active'] : true,
