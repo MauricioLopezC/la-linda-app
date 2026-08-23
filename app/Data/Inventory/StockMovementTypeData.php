@@ -11,7 +11,7 @@ class StockMovementTypeData extends Data
         public int $id,
         public string $name,
         public string $code,
-        public int $sign,
+        public ?int $sign,
         public ?string $description,
         public bool $is_system,
         public bool $is_in_use,

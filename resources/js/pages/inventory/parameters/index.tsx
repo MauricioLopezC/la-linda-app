@@ -2,6 +2,7 @@ import { Head, router, useForm } from '@inertiajs/react';
 import {
   ArrowDownCircle,
   ArrowUpCircle,
+  ArrowUpDown,
   CheckCircle2,
   Lock,
   Pencil,
@@ -534,13 +535,21 @@ export default function StockParametersIndex({
                               <ArrowUpCircle className="mr-1 size-3" />
                               (+1) Suma / Ingreso
                             </Badge>
-                          ) : (
+                          ) : type.sign === -1 ? (
                             <Badge
                               variant="outline"
                               className="border-amber-600/30 bg-amber-500/10 text-amber-700 dark:text-amber-400"
                             >
                               <ArrowDownCircle className="mr-1 size-3" />
                               (-1) Resta / Egreso
+                            </Badge>
+                          ) : (
+                            <Badge
+                              variant="outline"
+                              className="border-slate-500/30 bg-slate-500/10 text-slate-700 dark:text-slate-400"
+                            >
+                              <ArrowUpDown className="mr-1 size-3" />
+                              Varía por renglón
                             </Badge>
                           )}
                         </TableCell>

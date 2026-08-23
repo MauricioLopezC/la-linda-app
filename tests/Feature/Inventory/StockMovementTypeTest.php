@@ -45,6 +45,26 @@ test('user can create a custom stock movement type', function () {
     ]);
 });
 
+test('user can create a movement type whose sign varies per line', function () {
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)->post(route('inventory.parameters.movement-types.store'), [
+        'name' => 'Reclasificación de depósito',
+        'sign' => null,
+        'description' => 'Movimiento cuyo signo depende del renglón',
+        'is_active' => true,
+    ]);
+
+    $response->assertSessionHasNoErrors();
+    $response->assertRedirect();
+
+    $this->assertDatabaseHas('stock_movement_types', [
+        'name' => 'Reclasificación de depósito',
+        'sign' => null,
+        'is_system' => false,
+    ]);
+});
+
 test('user cannot create movement type with duplicate name ignoring case and outer spaces', function () {
     $user = User::factory()->create();
     StockMovementType::factory()->create(['name' => 'Tipo Duplicado']);
@@ -92,6 +112,29 @@ test('user can update a custom movement type', function () {
         'name_normalized' => 'nombre nuevo',
         'sign' => -1,
         'description' => 'Descripción actualizada',
+    ]);
+});
+
+test('user can update a custom movement type to vary its sign per line', function () {
+    $user = User::factory()->create();
+    $type = StockMovementType::factory()->create([
+        'name' => 'Tipo A Reclasificar',
+        'sign' => 1,
+        'is_system' => false,
+    ]);
+
+    $response = $this->actingAs($user)->put(route('inventory.parameters.movement-types.update', $type), [
+        'name' => 'Tipo A Reclasificar',
+        'sign' => null,
+        'description' => 'Ahora depende del renglón',
+        'is_active' => true,
+    ]);
+
+    $response->assertSessionHasNoErrors();
+
+    $this->assertDatabaseHas('stock_movement_types', [
+        'id' => $type->id,
+        'sign' => null,
     ]);
 });
 

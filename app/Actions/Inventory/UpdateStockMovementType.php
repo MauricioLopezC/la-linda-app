@@ -26,8 +26,8 @@ class UpdateStockMovementType
          * what already happened -- the signed delta lives in stock_movement_items.quantity -- but
          * it does invalidate the rule the past movements were written under.
          */
-        if (! $movementType->is_system && ! $movementType->isInUse() && isset($data['sign'])) {
-            $payload['sign'] = (int) $data['sign'];
+        if (! $movementType->is_system && ! $movementType->isInUse() && array_key_exists('sign', $data)) {
+            $payload['sign'] = isset($data['sign']) ? (int) $data['sign'] : null;
         }
 
         $movementType->update($payload);

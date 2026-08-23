@@ -16,7 +16,7 @@ use Illuminate\Support\Carbon;
  * @property string $name
  * @property string $name_normalized
  * @property string $code
- * @property int $sign
+ * @property int|null $sign
  * @property string|null $description
  * @property bool $is_system
  * @property bool $is_active
