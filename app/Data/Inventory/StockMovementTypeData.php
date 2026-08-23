@@ -11,9 +11,10 @@ class StockMovementTypeData extends Data
         public int $id,
         public string $name,
         public string $code,
-        public int $sign,
+        public ?int $sign,
         public ?string $description,
         public bool $is_system,
+        public bool $is_in_use,
         public bool $is_active,
         public ?string $created_at,
     ) {}
@@ -27,6 +28,7 @@ class StockMovementTypeData extends Data
             sign: $model->sign,
             description: $model->description,
             is_system: $model->is_system,
+            is_in_use: $model->isInUse(),
             is_active: $model->is_active,
             created_at: $model->created_at?->format('d/m/Y H:i'),
         );

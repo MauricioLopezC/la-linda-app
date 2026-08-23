@@ -2,6 +2,7 @@ import { Head, router, useForm } from '@inertiajs/react';
 import {
   ArrowDownCircle,
   ArrowUpCircle,
+  ArrowUpDown,
   CheckCircle2,
   Lock,
   Pencil,
@@ -534,13 +535,21 @@ export default function StockParametersIndex({
                               <ArrowUpCircle className="mr-1 size-3" />
                               (+1) Suma / Ingreso
                             </Badge>
-                          ) : (
+                          ) : type.sign === -1 ? (
                             <Badge
                               variant="outline"
                               className="border-amber-600/30 bg-amber-500/10 text-amber-700 dark:text-amber-400"
                             >
                               <ArrowDownCircle className="mr-1 size-3" />
                               (-1) Resta / Egreso
+                            </Badge>
+                          ) : (
+                            <Badge
+                              variant="outline"
+                              className="border-slate-500/30 bg-slate-500/10 text-slate-700 dark:text-slate-400"
+                            >
+                              <ArrowUpDown className="mr-1 size-3" />
+                              Varía por renglón
                             </Badge>
                           )}
                         </TableCell>
@@ -861,7 +870,9 @@ export default function StockParametersIndex({
               <DialogDescription>
                 {editingType?.is_system
                   ? 'Este es un tipo propio del sistema. Su código y signo están protegidos para asegurar la integridad de las operaciones.'
-                  : 'Modificá la configuración del tipo de movimiento.'}
+                  : editingType?.is_in_use
+                    ? 'Este tipo ya tiene movimientos registrados, así que su signo queda fijo: cambiarlo haría ilegible el historial.'
+                    : 'Modificá la configuración del tipo de movimiento.'}
               </DialogDescription>
             </DialogHeader>
 
@@ -877,7 +888,7 @@ export default function StockParametersIndex({
                 <InputError message={editTypeForm.errors.name} />
               </div>
 
-              {!editingType?.is_system && (
+              {!editingType?.is_system && !editingType?.is_in_use && (
                 <div className="grid gap-2">
                   <Label htmlFor="edit-type-sign">
                     Signo de Afectación al Stock *
