@@ -861,7 +861,9 @@ export default function StockParametersIndex({
               <DialogDescription>
                 {editingType?.is_system
                   ? 'Este es un tipo propio del sistema. Su código y signo están protegidos para asegurar la integridad de las operaciones.'
-                  : 'Modificá la configuración del tipo de movimiento.'}
+                  : editingType?.is_in_use
+                    ? 'Este tipo ya tiene movimientos registrados, así que su signo queda fijo: cambiarlo haría ilegible el historial.'
+                    : 'Modificá la configuración del tipo de movimiento.'}
               </DialogDescription>
             </DialogHeader>
 
@@ -877,7 +879,7 @@ export default function StockParametersIndex({
                 <InputError message={editTypeForm.errors.name} />
               </div>
 
-              {!editingType?.is_system && (
+              {!editingType?.is_system && !editingType?.is_in_use && (
                 <div className="grid gap-2">
                   <Label htmlFor="edit-type-sign">
                     Signo de Afectación al Stock *

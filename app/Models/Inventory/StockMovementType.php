@@ -103,9 +103,16 @@ class StockMovementType extends Model
 
     /**
      * Check if this movement type is currently in use in recorded movements.
+     *
+     * Prefers the flag set by withExists('stockMovements') so listings do not run one query
+     * per row.
      */
     public function isInUse(): bool
     {
+        if ($this->hasAttribute('stock_movements_exists')) {
+            return (bool) $this->getAttribute('stock_movements_exists');
+        }
+
         return $this->stockMovements()->exists();
     }
 
