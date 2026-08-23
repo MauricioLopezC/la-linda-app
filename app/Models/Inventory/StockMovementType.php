@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 /**
@@ -91,13 +92,21 @@ class StockMovementType extends Model
     }
 
     /**
+     * Get the movements recorded with this type.
+     *
+     * @return HasMany<StockMovement, $this>
+     */
+    public function stockMovements(): HasMany
+    {
+        return $this->hasMany(StockMovement::class);
+    }
+
+    /**
      * Check if this movement type is currently in use in recorded movements.
      */
     public function isInUse(): bool
     {
-        // Future relation with StockMovement (HU-017 / HU-018)
-        // When stock_movements table exists, return $this->stockMovements()->exists();
-        return false;
+        return $this->stockMovements()->exists();
     }
 
     /** @return array<string, string> */
