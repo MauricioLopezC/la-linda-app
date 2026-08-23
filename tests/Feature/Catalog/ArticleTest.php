@@ -4,7 +4,6 @@ use App\Models\Catalog\Article;
 use App\Models\Catalog\Brand;
 use App\Models\Catalog\Category;
 use App\Models\Catalog\UnitOfMeasure;
-use App\Models\Pricing\VatRate;
 use App\Models\User;
 use Illuminate\Database\QueryException;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -18,7 +17,6 @@ function articlePayload(array $overrides = []): array
         'category_id' => Category::factory()->create()->id,
         'brand_id' => null,
         'unit_of_measure_id' => UnitOfMeasure::factory()->create()->id,
-        'vat_rate_id' => VatRate::factory()->create()->id,
         'status' => 'active',
         'is_online_publishable' => false,
     ], $overrides);
@@ -75,7 +73,6 @@ test('user can create and update an article with all fields', function () {
 
     $newCategory = Category::factory()->create();
     $newUnit = UnitOfMeasure::factory()->create();
-    $newVatRate = VatRate::factory()->create();
 
     $this->actingAs($user)->put(route('catalog.articles.update', $article), articlePayload([
         'description' => 'Duraznos en almíbar 820g (actualizado)',
@@ -84,7 +81,6 @@ test('user can create and update an article with all fields', function () {
         'category_id' => $newCategory->id,
         'brand_id' => null,
         'unit_of_measure_id' => $newUnit->id,
-        'vat_rate_id' => $newVatRate->id,
         'status' => 'inactive',
     ]))->assertSessionHasNoErrors();
 
@@ -92,8 +88,7 @@ test('user can create and update an article with all fields', function () {
         ->description->toBe('Duraznos en almíbar 820g (actualizado)')
         ->category_id->toBe($newCategory->id)
         ->brand_id->toBeNull()
-        ->unit_of_measure_id->toBe($newUnit->id)
-        ->vat_rate_id->toBe($newVatRate->id);
+        ->unit_of_measure_id->toBe($newUnit->id);
     expect($article->fresh()->status->value)->toBe('inactive');
 });
 
@@ -173,7 +168,7 @@ test('clearing a previously set barcode frees it for reuse by another article', 
     $this->assertDatabaseHas('articles', ['internal_code' => 'ART-0002', 'barcode' => '7790895000017']);
 });
 
-test('description, internal code, category, unit of measure and vat rate are required', function () {
+test('description, internal code, category and unit of measure are required', function () {
     $user = User::factory()->create();
 
     $this->actingAs($user)->post(route('catalog.articles.store'), articlePayload([
@@ -181,8 +176,7 @@ test('description, internal code, category, unit of measure and vat rate are req
         'internal_code' => '',
         'category_id' => '',
         'unit_of_measure_id' => '',
-        'vat_rate_id' => '',
-    ]))->assertSessionHasErrors(['description', 'internal_code', 'category_id', 'unit_of_measure_id', 'vat_rate_id']);
+    ]))->assertSessionHasErrors(['description', 'internal_code', 'category_id', 'unit_of_measure_id']);
 });
 
 test('brand and barcode are not required', function () {

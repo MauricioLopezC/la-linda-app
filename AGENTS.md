@@ -212,6 +212,18 @@ Consult them when the work calls for it:
 - `docs/context/design.md` — frontend design system (colors, typography, UI patterns). Check it
   before styling new components.
 
+`docs/backlog/` holds the planning documents, which change from sprint to sprint (unlike
+`docs/context/`, which is stable reference material):
+
+- `docs/backlog/product-backlog.md` — the user stories, their acceptance criteria and their
+  priority.
+- `docs/backlog/sprint-backlog-1.md` — the scope of the current sprint, **and the DER** (the
+  entity-relationship diagram, in its "Tablas nuevas" sections). Read the DER section for a table
+  before writing a migration that touches it.
+
+The DER documents intent; the migrations are the source of truth for current state. If they
+disagree, the code wins and the DER needs fixing — say so instead of matching the doc.
+
 ## Convention: where business logic lives
 
 Controllers must not contain business rules. We use `app/Actions/` (grouped by module, e.g.

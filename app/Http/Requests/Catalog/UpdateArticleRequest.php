@@ -36,7 +36,6 @@ class UpdateArticleRequest extends FormRequest
             'category_id' => ['required', 'integer', 'exists:categories,id'],
             'brand_id' => ['nullable', 'integer', 'exists:brands,id'],
             'unit_of_measure_id' => ['required', 'integer', 'exists:units_of_measure,id'],
-            'vat_rate_id' => ['required', 'integer', 'exists:vat_rates,id'],
             'status' => ['nullable', 'string', Rule::enum(ArticleStatus::class)],
             'is_online_publishable' => ['nullable', 'boolean'],
         ];
@@ -52,7 +51,6 @@ class UpdateArticleRequest extends FormRequest
             'category_id' => 'categoría',
             'brand_id' => 'marca',
             'unit_of_measure_id' => 'unidad de medida',
-            'vat_rate_id' => 'alícuota de IVA',
             'status' => 'estado',
             'is_online_publishable' => 'publicable en canal online',
         ];

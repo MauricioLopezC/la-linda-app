@@ -6,7 +6,6 @@ use App\Enums\Catalog\ArticleStatus;
 use App\Models\Catalog\Article;
 use App\Models\Catalog\Category;
 use App\Models\Catalog\UnitOfMeasure;
-use App\Models\Pricing\VatRate;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -28,7 +27,6 @@ class ArticleFactory extends Factory
             'category_id' => Category::factory(),
             'brand_id' => null,
             'unit_of_measure_id' => UnitOfMeasure::factory(),
-            'vat_rate_id' => VatRate::factory(),
             'status' => ArticleStatus::Active,
             'is_online_publishable' => false,
         ];

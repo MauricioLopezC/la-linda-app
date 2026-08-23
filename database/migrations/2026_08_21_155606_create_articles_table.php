@@ -21,7 +21,6 @@ return new class extends Migration
             $table->foreignId('category_id')->constrained('categories')->restrictOnDelete();
             $table->foreignId('brand_id')->nullable()->constrained('brands')->nullOnDelete();
             $table->foreignId('unit_of_measure_id')->constrained('units_of_measure')->restrictOnDelete();
-            $table->foreignId('vat_rate_id')->constrained('vat_rates')->restrictOnDelete();
             $table->string('status', 20)->default('active')->index();
             $table->boolean('is_online_publishable')->default(false);
             $table->timestamps();

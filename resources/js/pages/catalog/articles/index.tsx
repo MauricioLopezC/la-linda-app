@@ -44,14 +44,12 @@ type Article = App.Data.Catalog.ArticleData;
 type Category = App.Data.Catalog.CategoryData;
 type Brand = App.Data.Catalog.BrandData;
 type UnitOfMeasure = App.Data.Catalog.UnitOfMeasureData;
-type VatRate = App.Data.Pricing.VatRateData;
 
 type Props = {
   articles: Article[];
   categories: Category[];
   brands: Brand[];
   unitsOfMeasure: UnitOfMeasure[];
-  vatRates: VatRate[];
 };
 
 type ArticleFormData = {
@@ -62,7 +60,6 @@ type ArticleFormData = {
   subcategory_id: string;
   brand_id: string;
   unit_of_measure_id: string;
-  vat_rate_id: string;
   status: string;
   is_online_publishable: boolean;
 };
@@ -78,7 +75,6 @@ const emptyForm: ArticleFormData = {
   subcategory_id: '',
   brand_id: NO_BRAND,
   unit_of_measure_id: '',
-  vat_rate_id: '',
   status: 'active',
   is_online_publishable: false,
 };
@@ -100,7 +96,6 @@ export default function ArticlesIndex({
   categories = [],
   brands = [],
   unitsOfMeasure = [],
-  vatRates = [],
 }: Props) {
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -162,7 +157,6 @@ export default function ArticlesIndex({
       subcategory_id: subcategoryId,
       brand_id: article.brand_id ? String(article.brand_id) : NO_BRAND,
       unit_of_measure_id: String(article.unit_of_measure_id),
-      vat_rate_id: String(article.vat_rate_id),
       status: article.status,
       is_online_publishable: article.is_online_publishable,
     });
@@ -361,46 +355,22 @@ export default function ArticlesIndex({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="grid gap-2">
-          <Label htmlFor={`${prefix}-article-vat-rate`}>
-            Alícuota de IVA *
-          </Label>
-          <Select
-            value={form.data.vat_rate_id}
-            onValueChange={(val) => form.setData('vat_rate_id', val)}
-          >
-            <SelectTrigger id={`${prefix}-article-vat-rate`}>
-              <SelectValue placeholder="Seleccioná una alícuota" />
-            </SelectTrigger>
-            <SelectContent>
-              {vatRates.map((vatRate) => (
-                <SelectItem key={vatRate.id} value={String(vatRate.id)}>
-                  {vatRate.description} ({vatRate.percentage}%)
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <InputError message={form.errors.vat_rate_id} />
-        </div>
-
-        <div className="grid gap-2">
-          <Label htmlFor={`${prefix}-article-status`}>Estado *</Label>
-          <Select
-            value={form.data.status}
-            onValueChange={(val) => form.setData('status', val)}
-          >
-            <SelectTrigger id={`${prefix}-article-status`}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="active">Activo</SelectItem>
-              <SelectItem value="inactive">Inactivo</SelectItem>
-              <SelectItem value="discontinued">Discontinuado</SelectItem>
-            </SelectContent>
-          </Select>
-          <InputError message={form.errors.status} />
-        </div>
+      <div className="grid gap-2">
+        <Label htmlFor={`${prefix}-article-status`}>Estado *</Label>
+        <Select
+          value={form.data.status}
+          onValueChange={(val) => form.setData('status', val)}
+        >
+          <SelectTrigger id={`${prefix}-article-status`}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="active">Activo</SelectItem>
+            <SelectItem value="inactive">Inactivo</SelectItem>
+            <SelectItem value="discontinued">Discontinuado</SelectItem>
+          </SelectContent>
+        </Select>
+        <InputError message={form.errors.status} />
       </div>
 
       <div className="flex items-center gap-2">
@@ -451,7 +421,6 @@ export default function ArticlesIndex({
                 <TableHead>Categoría</TableHead>
                 <TableHead>Marca</TableHead>
                 <TableHead>Unidad</TableHead>
-                <TableHead>IVA</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
@@ -460,7 +429,7 @@ export default function ArticlesIndex({
               {filteredArticles.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={8}
+                    colSpan={7}
                     className="py-12 text-center text-muted-foreground"
                   >
                     No se encontraron artículos registrados.
@@ -476,7 +445,6 @@ export default function ArticlesIndex({
                     <TableCell>{categoryPath(article.category_id)}</TableCell>
                     <TableCell>{article.brand_name ?? '—'}</TableCell>
                     <TableCell>{article.unit_of_measure_name}</TableCell>
-                    <TableCell>{article.vat_rate_description}</TableCell>
                     <TableCell>
                       <Badge variant={statusBadgeVariant(article.status)}>
                         {article.status_label}
