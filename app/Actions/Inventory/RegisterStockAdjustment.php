@@ -71,6 +71,7 @@ class RegisterStockAdjustment
                 $balance = StockBalance::query()
                     ->where('article_id', $articleId)
                     ->where('warehouse_id', $warehouse->id)
+                    ->lockForUpdate()
                     ->first();
 
                 // 1 & 3. Lee stock_balances.quantity (o 0 si no existe) y guarda en system_quantity
