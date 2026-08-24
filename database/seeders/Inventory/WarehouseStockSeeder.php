@@ -2,9 +2,12 @@
 
 namespace Database\Seeders\Inventory;
 
+use App\Actions\Inventory\RegisterStockAdjustment;
 use App\Models\Catalog\Article;
-use App\Models\Inventory\StockBalance;
+use App\Models\Inventory\StockAdjustmentReason;
+use App\Models\Inventory\StockMovement;
 use App\Models\Inventory\Warehouse;
+use App\Models\User;
 use Illuminate\Database\Seeder;
 
 class WarehouseStockSeeder extends Seeder
@@ -16,12 +19,14 @@ class WarehouseStockSeeder extends Seeder
     {
         $articles = Article::query()->get();
         $warehouses = Warehouse::query()->get();
+        $user = User::query()->first();
+        $reason = StockAdjustmentReason::query()->where('name', 'Carga inicial de inventario')->first();
 
-        if ($articles->isEmpty() || $warehouses->isEmpty()) {
+        if ($articles->isEmpty() || $warehouses->isEmpty() || ! $user || ! $reason) {
             return;
         }
 
-        // Seed stock balances for articles in different warehouses with various stock levels
+        // Sample initial stock levels for articles across warehouses
         $sampleStockConfig = [
             'ART-0001' => [
                 'Depósito Central' => 120,
@@ -31,7 +36,6 @@ class WarehouseStockSeeder extends Seeder
             'ART-0002' => [
                 'Depósito Central' => 80,
                 'Depósito Norte' => 5,
-                'Depósito E-commerce' => 0,
             ],
             'ART-0003' => [
                 'Depósito Central' => 200,
@@ -40,7 +44,6 @@ class WarehouseStockSeeder extends Seeder
             ],
             'ART-0004' => [
                 'Depósito Central' => 150,
-                'Depósito Norte' => 0,
                 'Depósito E-commerce' => 30,
             ],
             'ART-0005' => [
@@ -51,7 +54,6 @@ class WarehouseStockSeeder extends Seeder
             'ART-0006' => [
                 'Depósito Central' => 60,
                 'Depósito Norte' => 25,
-                'Depósito E-commerce' => 0,
             ],
             'ART-0007' => [
                 'Depósito Central' => 180,
@@ -68,6 +70,8 @@ class WarehouseStockSeeder extends Seeder
         $warehousesByName = $warehouses->keyBy('name');
         $articlesByCode = $articles->keyBy('internal_code');
 
+        // Group initial items by warehouse
+        $warehouseItems = [];
         foreach ($sampleStockConfig as $code => $warehouseConfigs) {
             $article = $articlesByCode->get($code);
             if (! $article) {
@@ -80,14 +84,32 @@ class WarehouseStockSeeder extends Seeder
                     continue;
                 }
 
-                StockBalance::firstOrCreate(
-                    [
-                        'article_id' => $article->id,
-                        'warehouse_id' => $warehouse->id,
-                    ],
-                    ['quantity' => $quantity]
-                );
+                $warehouseItems[$warehouse->id][] = [
+                    'article_id' => $article->id,
+                    'counted_quantity' => $quantity,
+                ];
             }
+        }
+
+        $action = app(RegisterStockAdjustment::class);
+
+        foreach ($warehouseItems as $warehouseId => $items) {
+            $alreadySeeded = StockMovement::query()
+                ->where('warehouse_id', $warehouseId)
+                ->where('stock_adjustment_reason_id', $reason->id)
+                ->exists();
+
+            if ($alreadySeeded) {
+                continue;
+            }
+
+            $action->execute([
+                'warehouse_id' => $warehouseId,
+                'stock_adjustment_reason_id' => $reason->id,
+                'notes' => 'Carga inicial de inventario para apertura del sistema',
+                'user_id' => $user->id,
+                'items' => $items,
+            ]);
         }
     }
 }

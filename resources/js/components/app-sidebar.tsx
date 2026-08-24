@@ -4,6 +4,7 @@ import {
   Boxes,
   Building2,
   CreditCard,
+  FileEdit,
   FolderTree,
   FolderGit2,
   Package,
@@ -33,6 +34,7 @@ import { index as articles } from '@/routes/catalog/articles';
 import { index as brands } from '@/routes/catalog/brands';
 import { index as categories } from '@/routes/catalog/categories';
 import { index as unitsOfMeasure } from '@/routes/catalog/units-of-measure';
+import { create as adjustmentsCreate } from '@/routes/inventory/adjustments';
 import { index as stockParameters } from '@/routes/inventory/parameters';
 import { index as stocks } from '@/routes/inventory/stocks';
 import { index as warehouses } from '@/routes/inventory/warehouses';
@@ -52,6 +54,11 @@ const mainNavItems: NavItem[] = [
     title: 'Existencias',
     href: stocks(),
     icon: Boxes,
+  },
+  {
+    title: 'Ajuste de Stock',
+    href: adjustmentsCreate(),
+    icon: FileEdit,
   },
   {
     title: 'Sucursales',

@@ -10,3 +10,23 @@ export function cn(...inputs: ClassValue[]) {
 export function toUrl(url: NonNullable<InertiaLinkProps['href']>): string {
   return typeof url === 'string' ? url : url.url;
 }
+
+/**
+ * Formats a stock quantity without trailing zeros: whole numbers for discrete
+ * units (e.g. "Unidad"), up to 2 decimals otherwise.
+ */
+export function formatStockQuantity(
+  quantity: number,
+  unitName: string,
+): string {
+  const isDiscrete =
+    unitName.toLowerCase().includes('unidad') ||
+    unitName.toLowerCase() === 'u' ||
+    unitName.toLowerCase() === 'un' ||
+    Number.isInteger(quantity);
+
+  return quantity.toLocaleString('es-AR', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: isDiscrete ? 0 : 2,
+  });
+}

@@ -43,6 +43,11 @@ class StockAdjustmentReasonSeeder extends Seeder
                 'description' => 'Pérdida no justificada de mercadería',
                 'is_active' => true,
             ],
+            [
+                'name' => 'Carga inicial de inventario',
+                'description' => 'Alta inicial de existencias al iniciar el sistema',
+                'is_active' => true,
+            ],
         ];
 
         StockAdjustmentReason::unguarded(function () use ($reasons): void {
