@@ -67,15 +67,26 @@ class RegisterStockAdjustment
                 // Ensure article exists
                 Article::query()->findOrFail($articleId);
 
-                /** @var StockBalance|null $balance */
+                // Garantiza que exista la fila antes de bloquearla: si dos transacciones ajustan
+                // el mismo artículo/depósito por primera vez a la vez, la segunda espera el lock
+                // en vez de competir por insertar la primera fila.
+                StockBalance::query()->insertOrIgnore([
+                    'article_id' => $articleId,
+                    'warehouse_id' => $warehouse->id,
+                    'quantity' => 0,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+                /** @var StockBalance $balance */
                 $balance = StockBalance::query()
                     ->where('article_id', $articleId)
                     ->where('warehouse_id', $warehouse->id)
                     ->lockForUpdate()
-                    ->first();
+                    ->firstOrFail();
 
-                // 1 & 3. Lee stock_balances.quantity (o 0 si no existe) y guarda en system_quantity
-                $systemQuantity = $balance !== null ? (float) $balance->quantity : 0.0;
+                // 1 & 3. Lee stock_balances.quantity y guarda en system_quantity
+                $systemQuantity = (float) $balance->quantity;
                 $delta = round($countedQuantity - $systemQuantity, 3);
 
                 // 4. Aserción de signo: validar con stock_movement_types.sign si está definido
