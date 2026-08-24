@@ -26,6 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { formatStockQuantity } from '@/lib/utils';
 import {
   create as adjustmentsCreate,
   show,
@@ -248,23 +249,42 @@ export default function ShowStockAdjustment({ movement }: Props) {
                           {item.unit_of_measure_name}
                         </TableCell>
                         <TableCell className="text-right font-mono text-sm text-muted-foreground">
-                          {sysQty.toFixed(3)}
+                          {formatStockQuantity(
+                            sysQty,
+                            item.unit_of_measure_name,
+                          )}
                         </TableCell>
                         <TableCell className="text-right font-mono text-sm font-semibold">
-                          {finalQty.toFixed(3)}
+                          {formatStockQuantity(
+                            finalQty,
+                            item.unit_of_measure_name,
+                          )}
                         </TableCell>
                         <TableCell className="text-right font-mono text-sm">
                           {delta > 0.0001 ? (
                             <span className="font-semibold text-emerald-600">
-                              +{delta.toFixed(3)} (Sobrante)
+                              +
+                              {formatStockQuantity(
+                                delta,
+                                item.unit_of_measure_name,
+                              )}{' '}
+                              (Sobrante)
                             </span>
                           ) : delta < -0.0001 ? (
                             <span className="font-semibold text-rose-600">
-                              {delta.toFixed(3)} (Faltante)
+                              {formatStockQuantity(
+                                delta,
+                                item.unit_of_measure_name,
+                              )}{' '}
+                              (Faltante)
                             </span>
                           ) : (
                             <span className="text-muted-foreground">
-                              0.000 (Sin cambio)
+                              {formatStockQuantity(
+                                0,
+                                item.unit_of_measure_name,
+                              )}{' '}
+                              (Sin cambio)
                             </span>
                           )}
                         </TableCell>

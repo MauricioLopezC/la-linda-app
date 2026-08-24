@@ -43,6 +43,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { formatStockQuantity } from '@/lib/utils';
 import { articles, store } from '@/routes/inventory/adjustments';
 import { index as stocksIndex } from '@/routes/inventory/stocks';
 import type { BreadcrumbItem } from '@/types';
@@ -489,7 +490,11 @@ export default function CreateStockAdjustment({
                               variant="secondary"
                               className="font-mono text-xs"
                             >
-                              Stock: {Number(article.current_stock).toFixed(3)}{' '}
+                              Stock:{' '}
+                              {formatStockQuantity(
+                                Number(article.current_stock),
+                                article.unit_of_measure_name,
+                              )}{' '}
                               {article.unit_of_measure_abbreviation}
                             </Badge>
                             {isAlreadyAdded && (
@@ -567,7 +572,10 @@ export default function CreateStockAdjustment({
                               {item.unit_of_measure_name}
                             </TableCell>
                             <TableCell className="text-right font-mono text-sm text-muted-foreground">
-                              {item.system_quantity.toFixed(3)}
+                              {formatStockQuantity(
+                                item.system_quantity,
+                                item.unit_of_measure_name,
+                              )}
                             </TableCell>
                             <TableCell className="text-right">
                               <Input
@@ -588,15 +596,28 @@ export default function CreateStockAdjustment({
                             <TableCell className="text-right font-mono text-sm">
                               {delta > 0.0001 ? (
                                 <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 px-2 py-0.5 text-xs font-semibold text-emerald-600">
-                                  +{delta.toFixed(3)} (Sobrante)
+                                  +
+                                  {formatStockQuantity(
+                                    delta,
+                                    item.unit_of_measure_name,
+                                  )}{' '}
+                                  (Sobrante)
                                 </span>
                               ) : delta < -0.0001 ? (
                                 <span className="inline-flex items-center gap-1 rounded bg-rose-500/10 px-2 py-0.5 text-xs font-semibold text-rose-600">
-                                  {delta.toFixed(3)} (Faltante)
+                                  {formatStockQuantity(
+                                    delta,
+                                    item.unit_of_measure_name,
+                                  )}{' '}
+                                  (Faltante)
                                 </span>
                               ) : (
                                 <span className="rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                                  0.000 (Sin cambio)
+                                  {formatStockQuantity(
+                                    0,
+                                    item.unit_of_measure_name,
+                                  )}{' '}
+                                  (Sin cambio)
                                 </span>
                               )}
                             </TableCell>

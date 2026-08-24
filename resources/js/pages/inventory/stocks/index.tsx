@@ -38,6 +38,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { formatStockQuantity } from '@/lib/utils';
 import { index } from '@/routes/inventory/stocks';
 import type { BreadcrumbItem } from '@/types';
 
@@ -76,26 +77,6 @@ type Props = {
     status?: string | null;
   };
 };
-
-function formatStockQuantity(quantity: number, unitName: string): string {
-  const isDiscrete =
-    unitName.toLowerCase().includes('unidad') ||
-    unitName.toLowerCase() === 'u' ||
-    unitName.toLowerCase() === 'un' ||
-    Number.isInteger(quantity);
-
-  if (isDiscrete) {
-    return quantity.toLocaleString('es-AR', {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    });
-  }
-
-  return quantity.toLocaleString('es-AR', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 3,
-  });
-}
 
 export default function StockConsultationIndex({
   stocks,
