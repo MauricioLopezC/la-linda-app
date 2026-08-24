@@ -1,19 +1,15 @@
 import { Link } from '@inertiajs/react';
 import {
-  BookOpen,
   Boxes,
   Building2,
-  CreditCard,
   FileEdit,
   FolderTree,
   FolderGit2,
   Package,
-  Percent,
   Ruler,
   Tags,
   LayoutGrid,
   Sliders,
-  Store,
   Warehouse,
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
@@ -39,90 +35,125 @@ import { index as stockParameters } from '@/routes/inventory/parameters';
 import { index as stocks } from '@/routes/inventory/stocks';
 import { index as warehouses } from '@/routes/inventory/warehouses';
 import { index as branches } from '@/routes/organization/branches';
-import { index as vatRates } from '@/routes/pricing/vat-rates';
-import { index as paymentMethods } from '@/routes/sales/payment-methods';
-import { index as pointsOfSale } from '@/routes/sales/points-of-sale';
-import type { NavItem } from '@/types';
+// Módulos "Alícuotas de IVA" y "Medios de Pago"/"Puntos de Venta" no están en el
+// alcance de este sprint; se ocultan del menú sin borrar el código que los soporta.
+// import { index as vatRates } from '@/routes/pricing/vat-rates';
+// import { index as paymentMethods } from '@/routes/sales/payment-methods';
+// import { index as pointsOfSale } from '@/routes/sales/points-of-sale';
+import type { NavGroup, NavItem } from '@/types';
 
-const mainNavItems: NavItem[] = [
+const navGroups: NavGroup[] = [
   {
-    title: 'Dashboard',
-    href: dashboard(),
-    icon: LayoutGrid,
+    label: 'General',
+    items: [
+      {
+        title: 'Dashboard',
+        href: dashboard(),
+        icon: LayoutGrid,
+      },
+    ],
   },
   {
-    title: 'Existencias',
-    href: stocks(),
-    icon: Boxes,
+    label: 'Catálogo',
+    items: [
+      {
+        title: 'Artículos',
+        href: articles(),
+        icon: Package,
+      },
+      {
+        title: 'Categorías',
+        href: categories(),
+        icon: FolderTree,
+      },
+      {
+        title: 'Marcas',
+        href: brands(),
+        icon: Tags,
+      },
+      {
+        title: 'Unidades de medida',
+        href: unitsOfMeasure(),
+        icon: Ruler,
+      },
+    ],
   },
   {
-    title: 'Ajuste de Stock',
-    href: adjustmentsCreate(),
-    icon: FileEdit,
+    label: 'Inventario',
+    items: [
+      {
+        title: 'Existencias',
+        href: stocks(),
+        icon: Boxes,
+      },
+      {
+        title: 'Ajuste de Stock',
+        href: adjustmentsCreate(),
+        icon: FileEdit,
+      },
+      {
+        title: 'Depósitos',
+        href: warehouses(),
+        icon: Warehouse,
+      },
+      {
+        title: 'Parámetros de Stock',
+        href: stockParameters(),
+        icon: Sliders,
+      },
+    ],
   },
   {
-    title: 'Sucursales',
-    href: branches(),
-    icon: Building2,
+    label: 'Organización',
+    items: [
+      {
+        title: 'Sucursales',
+        href: branches(),
+        icon: Building2,
+      },
+      // Fuera de alcance de este sprint: ver nota sobre imports comentados arriba.
+      // {
+      //   title: 'Puntos de Venta',
+      //   href: pointsOfSale(),
+      //   icon: Store,
+      // },
+    ],
   },
-  {
-    title: 'Depósitos',
-    href: warehouses(),
-    icon: Warehouse,
-  },
-  {
-    title: 'Puntos de Venta',
-    href: pointsOfSale(),
-    icon: Store,
-  },
-  {
-    title: 'Medios de Pago',
-    href: paymentMethods(),
-    icon: CreditCard,
-  },
-  {
-    title: 'Alícuotas de IVA',
-    href: vatRates(),
-    icon: Percent,
-  },
-  {
-    title: 'Artículos',
-    href: articles(),
-    icon: Package,
-  },
-  {
-    title: 'Categorías',
-    href: categories(),
-    icon: FolderTree,
-  },
-  {
-    title: 'Marcas',
-    href: brands(),
-    icon: Tags,
-  },
-  {
-    title: 'Unidades de medida',
-    href: unitsOfMeasure(),
-    icon: Ruler,
-  },
-  {
-    title: 'Parámetros de Stock',
-    href: stockParameters(),
-    icon: Sliders,
-  },
+  // Fuera de alcance de este sprint: ver nota sobre imports comentados arriba.
+  // {
+  //   label: 'Ventas',
+  //   items: [
+  //     {
+  //       title: 'Medios de Pago',
+  //       href: paymentMethods(),
+  //       icon: CreditCard,
+  //     },
+  //   ],
+  // },
+  // {
+  //   label: 'Precios',
+  //   items: [
+  //     {
+  //       title: 'Alícuotas de IVA',
+  //       href: vatRates(),
+  //       icon: Percent,
+  //     },
+  //   ],
+  // },
 ];
 
 const footerNavItems: NavItem[] = [
   {
     title: 'Repositorio',
-    href: 'https://github.com/laravel/react-starter-kit',
+    href: 'https://github.com/MauricioLopezC/la-linda-app',
     icon: FolderGit2,
   },
-  {
-    title: 'Documentación',
-    href: 'https://laravel.com/docs/starter-kits#react',
-    icon: BookOpen,
-  },
+  // Todavía no hay un destino para la documentación del proyecto.
+  // {
+  //   title: 'Documentación',
+  //   href: '',
+  //   icon: BookOpen,
+  // },
 ];
 
 export function AppSidebar() {
@@ -141,7 +172,7 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
-        <NavMain items={mainNavItems} />
+        <NavMain groups={navGroups} />
       </SidebarContent>
 
       <SidebarFooter>
