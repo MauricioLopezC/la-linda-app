@@ -1,4 +1,4 @@
-import { Head, useForm } from '@inertiajs/react';
+import { Head, Link, useForm } from '@inertiajs/react';
 import {
   AlertTriangle,
   ArrowLeft,
@@ -43,36 +43,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import AppLayout from '@/layouts/app-layout';
+import { articles, store } from '@/routes/inventory/adjustments';
+import { index as stocksIndex } from '@/routes/inventory/stocks';
 import type { BreadcrumbItem } from '@/types';
 
-interface WarehouseOption {
-  id: number;
-  name: string;
-  code: string;
-  branch: {
-    id: number;
-    name: string;
-  };
-}
-
-interface ReasonOption {
-  id: number;
-  name: string;
-  description: string | null;
-}
-
-interface ArticleOption {
-  id: number;
-  description: string;
-  internal_code: string;
-  barcode: string | null;
-  category_name: string;
-  brand_name: string | null;
-  unit_of_measure_name: string;
-  unit_of_measure_code: string;
-  current_stock: string;
-}
+type WarehouseOption = App.Data.Inventory.WarehouseData;
+type ReasonOption = App.Data.Inventory.StockAdjustmentReasonData;
+type ArticleOption = App.Data.Inventory.ArticleStockOptionData;
 
 interface AdjustmentItemDraft {
   article_id: number;
@@ -90,17 +67,6 @@ interface Props {
   reasons: ReasonOption[];
   initialWarehouseId?: number | null;
 }
-
-const breadcrumbs: BreadcrumbItem[] = [
-  {
-    title: 'Inventario',
-    href: '/inventory/stocks',
-  },
-  {
-    title: 'Ajuste de Stock',
-    href: '/inventory/adjustments/create',
-  },
-];
 
 export default function CreateStockAdjustment({
   warehouses,
@@ -153,12 +119,10 @@ export default function CreateStockAdjustment({
       setIsSearching(true);
 
       try {
-        const params = new URLSearchParams({
-          warehouse_id: data.warehouse_id,
-          search: trimmed,
-        });
         const res = await fetch(
-          `/inventory/adjustments/articles?${params.toString()}`,
+          articles.url({
+            query: { warehouse_id: data.warehouse_id, search: trimmed },
+          }),
         );
 
         if (res.ok) {
@@ -291,11 +255,11 @@ export default function CreateStockAdjustment({
 
   const handleConfirmSubmit = () => {
     setIsConfirmOpen(false);
-    post('/inventory/adjustments');
+    post(store.url());
   };
 
   return (
-    <AppLayout breadcrumbs={breadcrumbs}>
+    <>
       <Head title="Registrar Ajuste de Stock" />
 
       <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 p-4 md:p-6">
@@ -311,10 +275,10 @@ export default function CreateStockAdjustment({
             </p>
           </div>
           <Button variant="outline" asChild className="gap-2">
-            <a href="/inventory/stocks">
+            <Link href={stocksIndex()}>
               <ArrowLeft className="h-4 w-4" />
               Volver a Existencias
-            </a>
+            </Link>
           </Button>
         </div>
 
@@ -346,7 +310,7 @@ export default function CreateStockAdjustment({
                   <SelectContent>
                     {warehouses.map((w) => (
                       <SelectItem key={w.id} value={String(w.id)}>
-                        {w.name} ({w.branch.name})
+                        {w.name} ({w.branch_name})
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -526,7 +490,7 @@ export default function CreateStockAdjustment({
                               className="font-mono text-xs"
                             >
                               Stock: {Number(article.current_stock).toFixed(3)}{' '}
-                              {article.unit_of_measure_code}
+                              {article.unit_of_measure_abbreviation}
                             </Badge>
                             {isAlreadyAdded && (
                               <span className="mt-0.5 block text-[10px] text-muted-foreground">
@@ -676,7 +640,7 @@ export default function CreateStockAdjustment({
                 asChild
                 className="w-full sm:w-auto"
               >
-                <a href="/inventory/stocks">Cancelar</a>
+                <Link href={stocksIndex()}>Cancelar</Link>
               </Button>
               <Button
                 type="submit"
@@ -714,7 +678,7 @@ export default function CreateStockAdjustment({
                     <div>
                       <span className="font-semibold">Depósito:</span>{' '}
                       {selectedWarehouse?.name} (
-                      {selectedWarehouse?.branch.name})
+                      {selectedWarehouse?.branch_name})
                     </div>
                     <div>
                       <span className="font-semibold">Motivo:</span>{' '}
@@ -757,9 +721,22 @@ export default function CreateStockAdjustment({
           </DialogContent>
         </Dialog>
       </div>
-    </AppLayout>
+    </>
   );
 }
+
+CreateStockAdjustment.layout = {
+  breadcrumbs: [
+    {
+      title: 'Inventario',
+      href: '/inventory/stocks',
+    },
+    {
+      title: 'Ajuste de Stock',
+      href: '/inventory/adjustments/create',
+    },
+  ] satisfies BreadcrumbItem[],
+};
 
 function round3(n: number): number {
   return Math.round(n * 1000) / 1000;

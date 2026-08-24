@@ -1,4 +1,4 @@
-import { Head } from '@inertiajs/react';
+import { Head, Link, setLayoutProps } from '@inertiajs/react';
 import {
   ArrowLeft,
   Calendar,
@@ -26,67 +26,43 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import AppLayout from '@/layouts/app-layout';
+import {
+  create as adjustmentsCreate,
+  show,
+} from '@/routes/inventory/adjustments';
+import { index as stocksIndex } from '@/routes/inventory/stocks';
 import type { BreadcrumbItem } from '@/types';
 
-interface MovementItemDetail {
-  id: number;
-  article_id: number;
-  article_description: string;
-  article_internal_code: string;
-  article_barcode: string | null;
-  category_name: string;
-  brand_name: string | null;
-  unit_of_measure_name: string;
-  unit_of_measure_code: string;
-  quantity: string;
-  system_quantity: string | null;
-  final_quantity: string;
-}
-
-interface MovementDetail {
-  id: number;
-  type_name: string;
-  type_code: string;
-  warehouse_id: number;
-  warehouse_name: string;
-  branch_name: string;
-  reason_id: number | null;
-  reason_name: string | null;
-  notes: string | null;
-  user_id: number;
-  user_name: string;
-  created_at: string;
-  created_at_formatted: string;
-  items: MovementItemDetail[];
-}
+type MovementDetail = App.Data.Inventory.StockMovementDetailData;
 
 interface Props {
   movement: MovementDetail;
 }
 
 export default function ShowStockAdjustment({ movement }: Props) {
-  const breadcrumbs: BreadcrumbItem[] = [
-    {
-      title: 'Inventario',
-      href: '/inventory/stocks',
-    },
-    {
-      title: 'Ajustes',
-      href: '/inventory/adjustments/create',
-    },
-    {
-      title: `Movimiento #${movement.id}`,
-      href: `/inventory/adjustments/${movement.id}`,
-    },
-  ];
+  setLayoutProps({
+    breadcrumbs: [
+      {
+        title: 'Inventario',
+        href: '/inventory/stocks',
+      },
+      {
+        title: 'Ajustes',
+        href: '/inventory/adjustments/create',
+      },
+      {
+        title: `Movimiento #${movement.id}`,
+        href: show.url({ stock_movement: movement.id }),
+      },
+    ] satisfies BreadcrumbItem[],
+  });
 
   const handlePrint = () => {
     window.print();
   };
 
   return (
-    <AppLayout breadcrumbs={breadcrumbs}>
+    <>
       <Head title={`Comprobante de Ajuste #${movement.id}`} />
 
       <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 p-4 md:p-6 print:max-w-full print:p-0">
@@ -94,10 +70,10 @@ export default function ShowStockAdjustment({ movement }: Props) {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between print:hidden">
           <div className="flex items-center gap-2">
             <Button variant="outline" asChild size="sm" className="gap-1.5">
-              <a href="/inventory/stocks">
+              <Link href={stocksIndex()}>
                 <ArrowLeft className="h-4 w-4" />
                 Volver a Existencias
-              </a>
+              </Link>
             </Button>
           </div>
 
@@ -112,10 +88,10 @@ export default function ShowStockAdjustment({ movement }: Props) {
               Imprimir Comprobante
             </Button>
             <Button asChild size="sm" className="gap-1.5">
-              <a href="/inventory/adjustments/create">
+              <Link href={adjustmentsCreate()}>
                 <Plus className="h-4 w-4" />
                 Nuevo Ajuste
-              </a>
+              </Link>
             </Button>
           </div>
         </div>
@@ -321,6 +297,6 @@ export default function ShowStockAdjustment({ movement }: Props) {
           </CardContent>
         </Card>
       </div>
-    </AppLayout>
+    </>
   );
 }
