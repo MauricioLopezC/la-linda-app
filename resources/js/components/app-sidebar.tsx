@@ -4,6 +4,7 @@ import {
   Boxes,
   Building2,
   CreditCard,
+  FileEdit,
   FolderTree,
   FolderGit2,
   Package,
@@ -52,6 +53,11 @@ const mainNavItems: NavItem[] = [
     title: 'Existencias',
     href: stocks(),
     icon: Boxes,
+  },
+  {
+    title: 'Ajuste de Stock',
+    href: '/inventory/adjustments/create',
+    icon: FileEdit,
   },
   {
     title: 'Sucursales',
