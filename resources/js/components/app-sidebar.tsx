@@ -5,6 +5,7 @@ import {
   FileEdit,
   FolderTree,
   FolderGit2,
+  History,
   Package,
   Ruler,
   Tags,
@@ -31,6 +32,7 @@ import { index as brands } from '@/routes/catalog/brands';
 import { index as categories } from '@/routes/catalog/categories';
 import { index as unitsOfMeasure } from '@/routes/catalog/units-of-measure';
 import { create as adjustmentsCreate } from '@/routes/inventory/adjustments';
+import { index as movements } from '@/routes/inventory/movements';
 import { index as stockParameters } from '@/routes/inventory/parameters';
 import { index as stocks } from '@/routes/inventory/stocks';
 import { index as warehouses } from '@/routes/inventory/warehouses';
@@ -90,6 +92,11 @@ const navGroups: NavGroup[] = [
         title: 'Ajuste de Stock',
         href: adjustmentsCreate(),
         icon: FileEdit,
+      },
+      {
+        title: 'Historial de Movimientos',
+        href: movements(),
+        icon: History,
       },
       {
         title: 'Depósitos',

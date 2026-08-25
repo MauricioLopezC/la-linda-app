@@ -6,6 +6,7 @@ use App\Http\Controllers\Catalog\CategoryController;
 use App\Http\Controllers\Catalog\UnitOfMeasureController;
 use App\Http\Controllers\Inventory\StockAdjustmentController;
 use App\Http\Controllers\Inventory\StockConsultationController;
+use App\Http\Controllers\Inventory\StockMovementHistoryController;
 use App\Http\Controllers\Inventory\StockParameterController;
 use App\Http\Controllers\Inventory\WarehouseController;
 use App\Http\Controllers\Organization\BranchController;
@@ -70,6 +71,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('articles', [StockAdjustmentController::class, 'searchArticles'])->name('articles');
         Route::post('/', [StockAdjustmentController::class, 'store'])->name('store');
         Route::get('{stock_movement}', [StockAdjustmentController::class, 'show'])->name('show');
+    });
+
+    Route::prefix('inventory/movements')->name('inventory.movements.')->group(function () {
+        Route::get('/', [StockMovementHistoryController::class, 'index'])->name('index');
     });
 
     Route::prefix('sales/points-of-sale')->name('sales.points-of-sale.')->group(function () {
