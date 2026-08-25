@@ -7,6 +7,7 @@ import {
   FileEdit,
   FolderTree,
   FolderGit2,
+  History,
   Package,
   Percent,
   Ruler,
@@ -37,6 +38,7 @@ import { index as unitsOfMeasure } from '@/routes/catalog/units-of-measure';
 import { create as adjustmentsCreate } from '@/routes/inventory/adjustments';
 import { index as stockParameters } from '@/routes/inventory/parameters';
 import { index as stocks } from '@/routes/inventory/stocks';
+import { index as movements } from '@/routes/inventory/movements';
 import { index as warehouses } from '@/routes/inventory/warehouses';
 import { index as branches } from '@/routes/organization/branches';
 import { index as vatRates } from '@/routes/pricing/vat-rates';
@@ -59,6 +61,11 @@ const mainNavItems: NavItem[] = [
     title: 'Ajuste de Stock',
     href: adjustmentsCreate(),
     icon: FileEdit,
+  },
+  {
+    title: 'Historial de Movimientos',
+    href: movements(),
+    icon: History,
   },
   {
     title: 'Sucursales',
