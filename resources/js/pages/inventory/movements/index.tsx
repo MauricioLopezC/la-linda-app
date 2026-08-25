@@ -142,23 +142,23 @@ export default function StockMovementHistoryIndex({
       const queryParams: Record<string, string> = {};
 
       if (current.search.trim()) {
-queryParams.search = current.search.trim();
-}
+        queryParams.search = current.search.trim();
+      }
 
       if (current.warehouse_id && current.warehouse_id !== 'all') {
-queryParams.warehouse_id = current.warehouse_id;
-}
+        queryParams.warehouse_id = current.warehouse_id;
+      }
 
       if (
         current.stock_movement_type_id &&
         current.stock_movement_type_id !== 'all'
       ) {
-queryParams.stock_movement_type_id = current.stock_movement_type_id;
-}
+        queryParams.stock_movement_type_id = current.stock_movement_type_id;
+      }
 
       if (current.user_id && current.user_id !== 'all') {
-queryParams.user_id = current.user_id;
-}
+        queryParams.user_id = current.user_id;
+      }
 
       if (
         current.date_from &&
@@ -171,12 +171,12 @@ queryParams.user_id = current.user_id;
       }
 
       if (current.date_from) {
-queryParams.date_from = current.date_from;
-}
+        queryParams.date_from = current.date_from;
+      }
 
       if (current.date_to) {
-queryParams.date_to = current.date_to;
-}
+        queryParams.date_to = current.date_to;
+      }
 
       router.get(
         index.url({ query: queryParams }),
@@ -224,8 +224,8 @@ queryParams.date_to = current.date_to;
 
   const goToPage = (url: string | null) => {
     if (!url) {
-return;
-}
+      return;
+    }
 
     router.get(
       url,
