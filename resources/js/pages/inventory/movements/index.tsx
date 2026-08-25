@@ -41,20 +41,10 @@ import { show as showAdjustment } from '@/routes/inventory/adjustments';
 import { index } from '@/routes/inventory/movements';
 import type { BreadcrumbItem } from '@/types';
 
-type StockMovementList = {
-  id: number;
-  type_name: string;
-  type_code: string;
-  warehouse_name: string;
-  branch_name: string;
-  reason_name: string | null;
-  notes: string | null;
-  user_name: string;
-  created_at: string;
-  created_at_formatted: string;
-  items_count: number;
-  total_quantity: string;
-};
+type StockMovementList = App.Data.Inventory.StockMovementListData;
+type Warehouse = App.Data.Inventory.WarehouseData;
+type MovementType = App.Data.Inventory.StockMovementTypeData;
+type UserOption = App.Data.Inventory.UserOptionData;
 
 type StockMovementPage = {
   data: StockMovementList[];
@@ -65,22 +55,6 @@ type StockMovementPage = {
   from: number | null;
   to: number | null;
   links: { url: string | null; label: string; active: boolean }[];
-};
-
-type Warehouse = {
-  id: number;
-  name: string;
-  branch_name: string;
-};
-
-type MovementType = {
-  id: number;
-  name: string;
-};
-
-type UserOption = {
-  id: number;
-  name: string;
 };
 
 type Props = {
