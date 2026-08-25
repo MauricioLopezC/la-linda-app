@@ -1,16 +1,14 @@
 import { Head, Link, router } from '@inertiajs/react';
 import {
-  Building2,
-  Calendar,
   FileText,
   FilterX,
-  History,
   Package,
   Search,
   User,
   Warehouse as WarehouseIcon,
 } from 'lucide-react';
 import { useCallback, useState } from 'react';
+import { toast } from 'sonner';
 import Heading from '@/components/heading';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -39,10 +37,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { toast } from 'sonner';
-import { formatStockQuantity } from '@/lib/utils';
-import { index } from '@/routes/inventory/movements';
 import { show as showAdjustment } from '@/routes/inventory/adjustments';
+import { index } from '@/routes/inventory/movements';
 import type { BreadcrumbItem } from '@/types';
 
 type StockMovementList = {
@@ -145,24 +141,42 @@ export default function StockMovementHistoryIndex({
 
       const queryParams: Record<string, string> = {};
 
-      if (current.search.trim()) queryParams.search = current.search.trim();
-      if (current.warehouse_id && current.warehouse_id !== 'all')
-        queryParams.warehouse_id = current.warehouse_id;
+      if (current.search.trim()) {
+queryParams.search = current.search.trim();
+}
+
+      if (current.warehouse_id && current.warehouse_id !== 'all') {
+queryParams.warehouse_id = current.warehouse_id;
+}
+
       if (
         current.stock_movement_type_id &&
         current.stock_movement_type_id !== 'all'
-      )
-        queryParams.stock_movement_type_id = current.stock_movement_type_id;
-      if (current.user_id && current.user_id !== 'all')
-        queryParams.user_id = current.user_id;
+      ) {
+queryParams.stock_movement_type_id = current.stock_movement_type_id;
+}
 
-      if (current.date_from && current.date_to && current.date_from > current.date_to) {
+      if (current.user_id && current.user_id !== 'all') {
+queryParams.user_id = current.user_id;
+}
+
+      if (
+        current.date_from &&
+        current.date_to &&
+        current.date_from > current.date_to
+      ) {
         toast.error('La fecha "Desde" no puede ser mayor a la fecha "Hasta"');
+
         return;
       }
 
-      if (current.date_from) queryParams.date_from = current.date_from;
-      if (current.date_to) queryParams.date_to = current.date_to;
+      if (current.date_from) {
+queryParams.date_from = current.date_from;
+}
+
+      if (current.date_to) {
+queryParams.date_to = current.date_to;
+}
 
       router.get(
         index.url({ query: queryParams }),
@@ -209,7 +223,10 @@ export default function StockMovementHistoryIndex({
   };
 
   const goToPage = (url: string | null) => {
-    if (!url) return;
+    if (!url) {
+return;
+}
+
     router.get(
       url,
       {},
@@ -389,7 +406,8 @@ export default function StockMovementHistoryIndex({
                     colSpan={7}
                     className="py-12 text-center text-muted-foreground"
                   >
-                    No se encontraron movimientos para los filtros seleccionados.
+                    No se encontraron movimientos para los filtros
+                    seleccionados.
                   </TableCell>
                 </TableRow>
               ) : (
@@ -436,8 +454,10 @@ export default function StockMovementHistoryIndex({
                             {movement.reason_name}
                           </span>
                           <Link
-                            href={showAdjustment({ stock_movement: movement.id })}
-                            className="flex items-center gap-1 text-xs text-primary-600 hover:underline dark:text-primary-400"
+                            href={showAdjustment({
+                              stock_movement: movement.id,
+                            })}
+                            className="dark:text-primary-400 flex items-center gap-1 text-xs text-primary-600 hover:underline"
                           >
                             <FileText className="size-3" />
                             Ver comprobante #{movement.id}
@@ -504,8 +524,12 @@ export default function StockMovementHistoryIndex({
 
                 <PaginationItem>
                   <PaginationNext
-                    href={movements.links[movements.links.length - 1]?.url ?? '#'}
-                    aria-disabled={!movements.links[movements.links.length - 1]?.url}
+                    href={
+                      movements.links[movements.links.length - 1]?.url ?? '#'
+                    }
+                    aria-disabled={
+                      !movements.links[movements.links.length - 1]?.url
+                    }
                     className={
                       !movements.links[movements.links.length - 1]?.url
                         ? 'pointer-events-none opacity-50'
@@ -514,7 +538,8 @@ export default function StockMovementHistoryIndex({
                     onClick={(e) => {
                       e.preventDefault();
                       goToPage(
-                        movements.links[movements.links.length - 1]?.url ?? null,
+                        movements.links[movements.links.length - 1]?.url ??
+                          null,
                       );
                     }}
                   />
