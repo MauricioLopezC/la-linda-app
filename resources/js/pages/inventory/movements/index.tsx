@@ -39,6 +39,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { toast } from 'sonner';
 import { formatStockQuantity } from '@/lib/utils';
 import { index } from '@/routes/inventory/movements';
 import { show as showAdjustment } from '@/routes/inventory/adjustments';
@@ -154,6 +155,12 @@ export default function StockMovementHistoryIndex({
         queryParams.stock_movement_type_id = current.stock_movement_type_id;
       if (current.user_id && current.user_id !== 'all')
         queryParams.user_id = current.user_id;
+
+      if (current.date_from && current.date_to && current.date_from > current.date_to) {
+        toast.error('La fecha "Desde" no puede ser mayor a la fecha "Hasta"');
+        return;
+      }
+
       if (current.date_from) queryParams.date_from = current.date_from;
       if (current.date_to) queryParams.date_to = current.date_to;
 
@@ -238,7 +245,7 @@ export default function StockMovementHistoryIndex({
         <div className="flex flex-col gap-3 rounded-xl border border-sidebar-border bg-card p-4 shadow-xs">
           <form
             onSubmit={handleSearchSubmit}
-            className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"
+            className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7"
           >
             <div className="relative xl:col-span-2">
               <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -259,7 +266,7 @@ export default function StockMovementHistoryIndex({
                   applyFilters({ warehouse_id: val });
                 }}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Todos los depósitos" />
                 </SelectTrigger>
                 <SelectContent>
@@ -281,7 +288,7 @@ export default function StockMovementHistoryIndex({
                   applyFilters({ stock_movement_type_id: val });
                 }}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Todos los tipos" />
                 </SelectTrigger>
                 <SelectContent>
@@ -303,7 +310,7 @@ export default function StockMovementHistoryIndex({
                   applyFilters({ user_id: val });
                 }}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Todos los usuarios" />
                 </SelectTrigger>
                 <SelectContent>
@@ -317,10 +324,11 @@ export default function StockMovementHistoryIndex({
               </Select>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex gap-2 xl:col-span-2">
               <Input
                 type="date"
                 value={dateFrom}
+                max={dateTo || undefined}
                 onChange={(e) => {
                   setDateFrom(e.target.value);
                   applyFilters({ date_from: e.target.value });
@@ -331,6 +339,7 @@ export default function StockMovementHistoryIndex({
               <Input
                 type="date"
                 value={dateTo}
+                min={dateFrom || undefined}
                 onChange={(e) => {
                   setDateTo(e.target.value);
                   applyFilters({ date_to: e.target.value });
