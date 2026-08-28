@@ -53,7 +53,7 @@ class StoreStockAdjustmentRequest extends FormRequest
                 'required',
                 'numeric',
                 'min:0',
-                'max:999999999.999',
+                'max:100000',
             ],
         ];
     }
@@ -87,6 +87,7 @@ class StoreStockAdjustmentRequest extends FormRequest
             'items.min' => 'Debe agregar al menos un artículo para ajustar.',
             'items.*.article_id.distinct' => 'No se puede repetir el mismo artículo en el ajuste.',
             'items.*.counted_quantity.min' => 'La cantidad contada no puede ser negativa.',
+            'items.*.counted_quantity.max' => 'La cantidad contada no puede superar las 100.000 unidades.',
         ];
     }
 }

@@ -70,6 +70,9 @@ interface Props {
   initialWarehouseId?: number | null;
 }
 
+/** Tope de conteo físico por artículo. Debe coincidir con StoreStockAdjustmentRequest. */
+const MAX_COUNTED_QUANTITY = 100_000;
+
 export default function CreateStockAdjustment({
   warehouses,
   reasons,
@@ -200,7 +203,10 @@ export default function CreateStockAdjustment({
           return { ...it, counted_quantity: '' };
         }
 
-        let num = Math.max(0, parseFloat(value) || 0);
+        let num = Math.min(
+          MAX_COUNTED_QUANTITY,
+          Math.max(0, parseFloat(value) || 0),
+        );
 
         if (
           !unitAllowsDecimals(
@@ -606,7 +612,7 @@ export default function CreateStockAdjustment({
                                 }
                                 step={allowsDecimals ? '0.001' : '1'}
                                 min="0"
-                                max="999999999"
+                                max={MAX_COUNTED_QUANTITY}
                                 onKeyDown={(e) => {
                                   if (!allowsDecimals && e.key === '.') {
                                     e.preventDefault();

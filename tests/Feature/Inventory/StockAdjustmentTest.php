@@ -295,6 +295,18 @@ it('validates that counted quantity cannot be negative', function () {
         ->assertSessionHasErrors('items.0.counted_quantity');
 });
 
+it('validates that counted quantity cannot exceed 100000', function () {
+    $this->actingAs($this->user)
+        ->post(route('inventory.adjustments.store'), [
+            'warehouse_id' => $this->warehouse->id,
+            'stock_adjustment_reason_id' => $this->reason->id,
+            'items' => [
+                ['article_id' => $this->articleA->id, 'counted_quantity' => 100001],
+            ],
+        ])
+        ->assertSessionHasErrors('items.0.counted_quantity');
+});
+
 it('rejects adjustment if physical count matches system stock with 0 differences across all items', function () {
     StockBalance::create([
         'warehouse_id' => $this->warehouse->id,
