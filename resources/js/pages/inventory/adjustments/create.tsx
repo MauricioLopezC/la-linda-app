@@ -391,24 +391,30 @@ export default function CreateStockAdjustment({
                   </CardDescription>
                 </div>
                 {itemsDraft.length > 0 && (
-                  <div className="flex items-center gap-2 text-xs">
+                  <div
+                    className="flex items-center gap-2 text-xs"
+                    title="Cantidad de artículos en cada estado, no unidades. El detalle por unidad se ve en la columna Diferencia."
+                  >
                     <Badge
                       variant="outline"
                       className="border-emerald-500/30 bg-emerald-500/10 text-emerald-600"
                     >
-                      +{summary.positive} Sobrantes
+                      {summary.positive} {pluralizeArticulos(summary.positive)}{' '}
+                      con sobrante
                     </Badge>
                     <Badge
                       variant="outline"
                       className="border-rose-500/30 bg-rose-500/10 text-rose-600"
                     >
-                      -{summary.negative} Faltantes
+                      {summary.negative} {pluralizeArticulos(summary.negative)}{' '}
+                      con faltante
                     </Badge>
                     <Badge
                       variant="outline"
                       className="bg-muted text-muted-foreground"
                     >
-                      {summary.neutral} Sin cambio
+                      {summary.neutral} {pluralizeArticulos(summary.neutral)}{' '}
+                      sin cambio
                     </Badge>
                   </div>
                 )}
@@ -709,8 +715,8 @@ export default function CreateStockAdjustment({
                       <span className="font-semibold">
                         Artículos a ajustar:
                       </span>{' '}
-                      {itemsDraft.length} ({summary.positive} sobrantes,{' '}
-                      {summary.negative} faltantes)
+                      {itemsDraft.length} ({summary.positive} con sobrante,{' '}
+                      {summary.negative} con faltante)
                     </div>
                   </div>
                   <p className="text-xs font-medium text-amber-600 dark:text-amber-400">
@@ -761,4 +767,8 @@ CreateStockAdjustment.layout = {
 
 function round3(n: number): number {
   return Math.round(n * 1000) / 1000;
+}
+
+function pluralizeArticulos(count: number): string {
+  return count === 1 ? 'artículo' : 'artículos';
 }
