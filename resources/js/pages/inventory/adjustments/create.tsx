@@ -59,6 +59,7 @@ interface AdjustmentItemDraft {
   brand_name: string | null;
   category_name: string;
   unit_of_measure_name: string;
+  unit_of_measure_abbreviation: string;
   system_quantity: number;
   counted_quantity: number | '';
 }
@@ -175,6 +176,7 @@ export default function CreateStockAdjustment({
           brand_name: article.brand_name,
           category_name: article.category_name,
           unit_of_measure_name: article.unit_of_measure_name,
+          unit_of_measure_abbreviation: article.unit_of_measure_abbreviation,
           system_quantity: sysQty,
           counted_quantity: sysQty,
         },
@@ -198,7 +200,16 @@ export default function CreateStockAdjustment({
           return { ...it, counted_quantity: '' };
         }
 
-        const num = Math.max(0, parseFloat(value) || 0);
+        let num = Math.max(0, parseFloat(value) || 0);
+
+        if (
+          !unitAllowsDecimals(
+            it.unit_of_measure_name,
+            it.unit_of_measure_abbreviation,
+          )
+        ) {
+          num = Math.round(num);
+        }
 
         return { ...it, counted_quantity: num };
       }),
@@ -559,6 +570,10 @@ export default function CreateStockAdjustment({
                             ? 0
                             : Number(item.counted_quantity);
                         const delta = round3(counted - item.system_quantity);
+                        const allowsDecimals = unitAllowsDecimals(
+                          item.unit_of_measure_name,
+                          item.unit_of_measure_abbreviation,
+                        );
 
                         return (
                           <TableRow key={item.article_id}>
@@ -586,9 +601,17 @@ export default function CreateStockAdjustment({
                             <TableCell className="text-right">
                               <Input
                                 type="number"
-                                step="0.001"
+                                inputMode={
+                                  allowsDecimals ? 'decimal' : 'numeric'
+                                }
+                                step={allowsDecimals ? '0.001' : '1'}
                                 min="0"
                                 max="999999999"
+                                onKeyDown={(e) => {
+                                  if (!allowsDecimals && e.key === '.') {
+                                    e.preventDefault();
+                                  }
+                                }}
                                 value={item.counted_quantity}
                                 onChange={(e) =>
                                   handleQuantityChange(
@@ -771,4 +794,20 @@ function round3(n: number): number {
 
 function pluralizeArticulos(count: number): string {
   return count === 1 ? 'artículo' : 'artículos';
+}
+
+/**
+ * Las unidades discretas (unidad/es, abreviatura "u") solo admiten conteos
+ * enteros; el resto (kg, litros, etc.) admite decimales. Heurística por
+ * nombre/abreviatura: no existe un flag en `units_of_measure`.
+ */
+function unitAllowsDecimals(name: string, abbreviation: string): boolean {
+  const normalizedName = name.trim().toLowerCase();
+  const normalizedAbbr = abbreviation.trim().toLowerCase();
+
+  return (
+    normalizedName !== 'unidad' &&
+    normalizedName !== 'unidades' &&
+    normalizedAbbr !== 'u'
+  );
 }
