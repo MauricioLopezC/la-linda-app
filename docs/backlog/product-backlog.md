@@ -17,7 +17,7 @@ Product Owner se genera a pedido a partir de este documento.
   no los describía. Los MMF reales se identifican al cerrar cada sprint, no por adelantado.
 - Estimación en **story points**, escala de Fibonacci.
 - **Capacidad de referencia: 30 a 40 SP por sprint (indicación del PO).** Con 6 sprints eso da
-  entre 180 y 240 SP. El backlog estimado suma **350 SP**, entre 1,5 y 1,9 veces la capacidad.
+  entre 180 y 240 SP. El backlog estimado suma **360 SP**, entre 1,5 y 2 veces la capacidad.
   El desvío se informa al PO para que decida el recorte; **no se disimula bajando las
   estimaciones**, porque los story points miden tamaño relativo y la capacidad es un hecho aparte.
 - **Ningún ítem supera los 8 SP.** Un ítem de 13 es un tercio de la capacidad del sprint y
@@ -52,7 +52,7 @@ Product Owner se genera a pedido a partir de este documento.
 
 ## Índice
 
-68 ítems, **350 story points estimados**, más la reserva de estabilización del Sprint 6
+70 ítems, **360 story points estimados**, más la reserva de estabilización del Sprint 6
 (`HAB-03`, sin estimar a propósito).
 
 | # | ID | Título | Módulo | SP | Estado |
@@ -86,45 +86,47 @@ Product Owner se genera a pedido a partir de este documento.
 | 27 | [HU-037](#hu-037) | Imputar el comprobante a una o varias órdenes de compra | CMP | 5 | Pendiente |
 | 28 | [HU-038](#hu-038) | Actualizar el último costo y cerrar la orden cubierta | CMP | 3 | Pendiente |
 | 29 | [HU-026](#hu-026) | Ingresar el stock a partir del comprobante recibido | CMP | 8 | Pendiente |
-| 30 | [HU-027](#hu-027) | Registrar un pago a proveedor imputado a comprobantes | CMP | 8 | Pendiente |
+| 30 | [HU-027](#hu-027) | Emitir una orden de pago a proveedor | CMP | 8 | Pendiente |
 | 31 | [HU-028](#hu-028) | Consultar el saldo de cuenta corriente de un proveedor | CMP | 3 | Pendiente |
-| 32 | [HU-029](#hu-029) | Actualizar precios de forma masiva por porcentaje | PRE | 5 | Pendiente |
-| 33 | [HU-030](#hu-030) | Consultar el historial de cambios de precio | PRE | 3 | Pendiente |
-| 34 | [EPIC-01](#epic-01) | Resolver el precio de venta según el cliente y el canal | PRE | 8 | Pendiente |
-| 35 | [HU-051](#hu-051) | Administrar puntos de venta | ADM | 2 | Pendiente |
-| 36 | [HU-039](#hu-039) | Abrir una venta de mostrador | VTA | 3 | Pendiente |
-| 37 | [HU-040](#hu-040) | Incorporar artículos a la venta por código de barras o búsqueda | VTA | 5 | Pendiente |
-| 38 | [HU-007](#hu-007) | Administrar las alícuotas de IVA | ADM | 2 | Pendiente |
-| 39 | [HU-041](#hu-041) | Calcular el precio, el IVA y los totales de la venta | VTA | 5 | Pendiente |
-| 40 | [EPIC-03](#epic-03) | Identificar al cliente y determinar el tipo de comprobante | VTA | 5 | Pendiente |
-| 41 | [HU-052](#hu-052) | Administrar medios de pago | ADM | 2 | Pendiente |
-| 42 | [EPIC-04](#epic-04) | Cobrar la venta con uno o varios medios de pago | VTA | 8 | Pendiente |
-| 43 | [HU-042](#hu-042) | Emitir la factura con numeración correlativa por punto de venta | VTA | 8 | Pendiente |
-| 44 | [HU-043](#hu-043) | Imprimir y descargar la factura en PDF | VTA | 5 | Pendiente |
-| 45 | [EPIC-06](#epic-06) | Descontar el stock automáticamente al confirmar la venta | VTA | 5 | Pendiente |
-| 46 | [HU-044](#hu-044) | Anular una venta con nota de crédito y reingreso de stock | VTA | 8 | Pendiente |
-| 47 | [HU-045](#hu-045) | Registrar una devolución parcial de cliente | VTA | 5 | Pendiente |
-| 48 | [EPIC-08](#epic-08) | Consultar los comprobantes emitidos | VTA | 5 | Pendiente |
-| 49 | [EPIC-09](#epic-09) | Consultar la ficha del cliente con su historial | CLI | 5 | Pendiente |
-| 50 | [EPIC-10](#epic-10) | Registrar y consultar el log de auditoría | SEG | 8 | Pendiente |
-| 51 | [SPIKE-01](#spike-01) | Investigar la integración con ARCA (WSAA y WSFE) | VTA | 3 | Pendiente |
-| 52 | [EPIC-11](#epic-11) | Registrarse e iniciar sesión como cliente en la tienda online | CLI | 8 | Pendiente |
-| 53 | [HU-046](#hu-046) | Publicar el catálogo en la tienda online | ECO | 5 | Pendiente |
-| 54 | [HU-047](#hu-047) | Buscar, filtrar y ordenar artículos en la tienda online | ECO | 5 | Pendiente |
-| 55 | [HU-048](#hu-048) | Mostrar la disponibilidad online e impedir la compra sin stock | ECO | 3 | Pendiente |
-| 56 | [EPIC-13](#epic-13) | Gestionar el carrito de compras | ECO | 8 | Pendiente |
-| 57 | [HU-049](#hu-049) | Elegir la modalidad de entrega y calcular el costo de envío | ECO | 5 | Pendiente |
-| 58 | [HU-050](#hu-050) | Pagar el pedido con Mercado Pago en sandbox | ECO | 8 | Pendiente |
-| 59 | [EPIC-15](#epic-15) | Procesar el pedido pagado como una venta con factura y egreso de stock | ECO | 8 | Pendiente |
-| 60 | [EPIC-16](#epic-16) | Seguir el estado del pedido y recibir notificaciones por correo | ECO | 8 | Pendiente |
-| 61 | [EPIC-17](#epic-17) | Administrar los pedidos web desde el panel interno | ECO | 8 | Pendiente |
-| 62 | [EPIC-18](#epic-18) | Visualizar los ingresos del periodo | DSH | 8 | Pendiente |
-| 63 | [EPIC-19](#epic-19) | Visualizar los egresos del periodo | DSH | 5 | Pendiente |
-| 64 | [EPIC-20](#epic-20) | Visualizar la relación entre ingresos y egresos y su evolución | DSH | 8 | Pendiente |
-| 65 | [EPIC-21](#epic-21) | Visualizar indicadores operativos complementarios | DSH | 5 | Pendiente |
-| 66 | [HU-053](#hu-053) | Exportar a CSV y Excel los listados de stock | STK | 3 | Pendiente |
-| 67 | [EPIC-22](#epic-22) | Filtrar y exportar el tablero gerencial | DSH | 5 | Pendiente |
-| 68 | [HAB-03](#hab-03) | Estabilización y cierre | - | reserva | Pendiente |
+| 32 | [HU-054](#hu-054) | Aplicar notas de crédito y débito al saldo de la factura | CMP | 5 | Pendiente |
+| 33 | [HU-055](#hu-055) | Consultar el listado de pagos y egresos del período | CMP | 5 | Pendiente |
+| 34 | [HU-029](#hu-029) | Actualizar precios de forma masiva por porcentaje | PRE | 5 | Pendiente |
+| 35 | [HU-030](#hu-030) | Consultar el historial de cambios de precio | PRE | 3 | Pendiente |
+| 36 | [EPIC-01](#epic-01) | Resolver el precio de venta según el cliente y el canal | PRE | 8 | Pendiente |
+| 37 | [HU-051](#hu-051) | Administrar puntos de venta | ADM | 2 | Pendiente |
+| 38 | [HU-039](#hu-039) | Abrir una venta de mostrador | VTA | 3 | Pendiente |
+| 39 | [HU-040](#hu-040) | Incorporar artículos a la venta por código de barras o búsqueda | VTA | 5 | Pendiente |
+| 40 | [HU-007](#hu-007) | Administrar las alícuotas de IVA | ADM | 2 | Pendiente |
+| 41 | [HU-041](#hu-041) | Calcular el precio, el IVA y los totales de la venta | VTA | 5 | Pendiente |
+| 42 | [EPIC-03](#epic-03) | Identificar al cliente y determinar el tipo de comprobante | VTA | 5 | Pendiente |
+| 43 | [HU-052](#hu-052) | Administrar medios de pago | ADM | 2 | Pendiente |
+| 44 | [EPIC-04](#epic-04) | Cobrar la venta con uno o varios medios de pago | VTA | 8 | Pendiente |
+| 45 | [HU-042](#hu-042) | Emitir la factura con numeración correlativa por punto de venta | VTA | 8 | Pendiente |
+| 46 | [HU-043](#hu-043) | Imprimir y descargar la factura en PDF | VTA | 5 | Pendiente |
+| 47 | [EPIC-06](#epic-06) | Descontar el stock automáticamente al confirmar la venta | VTA | 5 | Pendiente |
+| 48 | [HU-044](#hu-044) | Anular una venta con nota de crédito y reingreso de stock | VTA | 8 | Pendiente |
+| 49 | [HU-045](#hu-045) | Registrar una devolución parcial de cliente | VTA | 5 | Pendiente |
+| 50 | [EPIC-08](#epic-08) | Consultar los comprobantes emitidos | VTA | 5 | Pendiente |
+| 51 | [EPIC-09](#epic-09) | Consultar la ficha del cliente con su historial | CLI | 5 | Pendiente |
+| 52 | [EPIC-10](#epic-10) | Registrar y consultar el log de auditoría | SEG | 8 | Pendiente |
+| 53 | [SPIKE-01](#spike-01) | Investigar la integración con ARCA (WSAA y WSFE) | VTA | 3 | Pendiente |
+| 54 | [EPIC-11](#epic-11) | Registrarse e iniciar sesión como cliente en la tienda online | CLI | 8 | Pendiente |
+| 55 | [HU-046](#hu-046) | Publicar el catálogo en la tienda online | ECO | 5 | Pendiente |
+| 56 | [HU-047](#hu-047) | Buscar, filtrar y ordenar artículos en la tienda online | ECO | 5 | Pendiente |
+| 57 | [HU-048](#hu-048) | Mostrar la disponibilidad online e impedir la compra sin stock | ECO | 3 | Pendiente |
+| 58 | [EPIC-13](#epic-13) | Gestionar el carrito de compras | ECO | 8 | Pendiente |
+| 59 | [HU-049](#hu-049) | Elegir la modalidad de entrega y calcular el costo de envío | ECO | 5 | Pendiente |
+| 60 | [HU-050](#hu-050) | Pagar el pedido con Mercado Pago en sandbox | ECO | 8 | Pendiente |
+| 61 | [EPIC-15](#epic-15) | Procesar el pedido pagado como una venta con factura y egreso de stock | ECO | 8 | Pendiente |
+| 62 | [EPIC-16](#epic-16) | Seguir el estado del pedido y recibir notificaciones por correo | ECO | 8 | Pendiente |
+| 63 | [EPIC-17](#epic-17) | Administrar los pedidos web desde el panel interno | ECO | 8 | Pendiente |
+| 64 | [EPIC-18](#epic-18) | Visualizar los ingresos del periodo | DSH | 8 | Pendiente |
+| 65 | [EPIC-19](#epic-19) | Visualizar los egresos del periodo | DSH | 5 | Pendiente |
+| 66 | [EPIC-20](#epic-20) | Visualizar la relación entre ingresos y egresos y su evolución | DSH | 8 | Pendiente |
+| 67 | [EPIC-21](#epic-21) | Visualizar indicadores operativos complementarios | DSH | 5 | Pendiente |
+| 68 | [HU-053](#hu-053) | Exportar a CSV y Excel los listados de stock | STK | 3 | Pendiente |
+| 69 | [EPIC-22](#epic-22) | Filtrar y exportar el tablero gerencial | DSH | 5 | Pendiente |
+| 70 | [HAB-03](#hab-03) | Estabilización y cierre | - | reserva | Pendiente |
 
 ### Historias desglosadas por corrección del PO (2026-08-22)
 
@@ -165,7 +167,7 @@ separadas: `VTA-01/02/03`, `ECO-01/02/03`, `ECO-05/06` y `CMP-05`.
 
 ## HU-005 - Administrar sucursales y depósitos
 
-**Tipo:** Historia · **Módulo:** ADM · **Estimación:** 3 SP · **Estado:** Pendiente · **Alcance:** `ADM-01` · **Depende de:** nada
+**Tipo:** Historia · **Módulo:** ADM · **Estimación:** 3 SP · **Estado:** Pendiente · **Sprint:** 1 · **Alcance:** `ADM-01` · **Depende de:** nada
 
 **Como** Administrador, **necesito** registrar las sucursales con sus depósitos, **para** que el resto del sistema sepa dónde se guarda la mercadería.
 
@@ -187,7 +189,7 @@ separadas: `VTA-01/02/03`, `ECO-01/02/03`, `ECO-05/06` y `CMP-05`.
 
 ## HU-006 - Administrar categorías, marcas y unidades de medida
 
-**Tipo:** Historia · **Módulo:** ADM · **Estimación:** 5 SP · **Estado:** Pendiente · **Alcance:** `ADM-02` · **Depende de:** nada
+**Tipo:** Historia · **Módulo:** ADM · **Estimación:** 5 SP · **Estado:** Pendiente · **Sprint:** 1 · **Alcance:** `ADM-02` · **Depende de:** nada
 
 **Como** Administrador, **necesito** administrar las categorías con sus subcategorías, las marcas y las unidades de medida, **para** clasificar el catálogo de forma uniforme y evitar que cada persona invente su propia nomenclatura.
 
@@ -206,7 +208,7 @@ separadas: `VTA-01/02/03`, `ECO-01/02/03`, `ECO-05/06` y `CMP-05`.
 
 ## HU-031 - Administrar los tipos de movimiento de stock
 
-**Tipo:** Historia · **Módulo:** ADM · **Estimación:** 2 SP · **Estado:** Pendiente · **Alcance:** `ADM-03` · **Depende de:** nada
+**Tipo:** Historia · **Módulo:** ADM · **Estimación:** 2 SP · **Estado:** Pendiente · **Sprint:** 1 · **Alcance:** `ADM-03` · **Depende de:** nada
 
 **Como** Administrador, **necesito** administrar el catálogo de tipos de movimiento de stock, **para** que todo movimiento quede tipado con un tipo descriptivo y con su signo de afectación, y ese nombre sea la justificación que se lee en el historial del artículo.
 
@@ -223,7 +225,7 @@ separadas: `VTA-01/02/03`, `ECO-01/02/03`, `ECO-05/06` y `CMP-05`.
 
 ## HU-008 - Administrar el catálogo de artículos
 
-**Tipo:** Historia · **Módulo:** ART · **Estimación:** 5 SP · **Estado:** Pendiente · **Alcance:** `ART-01`, `ART-02`, `ART-03` · **Depende de:** HU-006
+**Tipo:** Historia · **Módulo:** ART · **Estimación:** 5 SP · **Estado:** Pendiente · **Sprint:** 1 · **Alcance:** `ART-01`, `ART-02`, `ART-03` · **Depende de:** HU-006
 
 **Como** Encargado de compras, **necesito** registrar, modificar y dar de baja artículos del catálogo, **para** contar con una única definición de cada artículo compartida por todas las sucursales y canales.
 
@@ -389,7 +391,7 @@ separadas: `VTA-01/02/03`, `ECO-01/02/03`, `ECO-05/06` y `CMP-05`.
 
 ## HU-013 - Administrar proveedores
 
-**Tipo:** Historia · **Módulo:** CMP · **Estimación:** 5 SP · **Estado:** Pendiente · **Alcance:** `CMP-01` · **Depende de:** nada
+**Tipo:** Historia · **Módulo:** CMP · **Estimación:** 5 SP · **Estado:** Pendiente · **Sprint:** 2 · **Alcance:** `CMP-01` · **Depende de:** nada
 
 **Como** Encargado de compras, **necesito** registrar, modificar y dar de baja proveedores, **para** tener centralizada la información de quién me abastece y en qué condiciones comerciales.
 
@@ -440,7 +442,7 @@ separadas: `VTA-01/02/03`, `ECO-01/02/03`, `ECO-05/06` y `CMP-05`.
 
 ## HU-016 - Consultar las existencias por depósito
 
-**Tipo:** Historia · **Módulo:** STK · **Estimación:** 2 SP · **Estado:** Pendiente · **Alcance:** `STK-01` · **Depende de:** HU-005, HU-008
+**Tipo:** Historia · **Módulo:** STK · **Estimación:** 2 SP · **Estado:** Pendiente · **Sprint:** 1 · **Alcance:** `STK-01` · **Depende de:** HU-005, HU-008
 
 **Como** Encargado de depósito, **necesito** consultar la existencia de cada artículo en cada depósito, **para** saber con qué mercadería cuento realmente.
 
@@ -464,7 +466,7 @@ separadas: `VTA-01/02/03`, `ECO-01/02/03`, `ECO-05/06` y `CMP-05`.
 
 ## HU-017 - Registrar un movimiento de stock manual
 
-**Tipo:** Historia · **Módulo:** STK · **Estimación:** 8 SP · **Estado:** Pendiente · **Alcance:** `STK-02`, `STK-03`, `STK-06` · **Depende de:** HU-016, HU-031
+**Tipo:** Historia · **Módulo:** STK · **Estimación:** 8 SP · **Estado:** Pendiente · **Sprint:** 1 · **Alcance:** `STK-02`, `STK-03`, `STK-06` · **Depende de:** HU-016, HU-031
 
 **Como** Encargado de depósito, **necesito** registrar un movimiento de existencias eligiendo un tipo de movimiento y cargando sólo la cantidad que entra o sale de cada artículo, **para** corregir una diferencia sin tener que calcular el total resultante y dejando asentado quién lo hizo, con qué tipo y por qué.
 
@@ -488,7 +490,7 @@ separadas: `VTA-01/02/03`, `ECO-01/02/03`, `ECO-05/06` y `CMP-05`.
 
 ## HU-018 - Consultar el historial de movimientos de stock
 
-**Tipo:** Historia · **Módulo:** STK · **Estimación:** 2 SP · **Estado:** Pendiente · **Alcance:** `STK-04` · **Depende de:** HU-017
+**Tipo:** Historia · **Módulo:** STK · **Estimación:** 2 SP · **Estado:** Pendiente · **Sprint:** 1 · **Alcance:** `STK-04` · **Depende de:** HU-017
 
 **Como** Encargado de depósito, **necesito** consultar el historial de movimientos de un artículo o de un depósito, **para** poder rastrear el origen de cualquier diferencia de existencias.
 
@@ -647,19 +649,33 @@ separadas: `VTA-01/02/03`, `ECO-01/02/03`, `ECO-05/06` y `CMP-05`.
 
 ## HU-036 - Registrar un comprobante de proveedor
 
-**Tipo:** Historia · **Módulo:** CMP · **Estimación:** 5 SP · **Estado:** Pendiente · **Alcance:** `CMP-05` · **Depende de:** HU-013
+**Tipo:** Historia · **Módulo:** CMP · **Estimación:** 5 SP · **Estado:** Pendiente · **Sprint:** 2 · **Alcance:** `CMP-05` · **Depende de:** HU-013
 
-**Como** Encargado de compras, **necesito** registrar la factura o el remito que envía el proveedor, **para** dejar documentado que llegó y cuánto costó.
+**Como** Encargado de compras, **necesito** registrar los comprobantes que emite el proveedor -factura, nota de crédito y nota de débito-, **para** dejar documentada la deuda con cada proveedor y su saldo pendiente.
 
 **Criterios de aceptación**
 
-- **Datos:** proveedor, tipo de comprobante (factura o remito), número, fecha, importe, IVA discriminado
+- **Datos:** proveedor, tipo de comprobante (factura, nota de crédito, nota de débito), número, fecha de emisión, fecha de vencimiento, importe total, IVA discriminado, estado
 - **Validaciones:**
     - la combinación de proveedor, tipo y número de comprobante es única
-    - proveedor, tipo, número y fecha son obligatorios
-    - el importe debe ser mayor a cero
-    - la fecha del comprobante no puede ser posterior a la fecha actual
-- **Comportamiento:** el comprobante queda en estado pendiente de pago hasta que se le imputen pagos (HU-027)
+    - proveedor, tipo, número, fecha de emisión e importe total son obligatorios
+    - el importe total debe ser mayor a cero
+    - la fecha de emisión no puede ser posterior a la fecha actual
+    - la fecha de vencimiento, cuando se informa, no puede ser anterior a la fecha de emisión
+    - solo se pueden registrar comprobantes de proveedores en estado activo
+- **Comportamiento:**
+    - una factura nace en estado pendiente y con saldo pendiente igual a su importe total
+    - una nota de crédito o de débito nace pendiente de imputar; su efecto sobre el saldo lo aplica HU-054
+    - el estado del comprobante se recalcula automáticamente (pendiente, pagado parcialmente, pagado) a partir de su saldo, nunca se carga a mano
+    - un comprobante con imputaciones de pago o de nota asociadas no se elimina: se revierte con una contrapartida
+    - el listado muestra proveedor, tipo, número, fechas, importe, saldo pendiente y estado, y marca como vencido todo comprobante con saldo mayor a cero y fecha de vencimiento pasada
+
+> **Ampliada en el Sprint Planning 2 (2026-08-29):** el PO pidió recibir también notas de crédito y
+> de débito (antes la historia era "factura o remito"), más fecha de vencimiento, saldo pendiente y
+> estado del comprobante. El remito sale de esta historia: el ingreso de mercadería contra remito es
+> `HU-026`, fuera de este sprint; `HU-037` (imputación a órdenes de compra) se revisará cuando
+> entre. El IVA discriminado se registra de forma simplificada mientras `HU-007` (alícuotas de IVA)
+> siga pendiente.
 
 ## HU-037 - Imputar el comprobante a una o varias órdenes de compra
 
@@ -709,22 +725,88 @@ separadas: `VTA-01/02/03`, `ECO-01/02/03`, `ECO-05/06` y `CMP-05`.
     - la entrada de stock queda vinculada al comprobante que la originó y desde el historial de movimientos se puede navegar hasta el
     - el movimiento es inmutable como todos los demás
 
-## HU-027 - Registrar un pago a proveedor imputado a comprobantes
+## HU-027 - Emitir una orden de pago a proveedor
 
-**Tipo:** Historia · **Módulo:** CMP · **Estimación:** 8 SP · **Estado:** Pendiente · **Alcance:** `CMP-07` · **Depende de:** HU-036
+**Tipo:** Historia · **Módulo:** CMP · **Estimación:** 8 SP · **Estado:** Pendiente · **Sprint:** 2 · **Alcance:** `CMP-07` · **Depende de:** HU-036, HU-052
 
-**Como** Encargado de compras, **necesito** registrar un pago y aplicarlo a uno o varios comprobantes del proveedor, **para** mantener actualizado cuánto le debo realmente a cada proveedor.
+**Como** Encargado de compras, **necesito** emitir una orden de pago seleccionando al proveedor y las facturas pendientes que quiero cancelar, **para** registrar cuánto pago, con qué medio y cuánto imputo a cada factura, y mantener actualizado lo que le debo.
 
 **Criterios de aceptación**
 
-- **Datos:** proveedor, fecha, medio de pago, importe total, y detalle de imputación con comprobante e importe aplicado
+- **Datos:** proveedor, número de orden, fecha, medio de pago, importe total de la orden, estado, y detalle de imputación con factura e importe imputado
 - **Validaciones:**
-    - la relación entre el pago y los comprobantes es de muchos a muchos
-    - la suma de los importes imputados debe coincidir con el importe total del pago
-    - no se puede imputar a un comprobante más de su saldo pendiente
-    - se admiten pagos parciales
-    - solo se imputan comprobantes del mismo proveedor
-- **Comportamiento:** cada comprobante pasa automáticamente a estado pendiente, pagado parcialmente o pagado según el saldo resultante
+    - el medio de pago se elige del catálogo de HU-052, no se escribe a mano
+    - solo se imputan facturas del mismo proveedor y con saldo pendiente mayor a cero
+    - la relación entre la orden de pago y las facturas es de muchos a muchos: una orden cancela varias facturas y una factura se paga con varias órdenes; la tabla intermedia guarda el importe imputado de cada orden a cada factura
+    - el importe imputado a una factura no puede superar su saldo pendiente
+    - la suma de los importes imputados debe coincidir con el importe total de la orden
+    - se admiten pagos totales y parciales
+- **Comportamiento:**
+    - el importe total de la orden se calcula como la suma de los importes imputados, nunca se carga a mano
+    - al confirmar la orden, el saldo pendiente de cada factura afectada disminuye en el importe imputado
+    - cada factura pasa automáticamente a pendiente, pagada parcialmente o pagada según su saldo resultante; una factura con saldo cero queda pagada y un pago parcial la deja pagada parcialmente
+    - la orden de pago confirmada es inmutable: no se edita ni se elimina, se corrige con una contrapartida
+    - la orden queda registrada con usuario responsable y fecha
+- **Verificación:** se emite una orden de pago que imputa importes parciales a dos facturas del mismo proveedor y se comprueba que el saldo de cada una queda descontado y que ninguna imputación supera el saldo de su factura
+
+> **Reformulada en el Sprint Planning 2 (2026-08-29):** era "Registrar un pago a proveedor imputado
+> a comprobantes". El PO pidió un documento de **orden de pago** con número, estado y total
+> calculado, y que el medio de pago salga del catálogo administrable (nueva dependencia de
+> `HU-052`). El circuito de saldo comparte la misma base que `HU-054`.
+
+## HU-054 - Aplicar notas de crédito y débito al saldo de la factura
+
+**Tipo:** Historia · **Módulo:** CMP · **Estimación:** 5 SP · **Estado:** Pendiente · **Sprint:** 2 · **Alcance:** `CMP-05` · **Depende de:** HU-036
+
+**Como** Encargado de compras, **necesito** imputar cada nota de crédito o de débito del proveedor a una o varias facturas pendientes, **para** que el saldo que le debo refleje los ajustes y no solo las facturas originales.
+
+**Criterios de aceptación**
+
+- **Datos:** nota de crédito o de débito a imputar, y detalle de imputación con factura destino e importe imputado
+- **Validaciones:**
+    - solo se imputan facturas del mismo proveedor que la nota
+    - una nota de crédito solo se imputa a facturas con saldo pendiente mayor a cero
+    - el importe imputado de una nota de crédito a una factura no puede superar el saldo pendiente de esa factura
+    - la suma de los importes imputados de una nota no puede superar su importe total
+    - se admite imputar una nota a varias facturas y una factura puede recibir varias notas: la relación es de muchos a muchos, y la tabla intermedia guarda el importe imputado de cada nota a cada factura
+- **Comportamiento:**
+    - al imputar una nota de crédito, el saldo pendiente de la factura destino disminuye en el importe imputado
+    - al imputar una nota de débito, el saldo pendiente de la factura destino aumenta en el importe imputado
+    - una factura queda pagada cuando su saldo llega a cero, y vuelve a pendiente o pagada parcialmente si una nota de débito la reabre
+    - la imputación queda registrada con usuario responsable y fecha, y es inmutable: se corrige con una contrapartida, nunca se edita ni se borra
+    - el saldo pendiente de una factura se calcula siempre como importe total menos pagos imputados menos notas de crédito imputadas más notas de débito imputadas, nunca se carga a mano
+- **Verificación:** se imputa una nota de crédito y una de débito a la misma factura y se comprueba que el saldo resultante es importe original menos crédito más débito
+
+> **Historia nueva del Sprint Planning 2 (2026-08-29).** Cubre el "modelo de gastos" y la
+> "modificación del saldo de las facturas" que pidió el PO: cómo las notas afectan la deuda y la
+> trazabilidad de cada imputación. **Punto abierto a confirmar con el profesor:** el PO marcó como
+> ambigua la frase "todo tiene relación N:N". Este equipo asume que las notas se imputan **a
+> facturas concretas** (el saldo que se mueve es el de la factura), con relación N:N e importe
+> imputado en la tabla intermedia. La alternativa -notas como asientos independientes de la cuenta
+> corriente, sin imputar a una factura- cambiaría el modelo de esta historia.
+
+## HU-055 - Consultar el listado de pagos y egresos del período
+
+**Tipo:** Historia · **Módulo:** CMP · **Estimación:** 5 SP · **Estado:** Pendiente · **Sprint:** 2 · **Alcance:** `CMP-08` · **Depende de:** HU-027, HU-036
+
+**Como** Gerente, **necesito** consultar los pagos y egresos realizados en un período con su detalle, **para** controlar cuánto se gastó y a quién se le pagó sin recopilar la información a mano.
+
+**Criterios de aceptación**
+
+- **Datos:** por cada orden de pago y comprobante, fecha, proveedor, tipo de comprobante, medio de pago, importe y estado; y el total de egresos del período
+- **Validaciones:**
+    - el listado es de solo lectura
+    - el total de egresos suma los pagos imputados en el rango de fechas seleccionado, no los importes de comprobantes todavía impagos
+- **Comportamiento:**
+    - filtros combinables por rango de fechas, proveedor, tipo de comprobante, medio de pago y estado
+    - desde cada pago se ve el detalle de los comprobantes afectados y el importe imputado a cada uno
+    - el listado es exportable a CSV y Excel
+- **Verificación:** se filtra por proveedor y por un rango de fechas y se comprueba que el total de egresos coincide con la suma de los pagos listados
+
+> **Historia nueva del Sprint Planning 2 (2026-08-29).** Cubre el "listado de pagos y egresos" del
+> PO. Es la vista operativa por período y por pago; `HU-028` (cuenta corriente por proveedor) es la
+> vista complementaria por saldo y no entra a este sprint. Alimenta más adelante a `EPIC-19`
+> (egresos del período en el tablero gerencial).
 
 ## HU-028 - Consultar el saldo de cuenta corriente de un proveedor
 
@@ -867,7 +949,7 @@ separadas: `VTA-01/02/03`, `ECO-01/02/03`, `ECO-05/06` y `CMP-05`.
 
 ## HU-052 - Administrar medios de pago
 
-**Tipo:** Historia · **Módulo:** ADM · **Estimación:** 2 SP · **Estado:** Pendiente · **Alcance:** `ADM-03` · **Depende de:** nada
+**Tipo:** Historia · **Módulo:** ADM · **Estimación:** 2 SP · **Estado:** Pendiente · **Sprint:** 2 · **Alcance:** `ADM-03` · **Depende de:** nada
 
 **Como** Administrador, **necesito** administrar los medios de pago disponibles, **para** que el cobro de una venta se registre siempre con un valor controlado y no cargado a mano.
 
