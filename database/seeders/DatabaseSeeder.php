@@ -7,7 +7,6 @@ use Database\Seeders\Catalog\ArticleSeeder;
 use Database\Seeders\Catalog\BrandSeeder;
 use Database\Seeders\Catalog\CategorySeeder;
 use Database\Seeders\Catalog\UnitOfMeasureSeeder;
-use Database\Seeders\Inventory\StockAdjustmentReasonSeeder;
 use Database\Seeders\Inventory\StockMovementTypeSeeder;
 use Database\Seeders\Inventory\WarehouseSeeder;
 use Database\Seeders\Inventory\WarehouseStockSeeder;
@@ -48,7 +47,6 @@ class DatabaseSeeder extends Seeder
             WarehouseSeeder::class,
             PointOfSaleSeeder::class,
             StockMovementTypeSeeder::class,
-            StockAdjustmentReasonSeeder::class,
             VatRateSeeder::class,
             PaymentMethodSeeder::class,
             ArticleSeeder::class,

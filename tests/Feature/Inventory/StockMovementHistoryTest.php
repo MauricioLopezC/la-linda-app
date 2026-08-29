@@ -2,7 +2,6 @@
 
 use App\Models\Catalog\Article;
 use App\Models\Catalog\UnitOfMeasure;
-use App\Models\Inventory\StockAdjustmentReason;
 use App\Models\Inventory\StockMovement;
 use App\Models\Inventory\StockMovementItem;
 use App\Models\Inventory\StockMovementType;
@@ -39,17 +38,14 @@ test('movements are listed with correct data', function () {
     $article2 = Article::factory()->create(['description' => 'Producto B', 'unit_of_measure_id' => $unit->id]);
 
     $type = StockMovementType::firstOrCreate(
-        ['code' => StockMovementType::CODE_INVENTORY_ADJUSTMENT],
-        ['name' => 'Ajuste', 'sign' => 1, 'is_system' => true, 'is_active' => true]
+        ['code' => 'count_surplus'],
+        ['name' => 'Ajuste por sobrante de recuento', 'sign' => 1, 'is_system' => true, 'is_active' => true]
     );
-
-    $reason = StockAdjustmentReason::factory()->create(['name' => 'Diferencia de conteo']);
 
     $movement = StockMovement::factory()->create([
         'user_id' => $user->id,
         'warehouse_id' => $warehouse->id,
         'stock_movement_type_id' => $type->id,
-        'stock_adjustment_reason_id' => $reason->id,
         'created_at' => Carbon::parse('2024-01-01 10:00:00'),
     ]);
 
@@ -62,9 +58,8 @@ test('movements are listed with correct data', function () {
         ->assertInertia(fn (Assert $page) => $page
             ->has('movements.data', 1)
             ->where('movements.data.0.id', $movement->id)
-            ->where('movements.data.0.type_name', 'Ajuste')
+            ->where('movements.data.0.type_name', 'Ajuste por sobrante de recuento')
             ->where('movements.data.0.warehouse_name', 'Depósito Central')
-            ->where('movements.data.0.reason_name', 'Diferencia de conteo')
             ->where('movements.data.0.user_name', 'John Doe')
             ->where('movements.data.0.items_count', 2)
             ->where('movements.data.0.total_quantity', '15.500')

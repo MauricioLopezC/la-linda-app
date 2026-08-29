@@ -19,7 +19,6 @@ test('authenticated users can view stock parameters page with movement types', f
     $response->assertInertia(fn ($page) => $page
         ->component('inventory/parameters/index')
         ->has('movementTypes')
-        ->has('adjustmentReasons')
     );
 });
 
@@ -45,24 +44,17 @@ test('user can create a custom stock movement type', function () {
     ]);
 });
 
-test('user can create a movement type whose sign varies per line', function () {
+test('the sign is required when creating a movement type', function () {
     $user = User::factory()->create();
 
     $response = $this->actingAs($user)->post(route('inventory.parameters.movement-types.store'), [
         'name' => 'Reclasificación de depósito',
         'sign' => null,
-        'description' => 'Movimiento cuyo signo depende del renglón',
+        'description' => 'Todo tipo debe declarar su signo',
         'is_active' => true,
     ]);
 
-    $response->assertSessionHasNoErrors();
-    $response->assertRedirect();
-
-    $this->assertDatabaseHas('stock_movement_types', [
-        'name' => 'Reclasificación de depósito',
-        'sign' => null,
-        'is_system' => false,
-    ]);
+    $response->assertSessionHasErrors(['sign']);
 });
 
 test('user cannot create movement type with duplicate name ignoring case and outer spaces', function () {
@@ -115,7 +107,7 @@ test('user can update a custom movement type', function () {
     ]);
 });
 
-test('user can update a custom movement type to vary its sign per line', function () {
+test('the sign is required when updating a movement type', function () {
     $user = User::factory()->create();
     $type = StockMovementType::factory()->create([
         'name' => 'Tipo A Reclasificar',
@@ -126,16 +118,11 @@ test('user can update a custom movement type to vary its sign per line', functio
     $response = $this->actingAs($user)->put(route('inventory.parameters.movement-types.update', $type), [
         'name' => 'Tipo A Reclasificar',
         'sign' => null,
-        'description' => 'Ahora depende del renglón',
+        'description' => 'El signo no puede quedar vacío',
         'is_active' => true,
     ]);
 
-    $response->assertSessionHasNoErrors();
-
-    $this->assertDatabaseHas('stock_movement_types', [
-        'id' => $type->id,
-        'sign' => null,
-    ]);
+    $response->assertSessionHasErrors(['sign']);
 });
 
 test('system movement types cannot be deleted', function () {

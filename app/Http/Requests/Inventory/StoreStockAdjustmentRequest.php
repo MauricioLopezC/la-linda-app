@@ -28,14 +28,15 @@ class StoreStockAdjustmentRequest extends FormRequest
                 'integer',
                 Rule::exists('warehouses', 'id')->where('is_active', true),
             ],
-            'stock_adjustment_reason_id' => [
+            'stock_movement_type_id' => [
                 'required',
                 'integer',
-                Rule::exists('stock_adjustment_reasons', 'id')->where('is_active', true),
+                Rule::exists('stock_movement_types', 'id')->where('is_active', true),
             ],
             'notes' => [
-                'nullable',
+                'required',
                 'string',
+                'min:3',
                 'max:500',
             ],
             'items' => [
@@ -49,10 +50,10 @@ class StoreStockAdjustmentRequest extends FormRequest
                 'distinct',
                 Rule::exists('articles', 'id'),
             ],
-            'items.*.counted_quantity' => [
+            'items.*.quantity' => [
                 'required',
                 'numeric',
-                'min:0',
+                'gt:0',
                 'max:999999999.999',
             ],
         ];
@@ -67,11 +68,11 @@ class StoreStockAdjustmentRequest extends FormRequest
     {
         return [
             'warehouse_id' => 'depósito',
-            'stock_adjustment_reason_id' => 'motivo de ajuste',
+            'stock_movement_type_id' => 'tipo de movimiento',
             'notes' => 'observaciones',
             'items' => 'artículos a ajustar',
             'items.*.article_id' => 'artículo',
-            'items.*.counted_quantity' => 'cantidad contada',
+            'items.*.quantity' => 'cantidad',
         ];
     }
 
@@ -83,10 +84,11 @@ class StoreStockAdjustmentRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'notes.required' => 'Las observaciones son obligatorias: dejá asentado el motivo del movimiento.',
             'items.required' => 'Debe agregar al menos un artículo para ajustar.',
             'items.min' => 'Debe agregar al menos un artículo para ajustar.',
             'items.*.article_id.distinct' => 'No se puede repetir el mismo artículo en el ajuste.',
-            'items.*.counted_quantity.min' => 'La cantidad contada no puede ser negativa.',
+            'items.*.quantity.gt' => 'La cantidad que entra o sale debe ser mayor que cero.',
         ];
     }
 }

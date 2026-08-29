@@ -20,12 +20,11 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property int $stock_movement_type_id
  * @property int $warehouse_id
- * @property int|null $stock_adjustment_reason_id
  * @property string|null $notes
  * @property int $user_id
  * @property Carbon|null $created_at
  */
-#[Fillable(['stock_movement_type_id', 'warehouse_id', 'stock_adjustment_reason_id', 'notes', 'user_id'])]
+#[Fillable(['stock_movement_type_id', 'warehouse_id', 'notes', 'user_id'])]
 class StockMovement extends Model
 {
     /** @use HasFactory<StockMovementFactory> */
@@ -76,16 +75,6 @@ class StockMovement extends Model
     public function warehouse(): BelongsTo
     {
         return $this->belongsTo(Warehouse::class);
-    }
-
-    /**
-     * Get the adjustment reason, present only on inventory adjustments.
-     *
-     * @return BelongsTo<StockAdjustmentReason, $this>
-     */
-    public function reason(): BelongsTo
-    {
-        return $this->belongsTo(StockAdjustmentReason::class, 'stock_adjustment_reason_id');
     }
 
     /**

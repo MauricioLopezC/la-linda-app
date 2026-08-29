@@ -4,14 +4,14 @@ namespace App\Http\Controllers\Inventory;
 
 use App\Actions\Inventory\RegisterStockAdjustment;
 use App\Data\Inventory\ArticleStockOptionData;
-use App\Data\Inventory\StockAdjustmentReasonData;
 use App\Data\Inventory\StockMovementDetailData;
+use App\Data\Inventory\StockMovementTypeData;
 use App\Data\Inventory\WarehouseData;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Inventory\StoreStockAdjustmentRequest;
 use App\Models\Catalog\Article;
-use App\Models\Inventory\StockAdjustmentReason;
 use App\Models\Inventory\StockMovement;
+use App\Models\Inventory\StockMovementType;
 use App\Models\Inventory\Warehouse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -32,20 +32,21 @@ class StockAdjustmentController extends Controller
             ->orderBy('name')
             ->get();
 
-        $reasons = StockAdjustmentReason::query()
+        $movementTypes = StockMovementType::query()
             ->active()
+            ->whereNotIn('code', StockMovementType::AUTOMATIC_CODES)
             ->orderBy('name')
             ->get();
 
         return Inertia::render('inventory/adjustments/create', [
             'warehouses' => WarehouseData::collect($warehouses),
-            'reasons' => StockAdjustmentReasonData::collect($reasons),
+            'movementTypes' => StockMovementTypeData::collect($movementTypes),
             'initialWarehouseId' => $request->filled('warehouse_id') ? (int) $request->query('warehouse_id') : null,
         ]);
     }
 
     /**
-     * Search articles and fetch their current balance for the given warehouse.
+     * Search active articles to add to a manual stock movement.
      */
     public function searchArticles(Request $request): JsonResponse
     {
@@ -54,47 +55,32 @@ class StockAdjustmentController extends Controller
             'search' => ['nullable', 'string', 'max:100'],
         ]);
 
-        $warehouseId = (int) $request->query('warehouse_id');
         $search = trim((string) $request->query('search', ''));
 
         $query = Article::query()
             ->active()
-            ->with(['category', 'brand', 'unitOfMeasure'])
-            ->leftJoin('stock_balances', function ($join) use ($warehouseId) {
-                $join->on('articles.id', '=', 'stock_balances.article_id')
-                    ->where('stock_balances.warehouse_id', '=', $warehouseId);
-            })
-            ->select([
-                'articles.*',
-                'stock_balances.quantity as current_stock_balance',
-            ]);
+            ->with(['category', 'brand', 'unitOfMeasure']);
 
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
-                $q->where('articles.description', 'like', "%{$search}%")
-                    ->orWhere('articles.internal_code', 'like', "%{$search}%")
-                    ->orWhere('articles.barcode', 'like', "%{$search}%");
+                $q->where('description', 'like', "%{$search}%")
+                    ->orWhere('internal_code', 'like', "%{$search}%")
+                    ->orWhere('barcode', 'like', "%{$search}%");
             });
         }
 
-        $articles = $query->orderBy('articles.description')->limit(20)->get();
+        $articles = $query->orderBy('description')->limit(20)->get();
 
-        $data = $articles->map(function (Article $article): ArticleStockOptionData {
-            $stock = $article->getAttribute('current_stock_balance');
-            $currentStock = $stock !== null ? (float) $stock : 0.0;
-
-            return new ArticleStockOptionData(
-                id: $article->id,
-                description: $article->description,
-                internal_code: $article->internal_code,
-                barcode: $article->barcode,
-                category_name: $article->category->name,
-                brand_name: $article->brand?->name,
-                unit_of_measure_name: $article->unitOfMeasure->name,
-                unit_of_measure_abbreviation: $article->unitOfMeasure->abbreviation,
-                current_stock: sprintf('%.3f', $currentStock),
-            );
-        });
+        $data = $articles->map(fn (Article $article): ArticleStockOptionData => new ArticleStockOptionData(
+            id: $article->id,
+            description: $article->description,
+            internal_code: $article->internal_code,
+            barcode: $article->barcode,
+            category_name: $article->category->name,
+            brand_name: $article->brand?->name,
+            unit_of_measure_name: $article->unitOfMeasure->name,
+            unit_of_measure_abbreviation: $article->unitOfMeasure->abbreviation,
+        ));
 
         return response()->json($data);
     }
@@ -109,7 +95,7 @@ class StockAdjustmentController extends Controller
 
         $data = [
             'warehouse_id' => (int) $request->validated('warehouse_id'),
-            'stock_adjustment_reason_id' => (int) $request->validated('stock_adjustment_reason_id'),
+            'stock_movement_type_id' => (int) $request->validated('stock_movement_type_id'),
             'notes' => $request->validated('notes'),
             'user_id' => $userId,
             'items' => $request->validated('items'),
@@ -119,7 +105,7 @@ class StockAdjustmentController extends Controller
 
         return redirect()
             ->route('inventory.adjustments.show', $movement)
-            ->with('success', 'Ajuste de stock registrado exitosamente.');
+            ->with('success', 'Movimiento de stock registrado exitosamente.');
     }
 
     /**
@@ -129,7 +115,6 @@ class StockAdjustmentController extends Controller
     {
         $stockMovement->load([
             'warehouse.branch',
-            'reason',
             'user',
             'type',
             'items.article.unitOfMeasure',

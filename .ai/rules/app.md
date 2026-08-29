@@ -14,7 +14,7 @@ Modules:
 - `Pricing` — price lists, tax rates
 - `Customers`
 - `Purchasing` — suppliers, purchases
-- `Inventory` — multi-warehouse stock, warehouses, stock adjustment reasons
+- `Inventory` — multi-warehouse stock, warehouses, stock movement types
 - `Sales` — sales/invoicing, points of sale, payment methods
 - `Ecommerce`
 - `Reporting` — management dashboard

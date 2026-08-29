@@ -370,7 +370,7 @@ export default function StockMovementHistoryIndex({
                 <TableHead className="text-right">Artículos</TableHead>
                 <TableHead className="text-right">Volumen total</TableHead>
                 <TableHead>Usuario</TableHead>
-                <TableHead>Motivo / Doc</TableHead>
+                <TableHead>Detalle / Doc</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -422,26 +422,20 @@ export default function StockMovementHistoryIndex({
                       </div>
                     </TableCell>
                     <TableCell>
-                      {movement.type_code === 'inventory_adjustment' ? (
-                        <div className="flex flex-col gap-1">
-                          <span className="text-sm font-medium">
-                            {movement.reason_name}
-                          </span>
-                          <Link
-                            href={showAdjustment({
-                              stock_movement: movement.id,
-                            })}
-                            className="dark:text-primary-400 flex items-center gap-1 text-xs text-primary-600 hover:underline"
-                          >
-                            <FileText className="size-3" />
-                            Ver comprobante #{movement.id}
-                          </Link>
-                        </div>
-                      ) : (
+                      <div className="flex flex-col gap-1">
                         <span className="text-sm text-muted-foreground">
                           {movement.notes || '-'}
                         </span>
-                      )}
+                        <Link
+                          href={showAdjustment({
+                            stock_movement: movement.id,
+                          })}
+                          className="dark:text-primary-400 flex items-center gap-1 text-xs text-primary-600 hover:underline"
+                        >
+                          <FileText className="size-3" />
+                          Ver comprobante #{movement.id}
+                        </Link>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))

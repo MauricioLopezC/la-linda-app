@@ -3,7 +3,6 @@
 use App\Models\Catalog\Article;
 use App\Models\Catalog\Category;
 use App\Models\Catalog\UnitOfMeasure;
-use App\Models\Inventory\StockAdjustmentReason;
 use App\Models\Inventory\StockBalance;
 use App\Models\Inventory\StockMovement;
 use App\Models\Inventory\StockMovementType;
@@ -14,7 +13,6 @@ use Database\Seeders\Catalog\ArticleSeeder;
 use Database\Seeders\Catalog\BrandSeeder;
 use Database\Seeders\Catalog\CategorySeeder;
 use Database\Seeders\Catalog\UnitOfMeasureSeeder;
-use Database\Seeders\Inventory\StockAdjustmentReasonSeeder;
 use Database\Seeders\Inventory\StockMovementTypeSeeder;
 use Database\Seeders\Inventory\WarehouseSeeder;
 use Database\Seeders\Inventory\WarehouseStockSeeder;
@@ -22,10 +20,7 @@ use Database\Seeders\Organization\BranchSeeder;
 use Inertia\Testing\AssertableInertia;
 
 beforeEach(function () {
-    $this->seed([
-        StockMovementTypeSeeder::class,
-        StockAdjustmentReasonSeeder::class,
-    ]);
+    $this->seed([StockMovementTypeSeeder::class]);
 
     $this->user = User::factory()->create();
     $this->branch = Branch::factory()->create(['name' => 'Sucursal Centro']);
@@ -54,55 +49,55 @@ beforeEach(function () {
         'barcode' => '7790011223355',
     ]);
 
-    $this->reason = StockAdjustmentReason::query()->where('name', 'Rotura / Daño')->firstOrFail();
+    $this->surplusType = StockMovementType::query()->where('code', 'count_surplus')->firstOrFail();
+    $this->shortageType = StockMovementType::query()->where('code', 'breakage')->firstOrFail();
 });
 
-it('renders the create stock adjustment page for authenticated users', function () {
+it('renders the create page with warehouses and manual movement types only', function () {
     $this->actingAs($this->user)
         ->get(route('inventory.adjustments.create'))
         ->assertOk()
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->component('inventory/adjustments/create')
             ->has('warehouses')
-            ->has('reasons')
+            ->has('movementTypes')
         );
+
+    $response = $this->actingAs($this->user)->get(route('inventory.adjustments.create'));
+    $codes = collect($response->viewData('page')['props']['movementTypes'])->pluck('code');
+
+    expect($codes)->not->toContain(StockMovementType::CODE_PURCHASE_ENTRY)
+        ->and($codes)->not->toContain(StockMovementType::CODE_SALE_EXIT)
+        ->and($codes)->toContain('count_surplus');
 });
 
-it('can search articles with current warehouse stock balance', function () {
-    StockBalance::create([
-        'warehouse_id' => $this->warehouse->id,
-        'article_id' => $this->articleA->id,
-        'quantity' => '25.000',
-    ]);
-
-    $response = $this->actingAs($this->user)
+it('can search articles by description and barcode without a stock balance join', function () {
+    $data = $this->actingAs($this->user)
         ->getJson(route('inventory.adjustments.articles', [
             'warehouse_id' => $this->warehouse->id,
             'search' => 'Leche',
         ]))
-        ->assertOk();
+        ->assertOk()
+        ->json();
 
-    $data = $response->json();
     expect($data)->toHaveCount(1);
     expect($data[0]['internal_code'])->toBe('ART-1001');
-    expect($data[0]['current_stock'])->toBe('25.000');
+    expect($data[0])->not->toHaveKey('current_stock');
     expect($data[0]['unit_of_measure_abbreviation'])->toBe('UN');
-});
 
-it('can search articles by barcode', function () {
-    $response = $this->actingAs($this->user)
+    $byBarcode = $this->actingAs($this->user)
         ->getJson(route('inventory.adjustments.articles', [
             'warehouse_id' => $this->warehouse->id,
             'search' => '7790011223355',
         ]))
-        ->assertOk();
+        ->assertOk()
+        ->json();
 
-    $data = $response->json();
-    expect($data)->toHaveCount(1);
-    expect($data[0]['internal_code'])->toBe('ART-1002');
+    expect($byBarcode)->toHaveCount(1);
+    expect($byBarcode[0]['internal_code'])->toBe('ART-1002');
 });
 
-it('registers a stock adjustment with positive difference (sobrante) and updates stock balance atomically', function () {
+it('registers a positive movement adding only the entered quantity to the balance', function () {
     StockBalance::create([
         'warehouse_id' => $this->warehouse->id,
         'article_id' => $this->articleA->id,
@@ -111,31 +106,20 @@ it('registers a stock adjustment with positive difference (sobrante) and updates
 
     $response = $this->actingAs($this->user)->post(route('inventory.adjustments.store'), [
         'warehouse_id' => $this->warehouse->id,
-        'stock_adjustment_reason_id' => $this->reason->id,
+        'stock_movement_type_id' => $this->surplusType->id,
         'notes' => 'Recuento físico arrojó 5 unidades adicionales',
         'items' => [
-            [
-                'article_id' => $this->articleA->id,
-                'counted_quantity' => 15.000,
-            ],
+            ['article_id' => $this->articleA->id, 'quantity' => 5],
         ],
     ]);
 
     $movement = StockMovement::latest('id')->first();
     expect($movement)->not->toBeNull();
-
     $response->assertRedirect(route('inventory.adjustments.show', $movement));
 
     expect($movement->warehouse_id)->toBe($this->warehouse->id);
-    expect($movement->stock_adjustment_reason_id)->toBe($this->reason->id);
+    expect($movement->stock_movement_type_id)->toBe($this->surplusType->id);
     expect($movement->user_id)->toBe($this->user->id);
-    expect($movement->notes)->toBe('Recuento físico arrojó 5 unidades adicionales');
-
-    $this->assertDatabaseHas('stock_movements', [
-        'id' => $movement->id,
-        'warehouse_id' => $this->warehouse->id,
-        'stock_adjustment_reason_id' => $this->reason->id,
-    ]);
 
     $this->assertDatabaseHas('stock_movement_items', [
         'stock_movement_id' => $movement->id,
@@ -151,7 +135,7 @@ it('registers a stock adjustment with positive difference (sobrante) and updates
     expect((float) $balance->quantity)->toBe(15.000);
 });
 
-it('registers a stock adjustment with negative difference (faltante) and updates stock balance atomically', function () {
+it('registers a negative movement subtracting only the entered quantity from the balance', function () {
     StockBalance::create([
         'warehouse_id' => $this->warehouse->id,
         'article_id' => $this->articleA->id,
@@ -160,13 +144,10 @@ it('registers a stock adjustment with negative difference (faltante) and updates
 
     $this->actingAs($this->user)->post(route('inventory.adjustments.store'), [
         'warehouse_id' => $this->warehouse->id,
-        'stock_adjustment_reason_id' => $this->reason->id,
-        'notes' => 'Mercadería dañada',
+        'stock_movement_type_id' => $this->shortageType->id,
+        'notes' => 'Mercadería dañada durante descarga',
         'items' => [
-            [
-                'article_id' => $this->articleA->id,
-                'counted_quantity' => 12.000,
-            ],
+            ['article_id' => $this->articleA->id, 'quantity' => 8],
         ],
     ])->assertRedirect();
 
@@ -186,7 +167,7 @@ it('registers a stock adjustment with negative difference (faltante) and updates
     expect((float) $balance->quantity)->toBe(12.000);
 });
 
-it('registers a stock adjustment with multiple articles and records proper deltas', function () {
+it('registers a movement with multiple articles applying the type sign to each line', function () {
     StockBalance::create([
         'warehouse_id' => $this->warehouse->id,
         'article_id' => $this->articleA->id,
@@ -200,16 +181,11 @@ it('registers a stock adjustment with multiple articles and records proper delta
 
     $this->actingAs($this->user)->post(route('inventory.adjustments.store'), [
         'warehouse_id' => $this->warehouse->id,
-        'stock_adjustment_reason_id' => $this->reason->id,
+        'stock_movement_type_id' => $this->shortageType->id,
+        'notes' => 'Rotura de dos artículos en góndola',
         'items' => [
-            [
-                'article_id' => $this->articleA->id,
-                'counted_quantity' => 14.000, // +4.000
-            ],
-            [
-                'article_id' => $this->articleB->id,
-                'counted_quantity' => 2.000, // -3.000
-            ],
+            ['article_id' => $this->articleA->id, 'quantity' => 4],
+            ['article_id' => $this->articleB->id, 'quantity' => 3],
         ],
     ])->assertRedirect();
 
@@ -219,9 +195,8 @@ it('registers a stock adjustment with multiple articles and records proper delta
     $this->assertDatabaseHas('stock_movement_items', [
         'stock_movement_id' => $movement->id,
         'article_id' => $this->articleA->id,
-        'quantity' => 4.000,
+        'quantity' => -4.000,
     ]);
-
     $this->assertDatabaseHas('stock_movement_items', [
         'stock_movement_id' => $movement->id,
         'article_id' => $this->articleB->id,
@@ -229,21 +204,60 @@ it('registers a stock adjustment with multiple articles and records proper delta
     ]);
 });
 
-it('validates that stock adjustment reason is required and must exist and be active', function () {
-    $inactiveReason = StockAdjustmentReason::factory()->create(['is_active' => false]);
+it('rejects a movement whose resulting balance would go negative', function () {
+    StockBalance::create([
+        'warehouse_id' => $this->warehouse->id,
+        'article_id' => $this->articleA->id,
+        'quantity' => '3.000',
+    ]);
 
     $this->actingAs($this->user)
         ->post(route('inventory.adjustments.store'), [
             'warehouse_id' => $this->warehouse->id,
-            'stock_adjustment_reason_id' => $inactiveReason->id,
+            'stock_movement_type_id' => $this->shortageType->id,
+            'notes' => 'Intento de restar más de lo disponible',
             'items' => [
-                ['article_id' => $this->articleA->id, 'counted_quantity' => 10],
+                ['article_id' => $this->articleA->id, 'quantity' => 10],
             ],
         ])
-        ->assertSessionHasErrors('stock_adjustment_reason_id');
+        ->assertSessionHasErrors('items');
+
+    expect(StockMovement::count())->toBe(0);
 });
 
-it('validates that warehouse is required and must exist and be active', function () {
+it('rejects a movement whose type is generated automatically by another module', function () {
+    $purchaseEntry = StockMovementType::query()
+        ->where('code', StockMovementType::CODE_PURCHASE_ENTRY)
+        ->firstOrFail();
+
+    $this->actingAs($this->user)
+        ->post(route('inventory.adjustments.store'), [
+            'warehouse_id' => $this->warehouse->id,
+            'stock_movement_type_id' => $purchaseEntry->id,
+            'notes' => 'No debería permitirse',
+            'items' => [
+                ['article_id' => $this->articleA->id, 'quantity' => 5],
+            ],
+        ])
+        ->assertSessionHasErrors('stock_movement_type_id');
+});
+
+it('validates the movement type is required and must exist and be active', function () {
+    $inactiveType = StockMovementType::factory()->create(['is_active' => false, 'sign' => 1]);
+
+    $this->actingAs($this->user)
+        ->post(route('inventory.adjustments.store'), [
+            'warehouse_id' => $this->warehouse->id,
+            'stock_movement_type_id' => $inactiveType->id,
+            'notes' => 'Tipo inactivo',
+            'items' => [
+                ['article_id' => $this->articleA->id, 'quantity' => 10],
+            ],
+        ])
+        ->assertSessionHasErrors('stock_movement_type_id');
+});
+
+it('validates the warehouse is required and must exist and be active', function () {
     $inactiveWarehouse = Warehouse::factory()->create([
         'branch_id' => $this->branch->id,
         'is_active' => false,
@@ -252,72 +266,69 @@ it('validates that warehouse is required and must exist and be active', function
     $this->actingAs($this->user)
         ->post(route('inventory.adjustments.store'), [
             'warehouse_id' => $inactiveWarehouse->id,
-            'stock_adjustment_reason_id' => $this->reason->id,
+            'stock_movement_type_id' => $this->surplusType->id,
+            'notes' => 'Depósito inactivo',
             'items' => [
-                ['article_id' => $this->articleA->id, 'counted_quantity' => 10],
+                ['article_id' => $this->articleA->id, 'quantity' => 10],
             ],
         ])
         ->assertSessionHasErrors('warehouse_id');
+});
+
+it('requires notes as the justification of the movement', function () {
+    $this->actingAs($this->user)
+        ->post(route('inventory.adjustments.store'), [
+            'warehouse_id' => $this->warehouse->id,
+            'stock_movement_type_id' => $this->surplusType->id,
+            'items' => [
+                ['article_id' => $this->articleA->id, 'quantity' => 10],
+            ],
+        ])
+        ->assertSessionHasErrors('notes');
 });
 
 it('validates that at least one article is required in items', function () {
     $this->actingAs($this->user)
         ->post(route('inventory.adjustments.store'), [
             'warehouse_id' => $this->warehouse->id,
-            'stock_adjustment_reason_id' => $this->reason->id,
+            'stock_movement_type_id' => $this->surplusType->id,
+            'notes' => 'Sin artículos',
             'items' => [],
         ])
         ->assertSessionHasErrors('items');
 });
 
-it('validates that duplicate articles in the same adjustment are rejected', function () {
+it('validates that duplicate articles in the same movement are rejected', function () {
     $this->actingAs($this->user)
         ->post(route('inventory.adjustments.store'), [
             'warehouse_id' => $this->warehouse->id,
-            'stock_adjustment_reason_id' => $this->reason->id,
+            'stock_movement_type_id' => $this->surplusType->id,
+            'notes' => 'Artículo repetido',
             'items' => [
-                ['article_id' => $this->articleA->id, 'counted_quantity' => 10],
-                ['article_id' => $this->articleA->id, 'counted_quantity' => 15],
+                ['article_id' => $this->articleA->id, 'quantity' => 10],
+                ['article_id' => $this->articleA->id, 'quantity' => 15],
             ],
         ])
         ->assertSessionHasErrors('items.0.article_id');
 });
 
-it('validates that counted quantity cannot be negative', function () {
+it('validates that the entered quantity must be greater than zero', function () {
     $this->actingAs($this->user)
         ->post(route('inventory.adjustments.store'), [
             'warehouse_id' => $this->warehouse->id,
-            'stock_adjustment_reason_id' => $this->reason->id,
+            'stock_movement_type_id' => $this->surplusType->id,
+            'notes' => 'Cantidad cero',
             'items' => [
-                ['article_id' => $this->articleA->id, 'counted_quantity' => -5],
+                ['article_id' => $this->articleA->id, 'quantity' => 0],
             ],
         ])
-        ->assertSessionHasErrors('items.0.counted_quantity');
-});
-
-it('rejects adjustment if physical count matches system stock with 0 differences across all items', function () {
-    StockBalance::create([
-        'warehouse_id' => $this->warehouse->id,
-        'article_id' => $this->articleA->id,
-        'quantity' => '10.000',
-    ]);
-
-    $this->actingAs($this->user)
-        ->post(route('inventory.adjustments.store'), [
-            'warehouse_id' => $this->warehouse->id,
-            'stock_adjustment_reason_id' => $this->reason->id,
-            'items' => [
-                ['article_id' => $this->articleA->id, 'counted_quantity' => 10.000],
-            ],
-        ])
-        ->assertSessionHasErrors('items');
+        ->assertSessionHasErrors('items.0.quantity');
 });
 
 it('enforces immutability by rejecting PUT, PATCH, and DELETE requests on stock movements', function () {
     $movement = StockMovement::create([
-        'stock_movement_type_id' => StockMovementType::where('code', StockMovementType::CODE_INVENTORY_ADJUSTMENT)->value('id'),
+        'stock_movement_type_id' => $this->surplusType->id,
         'warehouse_id' => $this->warehouse->id,
-        'stock_adjustment_reason_id' => $this->reason->id,
         'user_id' => $this->user->id,
         'created_at' => now(),
     ]);
@@ -340,9 +351,8 @@ it('guarantees stock_balances has no direct HTTP write routes', function () {
 
 it('renders the show receipt page with all movement details and formatted dates', function () {
     $movement = StockMovement::create([
-        'stock_movement_type_id' => StockMovementType::where('code', StockMovementType::CODE_INVENTORY_ADJUSTMENT)->value('id'),
+        'stock_movement_type_id' => $this->surplusType->id,
         'warehouse_id' => $this->warehouse->id,
-        'stock_adjustment_reason_id' => $this->reason->id,
         'notes' => 'Comprobante de prueba',
         'user_id' => $this->user->id,
         'created_at' => now(),
@@ -360,7 +370,7 @@ it('renders the show receipt page with all movement details and formatted dates'
         );
 });
 
-it('seeds initial inventory using RegisterStockAdjustment with Carga inicial de inventario reason', function () {
+it('seeds initial inventory through RegisterStockAdjustment using the initial load type', function () {
     $this->seed([
         BranchSeeder::class,
         WarehouseSeeder::class,
@@ -371,8 +381,10 @@ it('seeds initial inventory using RegisterStockAdjustment with Carga inicial de 
         WarehouseStockSeeder::class,
     ]);
 
-    $initialReason = StockAdjustmentReason::where('name', 'Carga inicial de inventario')->firstOrFail();
-    $movements = StockMovement::where('stock_adjustment_reason_id', $initialReason->id)->get();
+    $initialLoadType = StockMovementType::query()
+        ->where('code', StockMovementType::CODE_INITIAL_LOAD)
+        ->firstOrFail();
+    $movements = StockMovement::where('stock_movement_type_id', $initialLoadType->id)->get();
 
     expect($movements)->not->toBeEmpty();
     expect(StockBalance::where('quantity', '>', 0)->count())->toBeGreaterThan(0);

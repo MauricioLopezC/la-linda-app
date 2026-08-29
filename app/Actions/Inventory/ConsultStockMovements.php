@@ -31,7 +31,6 @@ class ConsultStockMovements
             ->with([
                 'type',
                 'warehouse.branch',
-                'reason',
                 'user',
                 'items.article.unitOfMeasure',
             ])

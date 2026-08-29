@@ -2,7 +2,6 @@
 
 namespace Database\Factories\Inventory;
 
-use App\Models\Inventory\StockAdjustmentReason;
 use App\Models\Inventory\StockMovement;
 use App\Models\Inventory\StockMovementType;
 use App\Models\Inventory\Warehouse;
@@ -26,14 +25,13 @@ class StockMovementFactory extends Factory
         return [
             'stock_movement_type_id' => StockMovementType::factory(),
             'warehouse_id' => Warehouse::factory(),
-            'stock_adjustment_reason_id' => null,
             'notes' => null,
             'user_id' => User::factory(),
         ];
     }
 
     /**
-     * Indicate that the movement is an inventory adjustment, which requires a reason.
+     * Indicate that the movement is a manual inventory adjustment (a deduction by breakage).
      *
      * The type is resolved with firstOrCreate so the state works whether or not the test already
      * seeded the system movement types: stock_movement_types.code is unique.
@@ -42,16 +40,16 @@ class StockMovementFactory extends Factory
     {
         return $this->state(fn (array $attributes): array => [
             'stock_movement_type_id' => StockMovementType::firstOrCreate(
-                ['code' => StockMovementType::CODE_INVENTORY_ADJUSTMENT],
+                ['code' => 'breakage'],
                 [
-                    'name' => 'Ajuste de inventario',
-                    'sign' => 1,
-                    'description' => 'Ajuste de existencias por diferencia física documentada',
+                    'name' => 'Merma / Rotura',
+                    'sign' => -1,
+                    'description' => 'Mercadería dañada en depósito o manipulación',
                     'is_system' => true,
                     'is_active' => true,
                 ]
             )->id,
-            'stock_adjustment_reason_id' => StockAdjustmentReason::factory(),
+            'notes' => 'Ajuste registrado en prueba',
         ]);
     }
 }

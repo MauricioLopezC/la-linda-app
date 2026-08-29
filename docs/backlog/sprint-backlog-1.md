@@ -14,7 +14,7 @@
 
 Que el supermercado pueda definir su estructura de sucursales y depósitos y cargar su catálogo de
 artículos, y que a partir de ahí **toda existencia sea consultable y corregible únicamente a
-través de un movimiento de stock trazable**, con usuario, fecha y motivo.
+través de un movimiento de stock trazable**, con usuario, fecha, tipo y justificación.
 
 El foco es la indicación del Product Owner de arrancar por artículos y stock. Al cierre no hay
 compras, ni ventas, ni precios: hay un inventario que no se puede tocar sin dejar rastro.
@@ -30,10 +30,10 @@ Excel del entregable, ver la última sección.
 | --- | ------ | --------------------------------------------------- | ------ | --------- |
 | 1   | HU-005 | Administrar sucursales y depositos                  | 3      | Terminada |
 | 2   | HU-006 | Administrar categorias, marcas y unidades de medida | 5      | Terminada |
-| 3   | HU-031 | Administrar los parametros de stock                 | 2      | Terminada |
+| 3   | HU-031 | Administrar los tipos de movimiento de stock        | 2      | Terminada |
 | 4   | HU-008 | Administrar el catalogo de articulos                | 5      | Terminada |
 | 5   | HU-016 | Consultar las existencias por deposito              | 2      | Pendiente |
-| 6   | HU-017 | Registrar un ajuste de stock con motivo documentado | 8      | Pendiente |
+| 6   | HU-017 | Registrar un movimiento de stock manual            | 8      | Pendiente |
 | 7   | HU-018 | Consultar el historial de movimientos de stock      | 2      | Pendiente |
 |     |        | **Total**                                           | **27** |           |
 
@@ -49,7 +49,7 @@ nada de afuera del sprint.
 | Orden | Historia | SP | Qué construye |
 | ----- | -------- | -- | ------------- |
 | 1 | `HU-016` Existencias por depósito | 2 | tabla `stock_balances` + pantalla de consulta con filtros y totales |
-| 2 | `HU-017` Ajuste de stock | 8 | tablas `stock_movements` y `stock_movement_items` + el service que aplica el movimiento + pantalla de carga |
+| 2 | `HU-017` Movimiento de stock manual | 8 | tablas `stock_movements` y `stock_movement_items` + el service que aplica el movimiento + pantalla de carga |
 | 3 | `HU-018` Historial de movimientos | 2 | pantalla de consulta con filtros, paginada |
 
 El orden sale de las dependencias declaradas en `product-backlog.md`: `HU-017` depende de `HU-016`,
@@ -125,13 +125,13 @@ Laravel + Inertia.js + React sobre PostgreSQL, desplegado en Laravel Cloud.
 - [ ] ABM de marcas y de unidades de medida
 - [ ] Seeder con el juego de categorías, marcas y unidades de demostración
 
-### HU-031 - Parámetros de stock (2 SP)
+### HU-031 - Tipos de movimiento de stock (2 SP)
 
-- [ ] Migraciones de `tipos_movimiento` (con signo de afectación) y `motivos_ajuste`
+- [ ] Migración de `tipos_movimiento` con signo de afectación **obligatorio** (`+1` / `-1`). Sin entidad de `motivos_ajuste`: el detalle descriptivo vive en el nombre del tipo
 - [ ] Marcado de los tipos propios del sistema como no eliminables
-- [ ] Bloqueo de baja de un valor ya usado en un movimiento
-- [ ] ABM de ambas entidades
-- [ ] Seeder con los cinco tipos de movimiento del sistema y los motivos de ajuste iniciales
+- [ ] Bloqueo de baja de un tipo ya usado en un movimiento; bloqueo de cambio de signo de un tipo ya usado
+- [ ] ABM de tipos de movimiento
+- [ ] Seeder con el catálogo de tipos del sistema (automáticos + los de ajuste manual)
 
 ### HU-008 - Catálogo de artículos (5 SP)
 
@@ -149,19 +149,18 @@ Laravel + Inertia.js + React sobre PostgreSQL, desplegado en Laravel Cloud.
 - [ ] Totalización por sucursal y total general
 - [ ] **Cantidad como campo de sólo lectura: la pantalla no ofrece ninguna vía de edición**
 
-### HU-017 - Ajuste de stock con motivo documentado (8 SP)
+### HU-017 - Movimiento de stock manual (8 SP)
 
 - [ ] Migraciones de `movimientos_stock` (cabecera) y su detalle en relación de muchos a muchos con artículos
-- [ ] Servicio de aplicación del movimiento sobre la existencia, dentro de una transacción
-- [ ] Validaciones: motivo obligatorio de la tabla, cantidad resultante no negativa, al menos un artículo, sin repetidos
+- [ ] Servicio de aplicación del movimiento sobre la existencia, dentro de una transacción, que deriva el delta como `tipo.signo * cantidad_ingresada`
+- [ ] Validaciones: tipo de movimiento obligatorio del catálogo (y que no sea automático), cantidad ingresada por renglón > 0, existencia resultante no negativa, observaciones obligatorias, al menos un artículo, sin repetidos
 - [ ] Registro de usuario responsable, fecha y hora
 - [ ] Inmutabilidad: el movimiento confirmado no se edita ni se elimina, ni por pantalla ni por ruta directa
-- [ ] Pantalla de carga del ajuste con su detalle
-- [ ] **Prueba de que no existe ninguna vía en la interfaz para modificar una cantidad sin generar un movimiento**
+- [ ] Pantalla de carga: elegir tipo (que trae el signo) y cargar sólo la cantidad que entra/sale por artículo. **No se muestra el stock del sistema ni un total/diferencia resultante**
+- [ ] **Prueba de que la pantalla sólo pide la cantidad que entra/sale y no ofrece ninguna vía de modificar una cantidad sin generar un movimiento**
 - [ ] Prueba de que el intento de editar un movimiento confirmado es rechazado en el servidor
-- [ ] Hacer `stock_movement_types.sign` nullable con el sentido "varía por renglón" y sembrar `null` en `warehouse_transfer` e `inventory_adjustment`. Hoy el seeder les pone `1`, que es falso —un ajuste varía renglón a renglón y una transferencia son dos filas con efectos opuestos— y ese valor falso se le muestra al usuario como badge "Suma" en el ABM
-- [ ] Al registrar el movimiento, verificar que el signo del renglón concuerde con el del tipo cuando el tipo define uno, y aceptar cualquiera cuando es `null`. Hoy nada impide un renglón de `sale_exit` con cantidad positiva: el `CHECK (quantity <> 0)` sólo prohíbe el cero, y como el movimiento es inmutable un signo invertido queda para siempre
-- [ ] **Seeder del inventario inicial a través del service**, no insertando en `stock_balances`: un movimiento de tipo `inventory_adjustment` por depósito, con `system_quantity = 0`, `quantity = +n` y motivo "Carga inicial de inventario" — ver la nota de abajo
+- [ ] `stock_movement_types.sign` es `NOT NULL` (`+1` / `-1`) para todos los tipos, incluidos `warehouse_transfer_out/in`. No existe el estado "varía por renglón"
+- [ ] **Seeder del inventario inicial a través del service**, no insertando en `stock_balances`: un movimiento de tipo `initial_load` por depósito, con `system_quantity` = saldo previo y `quantity = +n` — ver la nota de abajo
 
 ### HU-018 - Historial de movimientos de stock (2 SP)
 
@@ -178,8 +177,8 @@ inventario inicial por el mismo camino que recorre el usuario, `HU-016` tiene ex
 mostrar y totalizar y `HU-018` tiene un historial poblado para filtrar y paginar, que es
 lo que hace falta para demostrar esas dos historias. Dos consecuencias operativas:
 
-- Verificar que "Carga inicial de inventario" esté entre los motivos que siembra el seeder de
-  `HU-031`; si no está, es una fila más.
+- Verificar que el tipo `initial_load` ("Carga inicial de inventario", signo `+1`) esté entre los
+  tipos que siembra el seeder de `HU-031`; si no está, es una fila más.
 - El seeder de demostración pasa a depender del service de `HU-017`, así que **no es tarea de la
   fase 0**. Para desarrollar `HU-016` y `HU-018` mientras tanto alcanza con una factory descartable.
 
@@ -263,18 +262,9 @@ erDiagram
         varchar name
         varchar name_normalized UK
         varchar code UK
-        smallint sign
+        smallint sign "NOT NULL, +1 o -1"
         varchar description
         boolean is_system
-        boolean is_active
-        timestamp created_at
-        timestamp updated_at
-    }
-    STOCK_ADJUSTMENT_REASONS {
-        bigint id PK
-        varchar name
-        varchar name_normalized UK
-        varchar description
         boolean is_active
         timestamp created_at
         timestamp updated_at
@@ -306,7 +296,6 @@ erDiagram
         bigint id PK
         bigint stock_movement_type_id FK
         bigint warehouse_id FK
-        bigint stock_adjustment_reason_id FK
         text notes
         bigint user_id FK
         timestamp created_at
@@ -329,7 +318,6 @@ erDiagram
     UNITS_OF_MEASURE ||--o{ ARTICLES : measures
 
     STOCK_MOVEMENT_TYPES ||--o{ STOCK_MOVEMENTS : types
-    STOCK_ADJUSTMENT_REASONS |o--o{ STOCK_MOVEMENTS : justifies
     WAREHOUSES ||--o{ STOCK_MOVEMENTS : affects
     STOCK_MOVEMENTS ||--o{ STOCK_MOVEMENT_ITEMS : details
     ARTICLES ||--o{ STOCK_MOVEMENT_ITEMS : includes
@@ -340,10 +328,10 @@ de Laravel (fuera del alcance de este sprint) — por eso no tiene entidad propi
 
 ### Datos maestros — `HU-005`, `HU-006`, `HU-031`, `HU-008`
 
-Ocho tablas ya construidas: `branches`, `warehouses`, `categories`, `brands`, `units_of_measure`,
-`stock_movement_types`, `stock_adjustment_reasons` y `articles`. Sus columnas están en el diagrama
+Siete tablas ya construidas: `branches`, `warehouses`, `categories`, `brands`, `units_of_measure`,
+`stock_movement_types` y `articles`. Sus columnas están en el diagrama
 de arriba y su definición exacta en las migraciones. Lo que no se lee en el código y conviene tener
-escrito son estas seis decisiones:
+escrito son estas decisiones:
 
 - **`*_normalized`** (`name_normalized`, `internal_code_normalized`, `barcode_normalized`,
   `abbreviation_normalized`): columna mantenida por la app para comparar sin distinguir mayúsculas
@@ -357,18 +345,28 @@ escrito son estas seis decisiones:
 - **`articles` no tiene precio, ni proveedor, ni depósito** — decisión cerrada del PO. Tampoco
   `alicuota_iva_id`: `HU-007` bajó de prioridad y la columna se agrega recién cuando esa historia
   entre.
-- **`stock_movement_types.code`** es la forma de referenciar un tipo sin depender de su nombre, y
-  se compara siempre contra las constantes `StockMovementType::CODE_*` (`inventory_adjustment`,
-  `warehouse_transfer`, `purchase_entry`, `sale_exit`, `customer_return`), nunca contra un literal
-  escrito a mano. `is_system` protege de la baja a esos cinco.
-- **`stock_movement_types.sign` no tiene `CHECK` en la base.** Los valores admitidos (1, -1) los
-  impone el FormRequest. Ver la nota sobre `sign` más abajo, que es donde está la discusión real.
+- **`stock_movement_types.code`** es la forma de referenciar un tipo sin depender de su nombre. Los
+  códigos automáticos (los generan otros módulos) se comparan contra `StockMovementType::CODE_*` /
+  `StockMovementType::AUTOMATIC_CODES` (`purchase_entry`, `sale_exit`, `customer_return`,
+  `warehouse_transfer_out`, `warehouse_transfer_in`), nunca contra un literal escrito a mano. Todos
+  los tipos sembrados son `is_system` y no se pueden eliminar.
+- **`stock_movement_types.sign` es `NOT NULL`** (`+1` suma / `-1` resta) para todos los tipos. No
+  tiene `CHECK` en la base: los valores admitidos los impone el FormRequest. Ver la nota sobre
+  `sign` más abajo.
 
 ### Tablas de stock — `HU-016`, `HU-017`, `HU-018`
 
 La parte compleja del sprint, y el motivo de que esta sección exista: acá están las decisiones de
 diseño que las migraciones no explican. Los nombres calzan con la familia `stock_` que ya arrancó
-en `stock_adjustment_reasons` y `stock_movement_types`.
+en `stock_movement_types`.
+
+> **Revisión post-HU-017 (rediseño de movimientos).** Se eliminó `stock_adjustment_reasons`: el
+> detalle descriptivo pasó al nombre del propio tipo de movimiento (catálogo administrable en
+> HU-031). `stock_movement_types.sign` es `NOT NULL` para todos los tipos y el service deriva el
+> delta como `tipo.signo * cantidad_ingresada` (la cantidad que el usuario tipea siempre es
+> positiva). La transferencia se modela con dos tipos de signo fijo, `warehouse_transfer_out`
+> (`-1`) y `warehouse_transfer_in` (`+1`). El texto de abajo se conservó como registro del diseño
+> previo; donde diga "motivo", "sign nullable" o "varía por renglón", vale esta nota.
 
 #### `stock_balances` — HU-016
 
@@ -397,17 +395,16 @@ Sin `minimum_quantity`: ese campo es de `HU-020`, fuera de este sprint. Por eso 
 
 | Columna                    | Tipo                                    | Notas                                                                                 |
 | -------------------------- | --------------------------------------- | ------------------------------------------------------------------------------------- |
-| id                         | bigserial PK                            |                                                                                       |
-| stock_movement_type_id     | bigint FK → stock_movement_types.id     | `NOT NULL`                                                                            |
-| warehouse_id               | bigint FK → warehouses.id               | `NOT NULL` — el depósito afectado por esta fila                                       |
-| stock_adjustment_reason_id | bigint FK → stock_adjustment_reasons.id | `NULL`, obligatorio a nivel service cuando el tipo es `StockMovementType::CODE_INVENTORY_ADJUSTMENT` (`'inventory_adjustment'`) |
-| notes                      | text                                    | `NULL`                                                                                |
-| user_id                    | bigint FK → users.id                    | `NOT NULL` — tabla externa del starter kit, no modelada acá                           |
-| created_at                 | timestamp                               | `NOT NULL DEFAULT now()` — es también la fecha/hora del movimiento                    |
+| id                     | bigserial PK                       |                                                                  |
+| stock_movement_type_id | bigint FK → stock_movement_types.id | `NOT NULL`                                                       |
+| warehouse_id           | bigint FK → warehouses.id           | `NOT NULL` — el depósito afectado por esta fila                  |
+| notes                  | text                               | `NULL` — obligatorio a nivel FormRequest para el movimiento manual (justificación) |
+| user_id                | bigint FK → users.id               | `NOT NULL` — tabla externa del starter kit, no modelada acá     |
+| created_at             | timestamp                          | `NOT NULL DEFAULT now()` — es también la fecha/hora del movimiento |
 
 Índices, todos para los filtros de `HU-018`: `(warehouse_id, created_at)`,
-`stock_movement_type_id`, `stock_adjustment_reason_id`, `user_id` y `created_at`. Postgres no indexa
-las claves foráneas por su cuenta.
+`stock_movement_type_id`, `user_id` y `created_at`. Postgres no indexa las claves foráneas por su
+cuenta.
 
 **Sin `updated_at`, a propósito.** La inmutabilidad del movimiento confirmado (`HU-017`) se
 sostiene arquitectónicamente —no hay ruta `PUT`/`PATCH`/`DELETE` para este recurso en ningún
@@ -437,36 +434,30 @@ se deriva del tipo al momento de la consulta:
 
 | Tipo                                            | Origen                | Destino               |
 | ----------------------------------------------- | --------------------- | --------------------- |
-| Ajuste (`HU-017`)                               | `warehouse_id`        | `warehouse_id`        |
-| Transferencia, fila de egreso (`quantity < 0`)  | `warehouse_id`        | el de la fila hermana |
-| Transferencia, fila de ingreso (`quantity > 0`) | el de la fila hermana | `warehouse_id`        |
+| Ajuste manual (`HU-017`)                        | `warehouse_id`        | `warehouse_id`        |
+| Transferencia, tipo `warehouse_transfer_out`    | `warehouse_id`        | el de la fila hermana |
+| Transferencia, tipo `warehouse_transfer_in`     | el de la fila hermana | `warehouse_id`        |
 | Entrada por compra (`HU-026`)                   | — (proveedor)         | `warehouse_id`        |
 | Salida por venta                                | `warehouse_id`        | — (cliente)           |
 
-**Salvedad sobre esta tabla:** las dos filas de transferencia se distinguen por el signo del
-renglón, y hoy nada garantiza que ese signo concuerde con el tipo del movimiento — el
-`CHECK (quantity <> 0)` sólo prohíbe el cero. Mientras no esté hecha la validación de signo que
-figura como tarea pendiente de `HU-017`, esta derivación es una convención del service, no una
-garantía del esquema.
+Las dos filas de una transferencia se distinguen por su tipo (`warehouse_transfer_out` /
+`warehouse_transfer_in`), cada uno con su signo fijo; el invariante a validar cuando `HU-019` entre
+es que los dos deltas sumen cero.
 
 #### Sobre `stock_movement_types.sign`
 
-**`sign` es aserción al escribir, nunca input de lectura.** No participa de ningún cálculo de
-saldo, y la razón que cierra la discusión es que **es dato editable por el usuario**: el ABM de
-`HU-031` deja elegirlo para los tipos que no son del sistema. Si el saldo se calculara como
-`type.sign * quantity`, editar un tipo reescribiría retroactivamente el efecto de todo su historial
-— movimientos inmutables con significado mutable. La fuente de verdad del signo es
+**Todo tipo tiene `sign` fijo (`NOT NULL`, `+1` o `-1`).** Al registrar un movimiento manual el
+service deriva el delta una sola vez como `tipo.signo * cantidad_ingresada` (el usuario siempre
+tipea una cantidad positiva) y lo persiste en `stock_movement_items.quantity`. A partir de ahí los
+saldos se recalculan **desde el delta almacenado, nunca desde el signo del tipo**: el tipo es dato
+editable por el usuario (ABM de `HU-031`), así que calcular saldos con él dejaría que editar un
+tipo reescribiera el efecto de todo su historial. La fuente de verdad del signo sigue siendo
 `stock_movement_items.quantity`.
 
-Su trabajo, el único que el delta no puede hacer, es expresar "una entrada por compra nunca puede
-restar": se valida contra el signo del renglón al registrar el movimiento, y no se lee para nada
-más. Ya está impedida su edición para tipos con movimientos registrados
-(`StockMovementType::isInUse()` en `UpdateStockMovementType`, commit `bad9505`), que es lo que evita
-que la aserción cambie de sentido a mitad de camino.
-
-Pendiente, anotado como tareas de `HU-017`: hacerlo nullable con el sentido "varía por renglón" y
-sembrar `null` en `warehouse_transfer` e `inventory_adjustment`, y validar la concordancia de signo
-al registrar el movimiento.
+Está impedido cambiar el signo de un tipo con movimientos registrados
+(`StockMovementType::isInUse()` en `UpdateStockMovementType`), que es lo que evita que el
+significado de un tipo cambie a mitad de camino. Los tipos automáticos
+(`StockMovementType::AUTOMATIC_CODES`) no se pueden elegir en la pantalla de carga manual.
 
 #### `stock_movement_items` — HU-017, HU-018 (detalle, muchos a muchos)
 
@@ -505,18 +496,16 @@ nombra —"se transfirieron 10 unidades"— que queda implícito en una resta. C
 el upsert es `quantity = quantity + :delta` y el movimiento inverso que pide `HU-026` es
 `-quantity`, función pura de la fila original.
 
-`system_quantity` se conserva porque `HU-017` pide mostrar la cantidad en sistema y es la evidencia
-del recuento, barata y sin recorrer el historial. Es reconstruible (el saldo previo es la suma de
-los deltas anteriores), así que se trata igual que `sign`: **informativa, nunca input de ningún
-cálculo.**
+`system_quantity` se conserva como foto del saldo previo al movimiento: rastro de auditoría y base
+para el "Saldo" corriente del historial, barato y sin recorrer el ledger. Es reconstruible (el
+saldo previo es la suma de los deltas anteriores) y **nunca es input de ningún cálculo ni lo tipea
+el usuario**; la pantalla de carga tampoco lo muestra.
 
 Qué escribe cada flujo:
 
-- **Ajuste manual (`HU-017`, este sprint):** el usuario tipea la cantidad que contó físicamente. El
-  service lee el balance, lo guarda en `system_quantity` y persiste
-  `quantity = contada - system_quantity`. La pantalla sigue mostrando los tres datos que pide el
-  criterio de aceptación: la cantidad ajustada es `system_quantity + quantity` y la diferencia es
-  `quantity`.
+- **Movimiento manual (`HU-017`, este sprint):** el usuario elige un tipo (que trae el signo) y
+  tipea sólo la cantidad positiva que entra o sale. El service lee el balance, lo guarda en
+  `system_quantity` y persiste `quantity = tipo.signo * cantidad_ingresada`.
 - **Movimientos automáticos (transferencia `HU-019`, compra `HU-026`, salida por venta):** el
   proceso ya conoce la cantidad a mover y la persiste con el signo que corresponde al depósito de
   esa fila. `system_quantity` queda en `NULL` y no se lee el balance.
@@ -529,40 +518,29 @@ detalle en cada una):
 | 41 (egreso en A)  | P1         | -10      | `NULL`          |
 | 42 (ingreso en B) | P1         | +10      | `NULL`          |
 
-### Servicio de aplicación del ajuste (`HU-017`)
+### Servicio de aplicación del movimiento manual (`HU-017`)
 
 No es parte del DER en sí, pero condiciona el diseño de las tablas de arriba:
 
-1. Se abre una transacción.
+1. Se resuelve el tipo de movimiento (activo y no automático) y se abre una transacción.
 2. Se crea la cabecera en `stock_movements`.
 3. Por cada línea del detalle: se lee `stock_balances.quantity` actual (o se asume 0 si no existe
-   la fila para ese par artículo/depósito), se guarda como `system_quantity`, se valida la cantidad
-   contada que cargó el usuario y se inserta en `stock_movement_items` con
-   `quantity = contada - system_quantity`.
-4. Se hace upsert de `stock_balances` sumando el delta (`quantity = quantity + :delta`) para cada
-   par artículo/depósito. El `CHECK (quantity >= 0)` de esa tabla es lo que rechaza el ajuste que
-   dejaría la existencia en negativo — no hace falta una validación aparte en el detalle.
+   la fila para ese par artículo/depósito) y se guarda como `system_quantity`; se toma la cantidad
+   positiva que cargó el usuario y se calcula `delta = tipo.signo * cantidad`; si
+   `saldo_previo + delta < 0` se rechaza; se inserta en `stock_movement_items` con `quantity = delta`.
+4. Se hace upsert de `stock_balances` con `quantity = saldo_previo + delta` para cada par
+   artículo/depósito, bajo `lockForUpdate`. El `CHECK (quantity >= 0)` de esa tabla es la última
+   red: la validación explícita del paso 3 da el mensaje de negocio.
 5. Se confirma la transacción. Si cualquier paso falla, no queda ni cabecera ni balance tocado.
 
-El paso 3 es el único que lee el balance, y lo hace sólo porque el ajuste necesita guardar la
-evidencia del recuento. Los movimientos automáticos de sprints futuros se saltean esa lectura: ya
-conocen la cantidad a mover, así que ejecutan los pasos 1, 2, 4 y 5.
-
-Al paso 3 le falta todavía la **aserción de signo**: verificar que el signo del renglón concuerde
-con `stock_movement_types.sign` cuando el tipo define uno, y aceptar cualquiera cuando es `null`.
-Está anotada como tarea pendiente de `HU-017`. Es el único lugar donde `sign` se lee, y se lee para
-rechazar, nunca para calcular.
+El paso 3 es el único que lee el balance, y lo hace para guardar la foto del saldo previo. Los
+movimientos automáticos de sprints futuros se saltean esa lectura: ya conocen la cantidad a mover,
+así que ejecutan los pasos 1, 2, 4 y 5. `stock_movement_types.sign` se lee una sola vez, en el
+paso 3, para derivar el delta.
 
 ### Puntos abiertos
 
-1. **`stock_movement_types.sign` es aserción al escribir, nunca input de lectura** (revisión
-   2026-08-23). No participa de ningún cálculo de saldo porque es dato editable por el usuario, y
-   calcular con él haría que editar un tipo reescribiera retroactivamente el significado de
-   movimientos inmutables. El signo real de cada renglón vive en `stock_movement_items.quantity`.
-   Ya está impedida su edición para tipos en uso (`isInUse()`); quedan pendientes, como tareas de
-   `HU-017`, hacerlo nullable para "ajuste" y "transferencia" y validar la concordancia de signo al
-   registrar el movimiento.
-2. **Cómo se agrupan las dos filas de una transferencia queda abierto para `HU-019`.** Ni
+1. **Cómo se agrupan las dos filas de una transferencia queda abierto para `HU-019`.** Ni
    `linked_movement_id` ni `transfer_group_id` entraron a la migración de este sprint. Lo que hay
    que decidir en el planning del Sprint 2 es si la transferencia se modela con una cabecera propia
    `stock_transfers` a la que apuntan los dos movimientos — hoy la opción más probable, porque de
@@ -578,8 +556,8 @@ Guion propuesto para la revisión con el Product Owner:
 1. Dar de alta una sucursal con dos depósitos.
 2. Cargar un artículo con su categoría, subcategoría, marca y unidad, y **mostrar que el formulario no tiene ningún campo de precio** (tampoco tiene alícuota de IVA este sprint: `HU-007` bajó de prioridad).
 3. Consultar existencias por depósito y mostrar que la cantidad no se puede editar desde ninguna pantalla.
-4. Registrar un ajuste con motivo obligatorio y ver la existencia actualizada como consecuencia del movimiento, no de una edición.
-5. Abrir el historial, filtrar por depósito, ver el ajuste con su usuario, fecha y motivo, e intentar editarlo para mostrar que el sistema lo rechaza.
+4. Registrar un movimiento manual eligiendo un tipo con signo y cargando sólo la cantidad que entra/sale, y ver la existencia actualizada como consecuencia del movimiento, no de una edición.
+5. Abrir el historial, filtrar por depósito, ver el movimiento con su usuario, fecha, tipo y observaciones, e intentar editarlo para mostrar que el sistema lo rechaza.
 6. Mostrar el DER actualizado.
 
 ## Fuera del sprint, y por qué

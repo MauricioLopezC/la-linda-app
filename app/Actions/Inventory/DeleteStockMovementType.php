@@ -16,7 +16,7 @@ class DeleteStockMovementType
     {
         if ($movementType->is_system) {
             throw ValidationException::withMessages([
-                'movement_type' => 'Los tipos de movimiento propios del sistema (entrada por compra, salida por venta, devolución, transferencia y ajuste) no pueden eliminarse.',
+                'movement_type' => 'Los tipos de movimiento propios del sistema no pueden eliminarse.',
             ]);
         }
 

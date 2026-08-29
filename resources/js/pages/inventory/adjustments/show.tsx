@@ -156,13 +156,13 @@ export default function ShowStockAdjustment({ movement }: Props) {
               <div className="space-y-1">
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                   <FileText className="h-3.5 w-3.5" />
-                  <span>Motivo Documentado</span>
+                  <span>Tipo de Movimiento</span>
                 </div>
                 <div className="text-sm font-semibold">
-                  {movement.reason_name ?? 'Sin motivo'}
-                </div>
-                <div className="text-xs text-muted-foreground">
                   {movement.type_name}
+                </div>
+                <div className="font-mono text-xs text-muted-foreground">
+                  {movement.type_code}
                 </div>
               </div>
 

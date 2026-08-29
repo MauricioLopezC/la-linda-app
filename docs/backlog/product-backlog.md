@@ -59,7 +59,7 @@ Product Owner se genera a pedido a partir de este documento.
 |---|----|--------|--------|----|--------|
 | 1 | [HU-005](#hu-005) | Administrar sucursales y depósitos | ADM | 3 | Pendiente |
 | 2 | [HU-006](#hu-006) | Administrar categorías, marcas y unidades de medida | ADM | 5 | Pendiente |
-| 3 | [HU-031](#hu-031) | Administrar los parámetros de stock | ADM | 2 | Pendiente |
+| 3 | [HU-031](#hu-031) | Administrar los tipos de movimiento de stock | ADM | 2 | Pendiente |
 | 4 | [HU-008](#hu-008) | Administrar el catálogo de artículos | ART | 5 | Pendiente |
 | 5 | [HU-032](#hu-032) | Registrar la imagen de un artículo | ART | 3 | Pendiente |
 | 6 | [HU-009](#hu-009) | Buscar artículos en el catálogo | ART | 5 | Pendiente |
@@ -72,7 +72,7 @@ Product Owner se genera a pedido a partir de este documento.
 | 13 | [HU-014](#hu-014) | Registrar los contactos de un proveedor y consultar el listado | CMP | 3 | Pendiente |
 | 14 | [HU-015](#hu-015) | Asociar artículos a sus proveedores | ART | 5 | Pendiente |
 | 15 | [HU-016](#hu-016) | Consultar las existencias por depósito | STK | 2 | Pendiente |
-| 16 | [HU-017](#hu-017) | Registrar un ajuste de stock con motivo documentado | STK | 8 | Pendiente |
+| 16 | [HU-017](#hu-017) | Registrar un movimiento de stock manual | STK | 8 | Pendiente |
 | 17 | [HU-018](#hu-018) | Consultar el historial de movimientos de stock | STK | 2 | Pendiente |
 | 18 | [HU-019](#hu-019) | Transferir mercadería entre depósitos | STK | 8 | Pendiente |
 | 19 | [HU-020](#hu-020) | Definir el stock mínimo y ver los artículos en faltante | STK | 5 | Pendiente |
@@ -204,21 +204,22 @@ separadas: `VTA-01/02/03`, `ECO-01/02/03`, `ECO-05/06` y `CMP-05`.
     - no se puede dar de baja una categoría, marca o unidad con artículos asociados
 - **Comportamiento:** el árbol de categorías se visualiza jerárquicamente
 
-## HU-031 - Administrar los parámetros de stock
+## HU-031 - Administrar los tipos de movimiento de stock
 
 **Tipo:** Historia · **Módulo:** ADM · **Estimación:** 2 SP · **Estado:** Pendiente · **Alcance:** `ADM-03` · **Depende de:** nada
 
-**Como** Administrador, **necesito** administrar los tipos de movimiento de stock y los motivos de ajuste, **para** que todo movimiento de stock quede tipado y todo ajuste quede justificado con un motivo controlado.
+**Como** Administrador, **necesito** administrar el catálogo de tipos de movimiento de stock, **para** que todo movimiento quede tipado con un tipo descriptivo y con su signo de afectación, y ese nombre sea la justificación que se lee en el historial del artículo.
 
 **Criterios de aceptación**
 
-- **Datos:**
-    - tipo de movimiento de stock (nombre, signo de afectación suma o resta)
-    - motivo de ajuste (nombre, estado)
+- **Datos:** tipo de movimiento de stock (nombre descriptivo, signo de afectación **obligatorio**: suma `+1` o resta `-1`, descripción, estado)
 - **Validaciones:**
-    - nombre único dentro de cada entidad
-    - no se puede dar de baja un valor ya utilizado en una operación registrada
-    - los tipos de movimiento propios del sistema (entrada por compra, salida por venta, devolución, transferencia y ajuste) no pueden eliminarse
+    - nombre único
+    - el signo es obligatorio y sólo admite suma o resta; no existe un signo "variable"
+    - el signo de un tipo ya utilizado en movimientos registrados no puede cambiarse (haría ilegible el historial)
+    - no se puede dar de baja un tipo ya utilizado en un movimiento registrado
+    - los tipos propios del sistema no pueden eliminarse
+- **Comportamiento:** los tipos que genera automáticamente otro módulo (entrada por compra, salida por venta, devolución de cliente, transferencia de salida y de entrada) no se ofrecen en la pantalla de carga de movimientos manuales
 
 ## HU-008 - Administrar el catálogo de artículos
 
@@ -461,26 +462,29 @@ separadas: `VTA-01/02/03`, `ECO-01/02/03`, `ECO-05/06` y `CMP-05`.
 > pedido, y la exportación no estaba entre lo que pidió para el arranque de artículos y stock. La
 > estimación baja de 3 a 2 SP.
 
-## HU-017 - Registrar un ajuste de stock con motivo documentado
+## HU-017 - Registrar un movimiento de stock manual
 
 **Tipo:** Historia · **Módulo:** STK · **Estimación:** 8 SP · **Estado:** Pendiente · **Alcance:** `STK-02`, `STK-03`, `STK-06` · **Depende de:** HU-016, HU-031
 
-**Como** Encargado de depósito, **necesito** registrar un ajuste de existencias indicando el motivo, **para** corregir una diferencia dejando asentado quién la corrigió y por qué.
+**Como** Encargado de depósito, **necesito** registrar un movimiento de existencias eligiendo un tipo de movimiento y cargando sólo la cantidad que entra o sale de cada artículo, **para** corregir una diferencia sin tener que calcular el total resultante y dejando asentado quién lo hizo, con qué tipo y por qué.
 
 **Criterios de aceptación**
 
-- **Datos:** depósito, motivo de ajuste, observaciones, y detalle con artículo, cantidad en sistema, cantidad ajustada y diferencia resultante
+- **Datos:** depósito, tipo de movimiento (que trae su signo fijo), observaciones, y detalle con artículo y **cantidad que entra o sale** (siempre positiva). El sistema calcula el nuevo saldo; el usuario nunca ingresa el total ni la diferencia.
 - **Validaciones:**
-    - el motivo es obligatorio y se selecciona de la tabla de motivos, no se escribe en texto libre
-    - la cantidad resultante no puede ser negativa
+    - el tipo de movimiento es obligatorio y se elige del catálogo de tipos, no se escribe en texto libre
+    - no se puede elegir un tipo que genera automáticamente otro módulo (compra, venta, devolución, transferencia)
+    - la cantidad ingresada por renglón es mayor que cero
+    - la existencia resultante de aplicar el movimiento no puede quedar negativa
+    - las observaciones son obligatorias (justificación del movimiento)
     - el detalle debe contener al menos un artículo
-    - un artículo no puede repetirse dentro del mismo ajuste
+    - un artículo no puede repetirse dentro del mismo movimiento
     - la operación requiere el permiso específico de ajuste de stock
 - **Comportamiento:**
-    - la existencia nunca se edita de forma directa, se modifica exclusivamente como consecuencia del movimiento registrado
+    - la existencia nunca se edita de forma directa, se modifica exclusivamente como consecuencia del movimiento registrado, sumando o restando según el signo del tipo
     - el movimiento queda con usuario responsable, fecha y hora
     - una vez confirmado no puede editarse ni eliminarse desde ninguna pantalla
-- **Verificación:** se comprueba que no existe ninguna vía en la interfaz para modificar una cantidad sin generar un movimiento, y que el intento de editar un movimiento confirmado es rechazado
+- **Verificación:** se comprueba que la pantalla sólo pide la cantidad que entra/sale (no un total ni una diferencia), que no existe ninguna vía en la interfaz para modificar una cantidad sin generar un movimiento, y que el intento de editar un movimiento confirmado es rechazado
 
 ## HU-018 - Consultar el historial de movimientos de stock
 
@@ -490,7 +494,7 @@ separadas: `VTA-01/02/03`, `ECO-01/02/03`, `ECO-05/06` y `CMP-05`.
 
 **Criterios de aceptación**
 
-- **Datos:** fecha y hora, tipo de movimiento, depósito de origen, depósito de destino, artículo, cantidad, usuario responsable, documento o motivo asociado
+- **Datos:** fecha y hora, tipo de movimiento, depósito de origen, depósito de destino, artículo, cantidad, usuario responsable, observaciones y documento asociado cuando exista
 - **Validaciones:** el historial es de solo lectura, no existe opción de editar ni de eliminar en ninguna vista del sistema
 - **Comportamiento:**
     - filtros por artículo, depósito, tipo de movimiento, usuario y rango de fechas, combinables entre sí

@@ -89,11 +89,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('movement-types', [StockParameterController::class, 'storeMovementType'])->name('movement-types.store');
         Route::put('movement-types/{movement_type}', [StockParameterController::class, 'updateMovementType'])->name('movement-types.update');
         Route::delete('movement-types/{movement_type}', [StockParameterController::class, 'destroyMovementType'])->name('movement-types.destroy');
-
-        Route::post('adjustment-reasons', [StockParameterController::class, 'storeAdjustmentReason'])->name('adjustment-reasons.store');
-        Route::put('adjustment-reasons/{adjustment_reason}', [StockParameterController::class, 'updateAdjustmentReason'])->name('adjustment-reasons.update');
-        Route::delete('adjustment-reasons/{adjustment_reason}', [StockParameterController::class, 'destroyAdjustmentReason'])->name('adjustment-reasons.destroy');
-        Route::patch('adjustment-reasons/{adjustment_reason}/toggle', [StockParameterController::class, 'toggleAdjustmentReason'])->name('adjustment-reasons.toggle');
     });
 
     Route::prefix('pricing/vat-rates')->name('pricing.vat-rates.')->group(function () {
