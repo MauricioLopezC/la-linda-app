@@ -37,7 +37,7 @@ class UpdateStockMovementTypeRequest extends FormRequest
                 'max:100',
                 new UniqueNormalizedValue(StockMovementType::class, 'name_normalized', $movementTypeId),
             ],
-            'sign' => ['nullable', 'integer', Rule::in([1, -1])],
+            'sign' => ['required', 'integer', Rule::in([1, -1])],
             'description' => ['nullable', 'string', 'max:255'],
             'is_active' => ['nullable', 'boolean'],
         ];

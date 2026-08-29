@@ -4,8 +4,8 @@ namespace Database\Seeders\Inventory;
 
 use App\Actions\Inventory\RegisterStockAdjustment;
 use App\Models\Catalog\Article;
-use App\Models\Inventory\StockAdjustmentReason;
 use App\Models\Inventory\StockMovement;
+use App\Models\Inventory\StockMovementType;
 use App\Models\Inventory\Warehouse;
 use App\Models\User;
 use Illuminate\Database\Seeder;
@@ -20,9 +20,11 @@ class WarehouseStockSeeder extends Seeder
         $articles = Article::query()->get();
         $warehouses = Warehouse::query()->get();
         $user = User::query()->first();
-        $reason = StockAdjustmentReason::query()->where('name', 'Carga inicial de inventario')->first();
+        $initialLoadType = StockMovementType::query()
+            ->where('code', StockMovementType::CODE_INITIAL_LOAD)
+            ->first();
 
-        if ($articles->isEmpty() || $warehouses->isEmpty() || ! $user || ! $reason) {
+        if ($articles->isEmpty() || $warehouses->isEmpty() || ! $user || ! $initialLoadType) {
             return;
         }
 
@@ -86,7 +88,7 @@ class WarehouseStockSeeder extends Seeder
 
                 $warehouseItems[$warehouse->id][] = [
                     'article_id' => $article->id,
-                    'counted_quantity' => $quantity,
+                    'quantity' => $quantity,
                 ];
             }
         }
@@ -96,7 +98,7 @@ class WarehouseStockSeeder extends Seeder
         foreach ($warehouseItems as $warehouseId => $items) {
             $alreadySeeded = StockMovement::query()
                 ->where('warehouse_id', $warehouseId)
-                ->where('stock_adjustment_reason_id', $reason->id)
+                ->where('stock_movement_type_id', $initialLoadType->id)
                 ->exists();
 
             if ($alreadySeeded) {
@@ -105,7 +107,7 @@ class WarehouseStockSeeder extends Seeder
 
             $action->execute([
                 'warehouse_id' => $warehouseId,
-                'stock_adjustment_reason_id' => $reason->id,
+                'stock_movement_type_id' => $initialLoadType->id,
                 'notes' => 'Carga inicial de inventario para apertura del sistema',
                 'user_id' => $user->id,
                 'items' => $items,

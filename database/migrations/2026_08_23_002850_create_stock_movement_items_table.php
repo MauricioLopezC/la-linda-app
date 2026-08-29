@@ -17,17 +17,20 @@ return new class extends Migration
             $table->foreignId('article_id')->constrained()->restrictOnDelete();
 
             /*
-             * Signed delta, the source of truth for the sign of the movement: negative leaves the
-             * warehouse, positive enters it. stock_movement_types.sign is informative metadata and
-             * is never read for a calculation. Declared with rawColumn for the same reason as
+             * Signed delta, the stored source of truth for the effect of the line: negative leaves
+             * the warehouse, positive enters it. The manual movement action derives it once on
+             * write as stock_movement_types.sign * (positive quantity typed by the user); after
+             * that, balances are recomputed from this column, never from the type's sign (the type
+             * is user-editable). Declared with rawColumn for the same reason as
              * stock_balances.quantity: SQLite has no ALTER TABLE ADD CONSTRAINT.
              */
             $table->rawColumn('quantity', 'decimal(12, 3) check (quantity <> 0)');
 
             /*
-             * Snapshot of stock_balances.quantity before the movement. Only the manual adjustment
-             * fills it, as evidence of the physical count; automatic movements leave it null.
-             * Informative, never an input to a calculation.
+             * Snapshot of stock_balances.quantity right before this line was applied. The manual
+             * movement action fills it automatically; automatic movements leave it null. Purely
+             * informative (audit trail / future running balance), never an input to a calculation
+             * and never typed by the user.
              */
             $table->decimal('system_quantity', 12, 3)->nullable();
 

@@ -19,11 +19,10 @@ return new class extends Migration
             $table->foreignId('warehouse_id')->constrained()->restrictOnDelete();
 
             /*
-             * Nullable in the schema: the reason is only mandatory for inventory adjustments, and
-             * that depends on the value of stock_movement_types.code, which a FK cannot express.
-             * The HU-017 action enforces it against StockMovementType::CODE_INVENTORY_ADJUSTMENT.
+             * Justification of the movement. Required by the HU-017 action for manual movements
+             * (there is no longer a controlled "reason" catalog: the movement type itself carries
+             * the descriptive detail and its fixed sign).
              */
-            $table->foreignId('stock_adjustment_reason_id')->nullable()->constrained()->restrictOnDelete();
             $table->text('notes')->nullable();
             $table->foreignId('user_id')->constrained()->restrictOnDelete();
 
@@ -38,7 +37,6 @@ return new class extends Migration
             /* HU-018 filters: warehouse, type, user and date range. */
             $table->index(['warehouse_id', 'created_at']);
             $table->index('stock_movement_type_id');
-            $table->index('stock_adjustment_reason_id');
             $table->index('user_id');
             $table->index('created_at');
         });

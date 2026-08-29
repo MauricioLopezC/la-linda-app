@@ -1,7 +1,6 @@
 <?php
 
 use App\Models\Catalog\Article;
-use App\Models\Inventory\StockAdjustmentReason;
 use App\Models\Inventory\StockBalance;
 use App\Models\Inventory\StockMovement;
 use App\Models\Inventory\StockMovementItem;
@@ -75,14 +74,13 @@ test('a stock movement is created without an updated_at column', function () {
     expect($movement->fresh())->not->toBeNull();
 });
 
-test('an adjustment movement links its type, reason, warehouse, user and items', function () {
+test('an adjustment movement links its type, warehouse, user and items', function () {
     $movement = StockMovement::factory()->adjustment()->create();
     StockMovementItem::factory()->count(2)->create(['stock_movement_id' => $movement->id]);
 
-    $movement->load(['type', 'reason', 'warehouse', 'user', 'items']);
+    $movement->load(['type', 'warehouse', 'user', 'items']);
 
-    expect($movement->type->code)->toBe(StockMovementType::CODE_INVENTORY_ADJUSTMENT)
-        ->and($movement->reason)->toBeInstanceOf(StockAdjustmentReason::class)
+    expect($movement->type->sign)->toBe(-1)
         ->and($movement->warehouse)->toBeInstanceOf(Warehouse::class)
         ->and($movement->user)->not->toBeNull()
         ->and($movement->items)->toHaveCount(2);
@@ -115,20 +113,16 @@ test('a branch reports registered stock through its warehouses', function () {
     expect($branch->hasRegisteredStock())->toBeTrue();
 });
 
-test('a movement type and an adjustment reason report being in use', function () {
+test('a movement type reports being in use', function () {
     $type = StockMovementType::factory()->create();
-    $reason = StockAdjustmentReason::factory()->create();
 
-    expect($type->isInUse())->toBeFalse()
-        ->and($reason->isInUse())->toBeFalse();
+    expect($type->isInUse())->toBeFalse();
 
     StockMovement::factory()->create([
         'stock_movement_type_id' => $type->id,
-        'stock_adjustment_reason_id' => $reason->id,
     ]);
 
-    expect($type->isInUse())->toBeTrue()
-        ->and($reason->isInUse())->toBeTrue();
+    expect($type->isInUse())->toBeTrue();
 });
 
 test('an article reports its stock movements', function () {

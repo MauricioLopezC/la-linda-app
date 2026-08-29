@@ -27,7 +27,7 @@ class UpdateStockMovementType
          * it does invalidate the rule the past movements were written under.
          */
         if (! $movementType->is_system && ! $movementType->isInUse() && array_key_exists('sign', $data)) {
-            $payload['sign'] = isset($data['sign']) ? (int) $data['sign'] : null;
+            $payload['sign'] = (int) $data['sign'];
         }
 
         $movementType->update($payload);
