@@ -655,11 +655,12 @@ separadas: `VTA-01/02/03`, `ECO-01/02/03`, `ECO-05/06` y `CMP-05`.
 
 **Criterios de aceptación**
 
-- **Datos:** proveedor, tipo de comprobante (factura, nota de crédito, nota de débito), número, fecha de emisión, fecha de vencimiento, importe total, IVA discriminado, estado
+- **Datos:** proveedor, tipo de comprobante (factura, nota de crédito, nota de débito), letra (A, B, C, M), punto de venta, número, fecha de emisión, fecha de vencimiento, importe neto gravado, IVA, otros tributos (percepciones), importe total, estado
 - **Validaciones:**
-    - la combinación de proveedor, tipo y número de comprobante es única
-    - proveedor, tipo, número, fecha de emisión e importe total son obligatorios
-    - el importe total debe ser mayor a cero
+    - la combinación de proveedor, tipo, letra, punto de venta y número de comprobante es única
+    - proveedor, tipo, letra, punto de venta, número, fecha de emisión e importe total son obligatorios
+    - el punto de venta y el número se guardan con la longitud del formulario oficial (4 y 8 dígitos)
+    - el importe total debe ser mayor a cero y debe coincidir con la suma de importe neto gravado, IVA y otros tributos
     - la fecha de emisión no puede ser posterior a la fecha actual
     - la fecha de vencimiento, cuando se informa, no puede ser anterior a la fecha de emisión
     - solo se pueden registrar comprobantes de proveedores en estado activo
@@ -668,7 +669,7 @@ separadas: `VTA-01/02/03`, `ECO-01/02/03`, `ECO-05/06` y `CMP-05`.
     - una nota de crédito o de débito nace pendiente de imputar; su efecto sobre el saldo lo aplica HU-054
     - el estado del comprobante se recalcula automáticamente (pendiente, pagado parcialmente, pagado) a partir de su saldo, nunca se carga a mano
     - un comprobante con imputaciones de pago o de nota asociadas no se elimina: se revierte con una contrapartida
-    - el listado muestra proveedor, tipo, número, fechas, importe, saldo pendiente y estado, y marca como vencido todo comprobante con saldo mayor a cero y fecha de vencimiento pasada
+    - el listado muestra proveedor, tipo, letra, punto de venta y número, fechas, importe, saldo pendiente y estado, y marca como vencido todo comprobante con saldo mayor a cero y fecha de vencimiento pasada
 
 > **Ampliada en el Sprint Planning 2 (2026-08-29):** el PO pidió recibir también notas de crédito y
 > de débito (antes la historia era "factura o remito"), más fecha de vencimiento, saldo pendiente y
@@ -676,6 +677,19 @@ separadas: `VTA-01/02/03`, `ECO-01/02/03`, `ECO-05/06` y `CMP-05`.
 > `HU-026`, fuera de este sprint; `HU-037` (imputación a órdenes de compra) se revisará cuando
 > entre. El IVA discriminado se registra de forma simplificada mientras `HU-007` (alícuotas de IVA)
 > siga pendiente.
+>
+> **Refinada con comprobantes reales (2026-08-30):** un comprobante se identifica por tipo + letra
+> (`A`/`B`/`C`/`M`) + punto de venta (4 dígitos) + número (8 dígitos), no solo por número, así que
+> la clave única incorpora letra y punto de venta. Se guardan importe neto gravado, IVA y otros
+> tributos (percepciones) como campos planos además del importe total; el crédito fiscal y el
+> detalle de alícuotas siguen fuera hasta `HU-007`. La fecha de vencimiento de pago es opcional: las
+> facturas A analizadas solo traen "Fecha de Vto. de CAE", que es un dato fiscal y no la fecha de
+> pago.
+>
+> **Punto abierto a confirmar con el PO / profesor:** ¿La Linda compra solo a responsables
+> inscriptos (siempre Factura A) o también a monotributistas / exentos (Factura C)? Si es solo A, la
+> letra queda con `A` por defecto pero se conserva el campo; si entran C, elegir la letra es
+> obligatorio y condiciona el IVA discriminado.
 
 ## HU-037 - Imputar el comprobante a una o varias órdenes de compra
 
