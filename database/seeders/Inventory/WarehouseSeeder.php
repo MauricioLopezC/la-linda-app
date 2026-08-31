@@ -38,7 +38,10 @@ class WarehouseSeeder extends Seeder
         ];
 
         foreach ($warehouses as $data) {
-            Warehouse::firstOrCreate(['name' => $data['name'], 'branch_id' => $data['branch_id']], $data);
+            Warehouse::updateOrCreate(
+                ['name' => $data['name'], 'branch_id' => $data['branch_id']],
+                $data
+            );
         }
     }
 }

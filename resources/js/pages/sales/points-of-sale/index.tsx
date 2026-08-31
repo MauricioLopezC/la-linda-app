@@ -9,6 +9,7 @@ import {
 } from '@/actions/App/Http/Controllers/Sales/PointOfSaleController';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
+import TablePagination from '@/components/table-pagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -54,6 +55,8 @@ export default function PointsOfSaleIndex({
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingPointOfSale, setEditingPointOfSale] =
     useState<PointOfSale | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 10;
 
   const createForm = useForm({
     number: '',
@@ -67,11 +70,22 @@ export default function PointsOfSaleIndex({
     is_active: true,
   });
 
+  const normalizedSearch = searchTerm.trim().toLowerCase();
   const filteredPointsOfSale = pointsOfSale.filter(
     (pos) =>
-      String(pos.number).includes(searchTerm) ||
-      pos.warehouse_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      pos.branch_name.toLowerCase().includes(searchTerm.toLowerCase()),
+      String(pos.number).toLowerCase().includes(normalizedSearch) ||
+      pos.warehouse_name.toLowerCase().includes(normalizedSearch) ||
+      pos.branch_name.toLowerCase().includes(normalizedSearch),
+  );
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredPointsOfSale.length / PAGE_SIZE),
+  );
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedPointsOfSale = filteredPointsOfSale.slice(
+    (safeCurrentPage - 1) * PAGE_SIZE,
+    safeCurrentPage * PAGE_SIZE,
   );
 
   const handleOpenCreate = () => {
@@ -155,7 +169,10 @@ export default function PointsOfSaleIndex({
             <Input
               placeholder="Buscar por número, depósito o sucursal..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
               className="pl-9"
             />
           </div>
@@ -195,7 +212,7 @@ export default function PointsOfSaleIndex({
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredPointsOfSale.map((pos) => (
+                paginatedPointsOfSale.map((pos) => (
                   <TableRow key={pos.id}>
                     <TableCell className="font-medium">{pos.number}</TableCell>
                     <TableCell>{pos.warehouse_name}</TableCell>
@@ -227,6 +244,14 @@ export default function PointsOfSaleIndex({
             </TableBody>
           </Table>
         </div>
+        <TablePagination
+          currentPage={safeCurrentPage}
+          totalPages={totalPages}
+          totalItems={filteredPointsOfSale.length}
+          pageSize={PAGE_SIZE}
+          onPageChange={setCurrentPage}
+          entityName="puntos de venta"
+        />
       </div>
 
       {/* DIALOG: Create Point of Sale */}

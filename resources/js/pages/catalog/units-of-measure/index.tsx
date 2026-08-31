@@ -9,6 +9,7 @@ import {
 } from '@/actions/App/Http/Controllers/Catalog/UnitOfMeasureController';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
+import TablePagination from '@/components/table-pagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -41,6 +42,9 @@ export default function UnitsOfMeasureIndex({ unitsOfMeasure = [] }: Props) {
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingUnit, setEditingUnit] = useState<UnitOfMeasure | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 10;
+
   const createForm = useForm<UnitFormData>({
     name: '',
     abbreviation: '',
@@ -51,11 +55,19 @@ export default function UnitsOfMeasureIndex({ unitsOfMeasure = [] }: Props) {
     abbreviation: '',
     is_active: true,
   });
+
   const normalizedSearch = searchTerm.trim().toLowerCase();
   const filteredUnits = unitsOfMeasure.filter(
     (unit) =>
       unit.name.toLowerCase().includes(normalizedSearch) ||
       unit.abbreviation.toLowerCase().includes(normalizedSearch),
+  );
+
+  const totalPages = Math.max(1, Math.ceil(filteredUnits.length / PAGE_SIZE));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedUnits = filteredUnits.slice(
+    (safeCurrentPage - 1) * PAGE_SIZE,
+    safeCurrentPage * PAGE_SIZE,
   );
 
   const openCreate = () => {
@@ -170,7 +182,10 @@ export default function UnitsOfMeasureIndex({ unitsOfMeasure = [] }: Props) {
             <Input
               placeholder="Buscar por nombre o abreviatura..."
               value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
+              onChange={(event) => {
+                setSearchTerm(event.target.value);
+                setCurrentPage(1);
+              }}
               className="pl-9"
             />
           </div>
@@ -200,7 +215,7 @@ export default function UnitsOfMeasureIndex({ unitsOfMeasure = [] }: Props) {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredUnits.map((unit) => (
+                paginatedUnits.map((unit) => (
                   <TableRow key={unit.id}>
                     <TableCell className="font-medium">{unit.name}</TableCell>
                     <TableCell>
@@ -237,6 +252,14 @@ export default function UnitsOfMeasureIndex({ unitsOfMeasure = [] }: Props) {
             </TableBody>
           </Table>
         </div>
+        <TablePagination
+          currentPage={safeCurrentPage}
+          totalPages={totalPages}
+          totalItems={filteredUnits.length}
+          pageSize={PAGE_SIZE}
+          onPageChange={setCurrentPage}
+          entityName="unidades de medida"
+        />
       </div>
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         <DialogContent className="sm:max-w-md">

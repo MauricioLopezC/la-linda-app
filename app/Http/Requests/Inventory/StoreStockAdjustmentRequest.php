@@ -2,8 +2,10 @@
 
 namespace App\Http\Requests\Inventory;
 
+use App\Models\Catalog\Article;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class StoreStockAdjustmentRequest extends FormRequest
 {
@@ -90,5 +92,49 @@ class StoreStockAdjustmentRequest extends FormRequest
             'items.*.article_id.distinct' => 'No se puede repetir el mismo artículo en el ajuste.',
             'items.*.quantity.gt' => 'La cantidad que entra o sale debe ser mayor que cero.',
         ];
+    }
+
+    /**
+     * Configure the validator instance.
+     */
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator): void {
+            $items = $this->input('items', []);
+            if (! is_array($items)) {
+                return;
+            }
+
+            $articleIds = array_filter(array_column($items, 'article_id'));
+            if (empty($articleIds)) {
+                return;
+            }
+
+            $articles = Article::query()
+                ->with('unitOfMeasure')
+                ->whereIn('id', $articleIds)
+                ->get()
+                ->keyBy('id');
+
+            foreach ($items as $index => $item) {
+                if (! is_array($item) || ! isset($item['article_id'], $item['quantity']) || ! is_numeric($item['quantity'])) {
+                    continue;
+                }
+
+                $article = $articles->get((int) $item['article_id']);
+                if (! $article) {
+                    continue;
+                }
+
+                $qty = (float) $item['quantity'];
+                if (! $article->allowsDecimalQuantity() && fmod($qty, 1.0) != 0.0) {
+                    $unitName = $article->unitOfMeasure->name;
+                    $validator->errors()->add(
+                        "items.{$index}.quantity",
+                        "El artículo '{$article->description}' se contabiliza por {$unitName} entera y no admite cantidades fraccionarias o decimales."
+                    );
+                }
+            }
+        });
     }
 }

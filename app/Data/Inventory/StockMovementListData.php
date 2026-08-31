@@ -24,6 +24,8 @@ class StockMovementListData extends Data
     public static function fromModel(StockMovement $movement): self
     {
         $totalQty = $movement->items->sum(fn ($item): float => abs((float) $item->quantity));
+        $tz = (string) config('app.timezone', 'America/Argentina/Buenos_Aires');
+        $created = $movement->created_at?->copy()->setTimezone($tz) ?? now()->setTimezone($tz);
 
         return new self(
             id: $movement->id,
@@ -33,8 +35,8 @@ class StockMovementListData extends Data
             branch_name: $movement->warehouse->branch->name,
             notes: $movement->notes,
             user_name: $movement->user->name,
-            created_at: $movement->created_at?->toISOString() ?? now()->toISOString(),
-            created_at_formatted: $movement->created_at?->format('d/m/Y H:i:s') ?? now()->format('d/m/Y H:i:s'),
+            created_at: $created->toISOString(true),
+            created_at_formatted: $created->format('d/m/Y H:i:s'),
             items_count: $movement->items_count ?? $movement->items->count(),
             total_quantity: sprintf('%.3f', $totalQty),
         );

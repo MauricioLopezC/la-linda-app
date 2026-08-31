@@ -9,6 +9,7 @@ import {
 } from '@/actions/App/Http/Controllers/Catalog/ArticleController';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
+import TablePagination from '@/components/table-pagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -100,6 +101,8 @@ export default function ArticlesIndex({
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingArticle, setEditingArticle] = useState<Article | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 10;
 
   const createForm = useForm<ArticleFormData>(emptyForm);
   const editForm = useForm<ArticleFormData>(emptyForm);
@@ -130,9 +133,21 @@ export default function ArticlesIndex({
     return (
       article.description.toLowerCase().includes(term) ||
       article.internal_code.toLowerCase().includes(term) ||
-      (article.barcode ?? '').toLowerCase().includes(term)
+      (article.barcode ?? '').toLowerCase().includes(term) ||
+      (article.brand_name ?? '').toLowerCase().includes(term) ||
+      article.unit_of_measure_name.toLowerCase().includes(term)
     );
   });
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredArticles.length / PAGE_SIZE),
+  );
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedArticles = filteredArticles.slice(
+    (safeCurrentPage - 1) * PAGE_SIZE,
+    safeCurrentPage * PAGE_SIZE,
+  );
 
   const openCreate = () => {
     createForm.setData(emptyForm);
@@ -403,7 +418,10 @@ export default function ArticlesIndex({
             <Input
               placeholder="Buscar por descripción, código interno o de barras..."
               value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
+              onChange={(event) => {
+                setSearchTerm(event.target.value);
+                setCurrentPage(1);
+              }}
               className="pl-9"
             />
           </div>
@@ -436,7 +454,7 @@ export default function ArticlesIndex({
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredArticles.map((article) => (
+                paginatedArticles.map((article) => (
                   <TableRow key={article.id}>
                     <TableCell className="font-medium">
                       {article.internal_code}
@@ -475,6 +493,14 @@ export default function ArticlesIndex({
             </TableBody>
           </Table>
         </div>
+        <TablePagination
+          currentPage={safeCurrentPage}
+          totalPages={totalPages}
+          totalItems={filteredArticles.length}
+          pageSize={PAGE_SIZE}
+          onPageChange={setCurrentPage}
+          entityName="artículos"
+        />
       </div>
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         <DialogContent className="sm:max-w-lg">

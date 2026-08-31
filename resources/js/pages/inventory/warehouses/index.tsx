@@ -9,6 +9,7 @@ import {
 } from '@/actions/App/Http/Controllers/Inventory/WarehouseController';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
+import TablePagination from '@/components/table-pagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -55,6 +56,8 @@ export default function WarehousesIndex({
   const [editingWarehouse, setEditingWarehouse] = useState<Warehouse | null>(
     null,
   );
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 10;
 
   const createForm = useForm({
     name: '',
@@ -70,10 +73,21 @@ export default function WarehousesIndex({
     is_active: true,
   });
 
+  const normalizedSearch = searchTerm.trim().toLowerCase();
   const filteredWarehouses = warehouses.filter(
     (warehouse) =>
-      warehouse.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      warehouse.branch_name.toLowerCase().includes(searchTerm.toLowerCase()),
+      warehouse.name.toLowerCase().includes(normalizedSearch) ||
+      warehouse.branch_name.toLowerCase().includes(normalizedSearch),
+  );
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredWarehouses.length / PAGE_SIZE),
+  );
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedWarehouses = filteredWarehouses.slice(
+    (safeCurrentPage - 1) * PAGE_SIZE,
+    safeCurrentPage * PAGE_SIZE,
   );
 
   const handleOpenCreate = () => {
@@ -164,7 +178,10 @@ export default function WarehousesIndex({
             <Input
               placeholder="Buscar depósito por nombre o sucursal..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
               className="pl-9"
             />
           </div>
@@ -203,7 +220,7 @@ export default function WarehousesIndex({
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredWarehouses.map((warehouse) => (
+                paginatedWarehouses.map((warehouse) => (
                   <TableRow key={warehouse.id}>
                     <TableCell className="font-medium">
                       {warehouse.name}
@@ -245,6 +262,14 @@ export default function WarehousesIndex({
             </TableBody>
           </Table>
         </div>
+        <TablePagination
+          currentPage={safeCurrentPage}
+          totalPages={totalPages}
+          totalItems={filteredWarehouses.length}
+          pageSize={PAGE_SIZE}
+          onPageChange={setCurrentPage}
+          entityName="depósitos"
+        />
       </div>
 
       {/* DIALOG: Create Warehouse */}

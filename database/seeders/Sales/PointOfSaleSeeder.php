@@ -23,6 +23,11 @@ class PointOfSaleSeeder extends Seeder
                 'is_active' => true,
             ],
             [
+                'number' => 2,
+                'warehouse_id' => $depositoCentral->id,
+                'is_active' => true,
+            ],
+            [
                 'number' => 1,
                 'warehouse_id' => $depositoNorte->id,
                 'is_active' => true,
@@ -30,7 +35,10 @@ class PointOfSaleSeeder extends Seeder
         ];
 
         foreach ($pointsOfSale as $data) {
-            PointOfSale::firstOrCreate(['number' => $data['number'], 'warehouse_id' => $data['warehouse_id']], $data);
+            PointOfSale::updateOrCreate(
+                ['number' => $data['number'], 'warehouse_id' => $data['warehouse_id']],
+                $data
+            );
         }
     }
 }

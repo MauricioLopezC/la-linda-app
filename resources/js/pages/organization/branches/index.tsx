@@ -9,6 +9,7 @@ import {
 } from '@/actions/App/Http/Controllers/Organization/BranchController';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
+import TablePagination from '@/components/table-pagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -41,6 +42,8 @@ export default function BranchesIndex({ branches = [] }: Props) {
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingBranch, setEditingBranch] = useState<Branch | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 10;
 
   const createForm = useForm({
     name: '',
@@ -56,8 +59,23 @@ export default function BranchesIndex({ branches = [] }: Props) {
     is_active: true,
   });
 
-  const filteredBranches = branches.filter((branch) =>
-    branch.name.toLowerCase().includes(searchTerm.toLowerCase()),
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+  const filteredBranches = branches.filter(
+    (branch) =>
+      branch.name.toLowerCase().includes(normalizedSearch) ||
+      (branch.address &&
+        branch.address.toLowerCase().includes(normalizedSearch)) ||
+      (branch.phone && branch.phone.toLowerCase().includes(normalizedSearch)),
+  );
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredBranches.length / PAGE_SIZE),
+  );
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedBranches = filteredBranches.slice(
+    (safeCurrentPage - 1) * PAGE_SIZE,
+    safeCurrentPage * PAGE_SIZE,
   );
 
   const handleOpenCreate = () => {
@@ -148,7 +166,10 @@ export default function BranchesIndex({ branches = [] }: Props) {
             <Input
               placeholder="Buscar sucursal por nombre..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
               className="pl-9"
             />
           </div>
@@ -181,7 +202,7 @@ export default function BranchesIndex({ branches = [] }: Props) {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredBranches.map((branch) => (
+                paginatedBranches.map((branch) => (
                   <TableRow key={branch.id}>
                     <TableCell className="font-medium">{branch.name}</TableCell>
                     <TableCell>{branch.address || '—'}</TableCell>
@@ -215,6 +236,14 @@ export default function BranchesIndex({ branches = [] }: Props) {
             </TableBody>
           </Table>
         </div>
+        <TablePagination
+          currentPage={safeCurrentPage}
+          totalPages={totalPages}
+          totalItems={filteredBranches.length}
+          pageSize={PAGE_SIZE}
+          onPageChange={setCurrentPage}
+          entityName="sucursales"
+        />
       </div>
 
       {/* DIALOG: Create Branch */}

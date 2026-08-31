@@ -17,6 +17,7 @@ import {
 } from '@/actions/App/Http/Controllers/Inventory/StockParameterController';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
+import TablePagination from '@/components/table-pagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -56,6 +57,8 @@ type Props = {
 
 export default function StockParametersIndex({ movementTypes = [] }: Props) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 10;
 
   const [isCreateTypeOpen, setIsCreateTypeOpen] = useState(false);
   const [editingType, setEditingType] = useState<StockMovementType | null>(
@@ -79,12 +82,19 @@ export default function StockParametersIndex({ movementTypes = [] }: Props) {
     is_active: true,
   });
 
+  const normalizedSearch = searchTerm.trim().toLowerCase();
   const filteredTypes = movementTypes.filter(
     (type) =>
-      type.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      type.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      type.name.toLowerCase().includes(normalizedSearch) ||
       (type.description &&
-        type.description.toLowerCase().includes(searchTerm.toLowerCase())),
+        type.description.toLowerCase().includes(normalizedSearch)),
+  );
+
+  const totalPages = Math.max(1, Math.ceil(filteredTypes.length / PAGE_SIZE));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedTypes = filteredTypes.slice(
+    (safeCurrentPage - 1) * PAGE_SIZE,
+    safeCurrentPage * PAGE_SIZE,
   );
 
   const handleOpenCreateType = () => {
@@ -188,9 +198,12 @@ export default function StockParametersIndex({ movementTypes = [] }: Props) {
             <div className="relative max-w-sm flex-1">
               <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Buscar tipo por nombre, código o descripción..."
+                placeholder="Buscar tipo por nombre o descripción..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1);
+                }}
                 className="pl-9"
               />
             </div>
@@ -209,7 +222,6 @@ export default function StockParametersIndex({ movementTypes = [] }: Props) {
               <TableHeader>
                 <TableRow>
                   <TableHead>Nombre</TableHead>
-                  <TableHead>Código</TableHead>
                   <TableHead>Signo / Afectación</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead>Descripción</TableHead>
@@ -220,20 +232,17 @@ export default function StockParametersIndex({ movementTypes = [] }: Props) {
                 {filteredTypes.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={6}
+                      colSpan={5}
                       className="py-12 text-center text-muted-foreground"
                     >
                       No se encontraron tipos de movimiento registrados.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredTypes.map((type) => (
+                  paginatedTypes.map((type) => (
                     <TableRow key={type.id}>
                       <TableCell className="font-medium text-foreground">
                         {type.name}
-                      </TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground">
-                        {type.code}
                       </TableCell>
                       <TableCell>
                         {type.sign === 1 ? (
@@ -311,6 +320,15 @@ export default function StockParametersIndex({ movementTypes = [] }: Props) {
               </TableBody>
             </Table>
           </div>
+
+          <TablePagination
+            currentPage={safeCurrentPage}
+            totalPages={totalPages}
+            totalItems={filteredTypes.length}
+            pageSize={PAGE_SIZE}
+            onPageChange={setCurrentPage}
+            entityName="tipos de movimiento"
+          />
         </div>
       </div>
 

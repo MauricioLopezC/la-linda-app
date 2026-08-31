@@ -15,20 +15,23 @@ class BranchSeeder extends Seeder
         $branches = [
             [
                 'name' => 'Sucursal Centro',
-                'address' => 'Av. San Martín 1250, Salta Capital',
-                'phone' => '387-4001100',
+                'address' => 'Av. San Martín 1250, Salta Capital, Salta',
+                'phone' => '+54 387 421-1100',
                 'is_active' => true,
             ],
             [
                 'name' => 'Sucursal Norte',
-                'address' => 'Belgrano 430, General Güemes',
-                'phone' => '387-4002200',
+                'address' => 'Av. Belgrano 430, General Güemes, Salta',
+                'phone' => '+54 387 400-2200',
                 'is_active' => true,
             ],
         ];
 
         foreach ($branches as $data) {
-            Branch::firstOrCreate(['name' => $data['name']], $data);
+            Branch::updateOrCreate(
+                ['name' => $data['name']],
+                $data
+            );
         }
     }
 }

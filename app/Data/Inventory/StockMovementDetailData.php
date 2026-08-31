@@ -28,6 +28,9 @@ class StockMovementDetailData extends Data
 
     public static function fromModel(StockMovement $movement): self
     {
+        $tz = (string) config('app.timezone', 'America/Argentina/Buenos_Aires');
+        $created = $movement->created_at?->copy()->setTimezone($tz) ?? now()->setTimezone($tz);
+
         return new self(
             id: $movement->id,
             type_name: $movement->type->name,
@@ -38,8 +41,8 @@ class StockMovementDetailData extends Data
             notes: $movement->notes,
             user_id: $movement->user_id,
             user_name: $movement->user->name,
-            created_at: $movement->created_at?->toISOString() ?? now()->toISOString(),
-            created_at_formatted: $movement->created_at?->format('d/m/Y H:i:s') ?? now()->format('d/m/Y H:i:s'),
+            created_at: $created->toISOString(true),
+            created_at_formatted: $created->format('d/m/Y H:i:s'),
             items: StockMovementItemDetailData::collect($movement->items),
         );
     }

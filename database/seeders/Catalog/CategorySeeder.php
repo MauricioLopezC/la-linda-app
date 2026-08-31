@@ -13,8 +13,48 @@ class CategorySeeder extends Seeder
     public function run(): void
     {
         $categories = [
-            'Almacén' => ['Conservas'],
-            'Bebidas' => ['Gaseosas'],
+            'Almacén' => [
+                'Conservas',
+                'Harinas y Legumbres',
+                'Arroz y Pastas',
+                'Aceites y Aderezos',
+                'Azúcares y Endulzantes',
+            ],
+            'Bebidas' => [
+                'Gaseosas',
+                'Aguas y Saborizadas',
+                'Cervezas',
+                'Jugos',
+            ],
+            'Lácteos y Frescos' => [
+                'Leches',
+                'Yogures',
+                'Quesos',
+                'Mantecas y Cremas',
+            ],
+            'Infusiones y Desayuno' => [
+                'Yerba Mate',
+                'Café y Té',
+                'Galletitas y Snacks',
+            ],
+            'Limpieza' => [
+                'Cuidado de la Ropa',
+                'Lavandinas y Desinfectantes',
+                'Lavavajillas',
+            ],
+            'Perfumería y Cuidado Personal' => [
+                'Higiene Bucal',
+                'Jabones y Champús',
+                'Desodorantes',
+            ],
+            'Congelados' => [
+                'Verduras Congeladas',
+                'Hamburguesas y Rebozados',
+            ],
+            'Panadería y Confitería' => [
+                'Panificados',
+                'Repostería',
+            ],
         ];
 
         Category::unguarded(function () use ($categories): void {

@@ -66,10 +66,11 @@ class ConsultStockMovements
             })
             ->when(! empty($filters['search']), function (Builder $query) use ($filters) {
                 $search = trim((string) $filters['search']);
-                $query->whereHas('items.article', function (Builder $q) use ($search) {
-                    $q->where('description', 'like', "%{$search}%")
-                        ->orWhere('internal_code', 'like', "%{$search}%")
-                        ->orWhere('barcode', 'like', "%{$search}%");
+                $lowerSearch = mb_strtolower($search);
+                $query->whereHas('items.article', function (Builder $q) use ($lowerSearch) {
+                    $q->whereRaw('LOWER(description) LIKE ?', ["%{$lowerSearch}%"])
+                        ->orWhereRaw('LOWER(internal_code) LIKE ?', ["%{$lowerSearch}%"])
+                        ->orWhereRaw('LOWER(barcode) LIKE ?', ["%{$lowerSearch}%"]);
                 });
             });
     }

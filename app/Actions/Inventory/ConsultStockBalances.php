@@ -65,10 +65,11 @@ class ConsultStockBalances
             ->join('branches', 'warehouses.branch_id', '=', 'branches.id')
             ->when(! empty($filters['search']), function (Builder $query) use ($filters) {
                 $search = trim((string) $filters['search']);
-                $query->where(function (Builder $query) use ($search) {
-                    $query->where('articles.internal_code', 'like', "%{$search}%")
-                        ->orWhere('articles.description', 'like', "%{$search}%")
-                        ->orWhere('articles.barcode', 'like', "%{$search}%");
+                $lowerSearch = mb_strtolower($search);
+                $query->where(function (Builder $query) use ($lowerSearch) {
+                    $query->whereRaw('LOWER(articles.internal_code) LIKE ?', ["%{$lowerSearch}%"])
+                        ->orWhereRaw('LOWER(articles.description) LIKE ?', ["%{$lowerSearch}%"])
+                        ->orWhereRaw('LOWER(articles.barcode) LIKE ?', ["%{$lowerSearch}%"]);
                 });
             })
             ->when(! empty($filters['category_id']), function (Builder $query) use ($filters) {

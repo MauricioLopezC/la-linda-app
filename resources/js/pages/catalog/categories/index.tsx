@@ -16,6 +16,7 @@ import {
 } from '@/actions/App/Http/Controllers/Catalog/CategoryController';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
+import TablePagination from '@/components/table-pagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -54,6 +55,9 @@ export default function CategoriesIndex({ categories = [] }: Props) {
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 10;
+
   const createForm = useForm<CategoryFormData>({
     name: '',
     parent_id: rootValue,
@@ -64,6 +68,7 @@ export default function CategoriesIndex({ categories = [] }: Props) {
     parent_id: rootValue,
     is_active: true,
   });
+
   const roots = categories.filter((category) => category.parent_id === null);
   const childrenByParent = categories.reduce<Record<number, Category[]>>(
     (grouped, category) => {
@@ -85,6 +90,13 @@ export default function CategoriesIndex({ categories = [] }: Props) {
       (childrenByParent[root.id] ?? []).some((child) =>
         child.name.toLowerCase().includes(normalizedSearch),
       ),
+  );
+
+  const totalPages = Math.max(1, Math.ceil(visibleRoots.length / PAGE_SIZE));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedRoots = visibleRoots.slice(
+    (safeCurrentPage - 1) * PAGE_SIZE,
+    safeCurrentPage * PAGE_SIZE,
   );
 
   const openCreate = (parentId: number | null = null) => {
@@ -225,7 +237,10 @@ export default function CategoriesIndex({ categories = [] }: Props) {
             <Input
               placeholder="Buscar categoría..."
               value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
+              onChange={(event) => {
+                setSearchTerm(event.target.value);
+                setCurrentPage(1);
+              }}
               className="pl-9"
             />
           </div>
@@ -240,7 +255,7 @@ export default function CategoriesIndex({ categories = [] }: Props) {
               No se encontraron categorías registradas.
             </div>
           ) : (
-            visibleRoots.map((root) => {
+            paginatedRoots.map((root) => {
               const children = (childrenByParent[root.id] ?? []).filter(
                 (child) =>
                   !normalizedSearch ||
@@ -340,6 +355,14 @@ export default function CategoriesIndex({ categories = [] }: Props) {
             })
           )}
         </div>
+        <TablePagination
+          currentPage={safeCurrentPage}
+          totalPages={totalPages}
+          totalItems={visibleRoots.length}
+          pageSize={PAGE_SIZE}
+          onPageChange={setCurrentPage}
+          entityName="categorías raíz"
+        />
       </div>
 
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
