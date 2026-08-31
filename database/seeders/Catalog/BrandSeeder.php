@@ -13,7 +13,24 @@ class BrandSeeder extends Seeder
     public function run(): void
     {
         Brand::unguarded(function (): void {
-            foreach (['Arcor', 'La Serenísima'] as $name) {
+            $brands = [
+                'Arcor',
+                'La Serenísima',
+                'Coca-Cola',
+                'Quilmes',
+                'Playadito',
+                'Pureza',
+                'Gallo',
+                'Levité',
+                'Villavicencio',
+                'Marolio',
+                'Lucchetti',
+                'Natura',
+                'Terrabusi',
+                'Ledesma',
+            ];
+
+            foreach ($brands as $name) {
                 Brand::firstOrCreate(
                     ['name_normalized' => Brand::normalizeUniqueValue($name)],
                     ['name' => $name, 'is_active' => true],

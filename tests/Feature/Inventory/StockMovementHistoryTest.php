@@ -135,7 +135,7 @@ test('filter by date range', function () {
     $user = User::factory()->create();
 
     StockMovement::factory()->create(['created_at' => Carbon::parse('2024-01-01')]);
-    StockMovement::factory()->create(['created_at' => Carbon::parse('2024-01-15')]);
+    $targetMovement = StockMovement::factory()->create(['created_at' => Carbon::parse('2024-01-15')]);
     StockMovement::factory()->create(['created_at' => Carbon::parse('2024-02-01')]);
 
     $response = $this->actingAs($user)->get(route('inventory.movements.index', [
@@ -146,9 +146,7 @@ test('filter by date range', function () {
     $response->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->has('movements.data', 1)
-            // '0' refers to the first item in the paginated response
-            // The item created on 2024-01-15 should be the only one present.
-            ->where('movements.data.0.created_at', Carbon::parse('2024-01-15')->toISOString())
+            ->where('movements.data.0.id', $targetMovement->id)
         );
 });
 

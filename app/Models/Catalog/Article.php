@@ -111,6 +111,11 @@ class Article extends Model
         return false;
     }
 
+    public function allowsDecimalQuantity(): bool
+    {
+        return $this->unitOfMeasure?->allowsDecimals() ?? false;
+    }
+
     /** @return array<string, string> */
     protected function uniqueAttributesToNormalize(): array
     {

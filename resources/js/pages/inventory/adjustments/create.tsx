@@ -60,6 +60,7 @@ interface MovementItemDraft {
   brand_name: string | null;
   category_name: string;
   unit_of_measure_name: string;
+  allows_decimals: boolean;
   quantity: number | '';
 }
 
@@ -180,6 +181,7 @@ export default function CreateStockAdjustment({
           brand_name: article.brand_name,
           category_name: article.category_name,
           unit_of_measure_name: article.unit_of_measure_name,
+          allows_decimals: article.allows_decimals ?? true,
           quantity: '',
         },
       ];
@@ -199,6 +201,16 @@ export default function CreateStockAdjustment({
 
         if (value === '') {
           return { ...it, quantity: '' };
+        }
+
+        if (!it.allows_decimals) {
+          const cleanVal = value.replace(/[^0-9]/g, '');
+
+          if (cleanVal === '') {
+            return { ...it, quantity: '' };
+          }
+
+          return { ...it, quantity: parseInt(cleanVal, 10) };
         }
 
         const num = Math.max(0, parseFloat(value) || 0);
@@ -537,7 +549,7 @@ export default function CreateStockAdjustment({
                           <TableCell className="text-right">
                             <Input
                               type="number"
-                              step="0.001"
+                              step={item.allows_decimals ? '0.001' : '1'}
                               min="0"
                               max="999999999"
                               value={item.quantity}
@@ -548,7 +560,7 @@ export default function CreateStockAdjustment({
                                 )
                               }
                               placeholder="0"
-                              className="ml-auto h-8 w-32 text-right font-mono text-sm"
+                              className="ml-auto h-8 w-32 [appearance:textfield] text-right font-mono text-sm [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                             />
                           </TableCell>
                           <TableCell className="text-right">

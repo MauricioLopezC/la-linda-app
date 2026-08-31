@@ -18,8 +18,8 @@ test('catalog demonstration seeders create the expected data and are idempotent'
         }
     });
 
-    expect(Category::count())->toBe(4)
-        ->and(Brand::count())->toBe(2)
+    expect(Category::count())->toBe(34)
+        ->and(Brand::count())->toBe(14)
         ->and(UnitOfMeasure::count())->toBe(3);
 
     $warehouse = Category::where('name', 'Almacén')->firstOrFail();

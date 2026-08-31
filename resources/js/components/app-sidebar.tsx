@@ -11,6 +11,7 @@ import {
   Tags,
   LayoutGrid,
   Sliders,
+  Truck,
   Warehouse,
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
@@ -37,6 +38,7 @@ import { index as stockParameters } from '@/routes/inventory/parameters';
 import { index as stocks } from '@/routes/inventory/stocks';
 import { index as warehouses } from '@/routes/inventory/warehouses';
 import { index as branches } from '@/routes/organization/branches';
+import { index as suppliers } from '@/routes/purchasing/suppliers';
 // Módulos "Alícuotas de IVA" y "Medios de Pago"/"Puntos de Venta" no están en el
 // alcance de este sprint; se ocultan del menú sin borrar el código que los soporta.
 // import { index as vatRates } from '@/routes/pricing/vat-rates';
@@ -107,6 +109,16 @@ const navGroups: NavGroup[] = [
         title: 'Parámetros de Stock',
         href: stockParameters(),
         icon: Sliders,
+      },
+    ],
+  },
+  {
+    label: 'Compras',
+    items: [
+      {
+        title: 'Proveedores',
+        href: suppliers(),
+        icon: Truck,
       },
     ],
   },

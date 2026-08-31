@@ -11,6 +11,7 @@ use App\Http\Controllers\Inventory\StockParameterController;
 use App\Http\Controllers\Inventory\WarehouseController;
 use App\Http\Controllers\Organization\BranchController;
 use App\Http\Controllers\Pricing\VatRateController;
+use App\Http\Controllers\Purchasing\SupplierController;
 use App\Http\Controllers\Sales\PaymentMethodController;
 use App\Http\Controllers\Sales\PointOfSaleController;
 use Illuminate\Support\Facades\Route;
@@ -103,6 +104,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/', [PaymentMethodController::class, 'store'])->name('store');
         Route::put('{payment_method}', [PaymentMethodController::class, 'update'])->name('update');
         Route::patch('{payment_method}/toggle', [PaymentMethodController::class, 'toggleStatus'])->name('toggle');
+    });
+
+    Route::prefix('purchasing/suppliers')->name('purchasing.suppliers.')->group(function () {
+        Route::get('/', [SupplierController::class, 'index'])->name('index');
+        Route::post('/', [SupplierController::class, 'store'])->name('store');
+        Route::put('{supplier}', [SupplierController::class, 'update'])->name('update');
+        Route::patch('{supplier}/toggle', [SupplierController::class, 'toggleStatus'])->name('toggle');
+        Route::delete('{supplier}', [SupplierController::class, 'destroy'])->name('destroy');
     });
 });
 

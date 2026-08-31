@@ -9,6 +9,7 @@ import {
 } from '@/actions/App/Http/Controllers/Sales/PaymentMethodController';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
+import TablePagination from '@/components/table-pagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -46,6 +47,9 @@ export default function PaymentMethodsIndex({ paymentMethods = [] }: Props) {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingPaymentMethod, setEditingPaymentMethod] =
     useState<PaymentMethod | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 10;
+
   const createForm = useForm<PaymentMethodFormData>({
     name: '',
     is_enabled_online: false,
@@ -56,8 +60,19 @@ export default function PaymentMethodsIndex({ paymentMethods = [] }: Props) {
     is_enabled_online: false,
     is_active: true,
   });
+
   const filteredPaymentMethods = paymentMethods.filter((paymentMethod) =>
     paymentMethod.name.toLowerCase().includes(searchTerm.trim().toLowerCase()),
+  );
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredPaymentMethods.length / PAGE_SIZE),
+  );
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedPaymentMethods = filteredPaymentMethods.slice(
+    (safeCurrentPage - 1) * PAGE_SIZE,
+    safeCurrentPage * PAGE_SIZE,
   );
 
   const openCreate = () => {
@@ -176,7 +191,10 @@ export default function PaymentMethodsIndex({ paymentMethods = [] }: Props) {
             <Input
               placeholder="Buscar medio de pago..."
               value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
+              onChange={(event) => {
+                setSearchTerm(event.target.value);
+                setCurrentPage(1);
+              }}
               className="pl-9"
             />
           </div>
@@ -206,7 +224,7 @@ export default function PaymentMethodsIndex({ paymentMethods = [] }: Props) {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredPaymentMethods.map((paymentMethod) => (
+                paginatedPaymentMethods.map((paymentMethod) => (
                   <TableRow key={paymentMethod.id}>
                     <TableCell className="font-medium">
                       {paymentMethod.name}
@@ -257,6 +275,14 @@ export default function PaymentMethodsIndex({ paymentMethods = [] }: Props) {
             </TableBody>
           </Table>
         </div>
+        <TablePagination
+          currentPage={safeCurrentPage}
+          totalPages={totalPages}
+          totalItems={filteredPaymentMethods.length}
+          pageSize={PAGE_SIZE}
+          onPageChange={setCurrentPage}
+          entityName="medios de pago"
+        />
       </div>
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         <DialogContent className="sm:max-w-md">

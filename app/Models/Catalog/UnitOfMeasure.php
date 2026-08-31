@@ -64,6 +64,14 @@ class UnitOfMeasure extends Model
         return $this->articles()->exists();
     }
 
+    public function allowsDecimals(): bool
+    {
+        $discreteAbbreviations = ['u', 'un', 'und', 'pk', 'bto', 'doc'];
+
+        return ! in_array(mb_strtolower($this->abbreviation_normalized), $discreteAbbreviations, true)
+            && ! in_array(mb_strtolower($this->name_normalized), ['unidad', 'pack', 'bulto', 'docena'], true);
+    }
+
     /** @return array<string, string> */
     protected function uniqueAttributesToNormalize(): array
     {

@@ -67,6 +67,36 @@ class WarehouseStockSeeder extends Seeder
                 'Depósito Norte' => 140,
                 'Depósito E-commerce' => 85,
             ],
+            'ART-0010' => [
+                'Depósito Central' => 110,
+                'Depósito Norte' => 35,
+                'Depósito E-commerce' => 20,
+            ],
+            'ART-0011' => [
+                'Depósito Central' => 160,
+                'Depósito Norte' => 80,
+                'Depósito E-commerce' => 45,
+            ],
+            'ART-0012' => [
+                'Depósito Central' => 140,
+                'Depósito Norte' => 60,
+                'Depósito E-commerce' => 30,
+            ],
+            'ART-0013' => [
+                'Depósito Central' => 95,
+                'Depósito Norte' => 40,
+                'Depósito E-commerce' => 15,
+            ],
+            'ART-0014' => [
+                'Depósito Central' => 180,
+                'Depósito Norte' => 90,
+                'Depósito E-commerce' => 50,
+            ],
+            'ART-0015' => [
+                'Depósito Central' => 130,
+                'Depósito Norte' => 55,
+                'Depósito E-commerce' => 25,
+            ],
         ];
 
         $warehousesByName = $warehouses->keyBy('name');

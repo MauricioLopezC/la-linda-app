@@ -15,5 +15,6 @@ class ArticleStockOptionData extends Data
         public ?string $brand_name,
         public string $unit_of_measure_name,
         public string $unit_of_measure_abbreviation,
+        public bool $allows_decimals = true,
     ) {}
 }

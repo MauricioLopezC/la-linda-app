@@ -9,6 +9,7 @@ import {
 } from '@/actions/App/Http/Controllers/Pricing/VatRateController';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
+import TablePagination from '@/components/table-pagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -48,6 +49,9 @@ export default function VatRatesIndex({ vatRates = [] }: Props) {
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingVatRate, setEditingVatRate] = useState<VatRate | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 10;
+
   const createForm = useForm<VatRateFormData>({
     description: '',
     percentage: '',
@@ -58,8 +62,19 @@ export default function VatRatesIndex({ vatRates = [] }: Props) {
     percentage: '',
     is_active: true,
   });
+
   const filteredVatRates = vatRates.filter((vatRate) =>
     vatRate.description.toLowerCase().includes(searchTerm.trim().toLowerCase()),
+  );
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredVatRates.length / PAGE_SIZE),
+  );
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedVatRates = filteredVatRates.slice(
+    (safeCurrentPage - 1) * PAGE_SIZE,
+    safeCurrentPage * PAGE_SIZE,
   );
 
   const openCreate = () => {
@@ -177,7 +192,10 @@ export default function VatRatesIndex({ vatRates = [] }: Props) {
             <Input
               placeholder="Buscar alícuota..."
               value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
+              onChange={(event) => {
+                setSearchTerm(event.target.value);
+                setCurrentPage(1);
+              }}
               className="pl-9"
             />
           </div>
@@ -207,7 +225,7 @@ export default function VatRatesIndex({ vatRates = [] }: Props) {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredVatRates.map((vatRate) => (
+                paginatedVatRates.map((vatRate) => (
                   <TableRow key={vatRate.id}>
                     <TableCell className="font-medium">
                       {vatRate.description}
@@ -246,6 +264,14 @@ export default function VatRatesIndex({ vatRates = [] }: Props) {
             </TableBody>
           </Table>
         </div>
+        <TablePagination
+          currentPage={safeCurrentPage}
+          totalPages={totalPages}
+          totalItems={filteredVatRates.length}
+          pageSize={PAGE_SIZE}
+          onPageChange={setCurrentPage}
+          entityName="alícuotas de IVA"
+        />
       </div>
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         <DialogContent className="sm:max-w-md">

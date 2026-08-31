@@ -9,6 +9,7 @@ import {
 } from '@/actions/App/Http/Controllers/Catalog/BrandController';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
+import TablePagination from '@/components/table-pagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -41,10 +42,21 @@ export default function BrandsIndex({ brands = [] }: Props) {
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingBrand, setEditingBrand] = useState<Brand | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 10;
+
   const createForm = useForm<BrandFormData>({ name: '', is_active: true });
   const editForm = useForm<BrandFormData>({ name: '', is_active: true });
+
   const filteredBrands = brands.filter((brand) =>
     brand.name.toLowerCase().includes(searchTerm.trim().toLowerCase()),
+  );
+
+  const totalPages = Math.max(1, Math.ceil(filteredBrands.length / PAGE_SIZE));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedBrands = filteredBrands.slice(
+    (safeCurrentPage - 1) * PAGE_SIZE,
+    safeCurrentPage * PAGE_SIZE,
   );
 
   const openCreate = () => {
@@ -141,7 +153,10 @@ export default function BrandsIndex({ brands = [] }: Props) {
             <Input
               placeholder="Buscar marca..."
               value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
+              onChange={(event) => {
+                setSearchTerm(event.target.value);
+                setCurrentPage(1);
+              }}
               className="pl-9"
             />
           </div>
@@ -170,7 +185,7 @@ export default function BrandsIndex({ brands = [] }: Props) {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredBrands.map((brand) => (
+                paginatedBrands.map((brand) => (
                   <TableRow key={brand.id}>
                     <TableCell className="font-medium">{brand.name}</TableCell>
                     <TableCell>
@@ -204,6 +219,14 @@ export default function BrandsIndex({ brands = [] }: Props) {
             </TableBody>
           </Table>
         </div>
+        <TablePagination
+          currentPage={safeCurrentPage}
+          totalPages={totalPages}
+          totalItems={filteredBrands.length}
+          pageSize={PAGE_SIZE}
+          onPageChange={setCurrentPage}
+          entityName="marcas"
+        />
       </div>
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         <DialogContent className="sm:max-w-md">

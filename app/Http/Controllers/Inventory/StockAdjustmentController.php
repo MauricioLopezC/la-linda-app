@@ -62,10 +62,11 @@ class StockAdjustmentController extends Controller
             ->with(['category', 'brand', 'unitOfMeasure']);
 
         if ($search !== '') {
-            $query->where(function ($q) use ($search) {
-                $q->where('description', 'like', "%{$search}%")
-                    ->orWhere('internal_code', 'like', "%{$search}%")
-                    ->orWhere('barcode', 'like', "%{$search}%");
+            $lowerSearch = mb_strtolower($search);
+            $query->where(function ($q) use ($lowerSearch) {
+                $q->whereRaw('LOWER(description) LIKE ?', ["%{$lowerSearch}%"])
+                    ->orWhereRaw('LOWER(internal_code) LIKE ?', ["%{$lowerSearch}%"])
+                    ->orWhereRaw('LOWER(barcode) LIKE ?', ["%{$lowerSearch}%"]);
             });
         }
 
@@ -80,6 +81,7 @@ class StockAdjustmentController extends Controller
             brand_name: $article->brand?->name,
             unit_of_measure_name: $article->unitOfMeasure->name,
             unit_of_measure_abbreviation: $article->unitOfMeasure->abbreviation,
+            allows_decimals: $article->allowsDecimalQuantity(),
         ));
 
         return response()->json($data);

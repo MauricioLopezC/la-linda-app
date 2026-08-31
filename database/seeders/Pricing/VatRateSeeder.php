@@ -12,15 +12,22 @@ class VatRateSeeder extends Seeder
      */
     public function run(): void
     {
-        VatRate::unguarded(function (): void {
-            foreach ([
-                ['description' => 'Exenta', 'percentage' => 0],
-                ['description' => 'Reducida', 'percentage' => 10.5],
-                ['description' => 'General', 'percentage' => 21],
-            ] as $vatRate) {
-                VatRate::firstOrCreate(
-                    ['description_normalized' => VatRate::normalizeUniqueValue($vatRate['description'])],
-                    ['description' => $vatRate['description'], 'percentage' => $vatRate['percentage'], 'is_active' => true],
+        $vatRates = [
+            ['description' => 'General (21%)', 'percentage' => 21.0],
+            ['description' => 'Reducida (10.5%)', 'percentage' => 10.5],
+            ['description' => 'Exenta (0%)', 'percentage' => 0.0],
+        ];
+
+        VatRate::unguarded(function () use ($vatRates): void {
+            foreach ($vatRates as $vatRate) {
+                VatRate::updateOrCreate(
+                    ['percentage' => $vatRate['percentage']],
+                    [
+                        'description' => $vatRate['description'],
+                        'description_normalized' => VatRate::normalizeUniqueValue($vatRate['description']),
+                        'percentage' => $vatRate['percentage'],
+                        'is_active' => true,
+                    ]
                 );
             }
         });

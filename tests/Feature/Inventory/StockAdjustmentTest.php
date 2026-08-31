@@ -242,6 +242,44 @@ it('rejects a movement whose type is generated automatically by another module',
         ->assertSessionHasErrors('stock_movement_type_id');
 });
 
+it('rejects decimal quantities for articles measured in whole units', function () {
+    $this->actingAs($this->user)
+        ->post(route('inventory.adjustments.store'), [
+            'warehouse_id' => $this->warehouse->id,
+            'stock_movement_type_id' => $this->surplusType->id,
+            'notes' => 'Intento de cargar decimales en unidad entera',
+            'items' => [
+                ['article_id' => $this->articleA->id, 'quantity' => 2.5],
+            ],
+        ])
+        ->assertSessionHasErrors('items.0.quantity');
+});
+
+it('accepts decimal quantities for articles measured in continuous units like kilogram', function () {
+    $kgUnit = UnitOfMeasure::factory()->create(['name' => 'Kilogramo', 'abbreviation' => 'kg']);
+    $flour = Article::factory()->create([
+        'category_id' => $this->category->id,
+        'unit_of_measure_id' => $kgUnit->id,
+        'internal_code' => 'ART-KG-01',
+    ]);
+
+    $this->actingAs($this->user)
+        ->post(route('inventory.adjustments.store'), [
+            'warehouse_id' => $this->warehouse->id,
+            'stock_movement_type_id' => $this->surplusType->id,
+            'notes' => 'Carga con decimales en kilogramos',
+            'items' => [
+                ['article_id' => $flour->id, 'quantity' => 2.750],
+            ],
+        ])
+        ->assertSessionHasNoErrors();
+
+    $this->assertDatabaseHas('stock_movement_items', [
+        'article_id' => $flour->id,
+        'quantity' => 2.750,
+    ]);
+});
+
 it('validates the movement type is required and must exist and be active', function () {
     $inactiveType = StockMovementType::factory()->create(['is_active' => false, 'sign' => 1]);
 
