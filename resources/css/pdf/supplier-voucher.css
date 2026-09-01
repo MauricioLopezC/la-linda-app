@@ -1,0 +1,213 @@
+@page {
+  margin: 26px 28px 24px;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  color: #161616;
+  font-family:
+    DejaVu Sans,
+    Arial,
+    sans-serif;
+  font-size: 10px;
+  line-height: 1.35;
+  margin: 0;
+}
+p,
+h1,
+h2 {
+  margin: 0;
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+.document {
+  border: 1.4px solid #111;
+}
+.copy-label {
+  border-bottom: 1.4px solid #111;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 7px;
+  text-align: center;
+}
+.masthead-table td {
+  border-bottom: 1.4px solid #111;
+  height: 134px;
+  padding: 12px 14px;
+  vertical-align: top;
+}
+.masthead-table .brand-cell {
+  border-right: 1.4px solid #111;
+  width: 48%;
+}
+.brand-name {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin-top: 5px;
+  text-transform: uppercase;
+}
+.brand-kicker {
+  color: #4b4b4b;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  margin-top: 2px;
+  text-transform: uppercase;
+}
+.brand-note {
+  margin-top: 26px;
+}
+.letter-cell {
+  border-right: 1.4px solid #111;
+  padding: 0 !important;
+  text-align: center;
+  width: 8%;
+}
+.letter-value {
+  font-size: 29px;
+  font-weight: 700;
+  padding-top: 10px;
+}
+.letter-code {
+  border-top: 1px solid #111;
+  font-size: 7px;
+  margin-top: 4px;
+  padding: 5px 2px;
+}
+.voucher-cell {
+  width: 44%;
+}
+.voucher-title {
+  font-size: 19px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.field-line {
+  margin-top: 6px;
+}
+.field-label {
+  font-weight: 700;
+}
+.fiscal-number {
+  font-family:
+    DejaVu Sans Mono,
+    monospace;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+.dates-table td {
+  border-bottom: 1.4px solid #111;
+  padding: 7px 10px;
+  text-align: center;
+}
+.parties-table td {
+  border-bottom: 1.4px solid #111;
+  padding: 10px 12px;
+  vertical-align: top;
+  width: 50%;
+}
+.parties-table td:first-child {
+  border-right: 1.4px solid #111;
+}
+.section-label {
+  background: #e7e7e7;
+  border-bottom: 1px solid #111;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin: -10px -12px 8px;
+  padding: 5px 8px;
+  text-transform: uppercase;
+}
+.concept-table th,
+.concept-table td {
+  border-bottom: 1px solid #111;
+  border-right: 1px solid #111;
+  padding: 6px 8px;
+}
+.concept-table th:last-child,
+.concept-table td:last-child {
+  border-right: 0;
+}
+.concept-table th {
+  background: #d9d9d9;
+  font-size: 9px;
+  text-align: left;
+}
+.concept-table .concept-description {
+  height: 72px;
+  vertical-align: top;
+}
+.concept-table .amount {
+  text-align: right;
+  vertical-align: top;
+  white-space: nowrap;
+  width: 23%;
+}
+.summary-wrap {
+  border-bottom: 1.4px solid #111;
+  min-height: 430px;
+  padding: 14px 12px;
+}
+.summary-table {
+  float: right;
+  width: 48%;
+}
+.summary-table th,
+.summary-table td {
+  padding: 4px 5px;
+}
+.summary-table th {
+  font-weight: 700;
+  text-align: right;
+}
+.summary-table td {
+  text-align: right;
+  white-space: nowrap;
+  width: 34%;
+}
+.summary-table .total-row th,
+.summary-table .total-row td {
+  border-top: 1.4px solid #111;
+  font-size: 12px;
+  padding-top: 7px;
+}
+.internal-state {
+  border: 1px solid #777;
+  display: inline-block;
+  margin-top: 14px;
+  padding: 9px 11px;
+  width: 43%;
+}
+.internal-state p + p {
+  margin-top: 5px;
+}
+.footer-table td {
+  padding: 10px 12px;
+  vertical-align: middle;
+}
+.footer-brand {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  width: 28%;
+}
+.footer-page {
+  font-weight: 700;
+  text-align: center;
+  width: 18%;
+}
+.footer-disclaimer {
+  font-size: 8px;
+  text-align: right;
+}
+.muted {
+  color: #555;
+}
+.notes {
+  white-space: pre-line;
+}

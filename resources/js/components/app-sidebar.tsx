@@ -7,6 +7,7 @@ import {
   FolderGit2,
   History,
   Package,
+  ReceiptText,
   Ruler,
   Tags,
   LayoutGrid,
@@ -39,6 +40,7 @@ import { index as stocks } from '@/routes/inventory/stocks';
 import { index as warehouses } from '@/routes/inventory/warehouses';
 import { index as branches } from '@/routes/organization/branches';
 import { index as suppliers } from '@/routes/purchasing/suppliers';
+import { index as supplierVouchers } from '@/routes/purchasing/vouchers';
 // Módulos "Alícuotas de IVA" y "Medios de Pago"/"Puntos de Venta" no están en el
 // alcance de este sprint; se ocultan del menú sin borrar el código que los soporta.
 // import { index as vatRates } from '@/routes/pricing/vat-rates';
@@ -119,6 +121,11 @@ const navGroups: NavGroup[] = [
         title: 'Proveedores',
         href: suppliers(),
         icon: Truck,
+      },
+      {
+        title: 'Comprobantes',
+        href: supplierVouchers(),
+        icon: ReceiptText,
       },
     ],
   },

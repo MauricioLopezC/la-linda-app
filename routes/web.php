@@ -12,6 +12,7 @@ use App\Http\Controllers\Inventory\WarehouseController;
 use App\Http\Controllers\Organization\BranchController;
 use App\Http\Controllers\Pricing\VatRateController;
 use App\Http\Controllers\Purchasing\SupplierController;
+use App\Http\Controllers\Purchasing\SupplierVoucherController;
 use App\Http\Controllers\Sales\PaymentMethodController;
 use App\Http\Controllers\Sales\PointOfSaleController;
 use Illuminate\Support\Facades\Route;
@@ -112,6 +113,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('{supplier}', [SupplierController::class, 'update'])->name('update');
         Route::patch('{supplier}/toggle', [SupplierController::class, 'toggleStatus'])->name('toggle');
         Route::delete('{supplier}', [SupplierController::class, 'destroy'])->name('destroy');
+    });
+
+    Route::prefix('purchasing/vouchers')->name('purchasing.vouchers.')->group(function () {
+        Route::get('/', [SupplierVoucherController::class, 'index'])->name('index');
+        Route::get('create', [SupplierVoucherController::class, 'create'])->name('create');
+        Route::post('/', [SupplierVoucherController::class, 'store'])->name('store');
+        Route::get('{supplier_voucher}/pdf', [SupplierVoucherController::class, 'pdf'])->name('pdf');
     });
 });
 
