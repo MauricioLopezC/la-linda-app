@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Schema;
 
@@ -66,6 +67,12 @@ class Supplier extends Model
         return $query->where('is_active', true);
     }
 
+    /** @return HasMany<SupplierVoucher, $this> */
+    public function vouchers(): HasMany
+    {
+        return $this->hasMany(SupplierVoucher::class);
+    }
+
     /**
      * Check if the supplier has associated transactions (vouchers, payments, etc.)
      * preventing destructive physical deletion and locking CUIT edits.
@@ -73,11 +80,7 @@ class Supplier extends Model
     public function hasAssociatedRecords(): bool
     {
         if (Schema::hasTable('supplier_vouchers')) {
-            $hasVouchers = $this->hasMany(Model::class, 'supplier_id')
-                ->from('supplier_vouchers')
-                ->exists();
-
-            if ($hasVouchers) {
+            if ($this->vouchers()->exists()) {
                 return true;
             }
         }

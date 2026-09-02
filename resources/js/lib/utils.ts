@@ -11,6 +11,15 @@ export function toUrl(url: NonNullable<InertiaLinkProps['href']>): string {
   return typeof url === 'string' ? url : url.url;
 }
 
+export function formatCurrency(amount: number | string): string {
+  return Number(amount).toLocaleString('es-AR', {
+    style: 'currency',
+    currency: 'ARS',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
 /**
  * Formats a stock quantity without trailing zeros: whole numbers for discrete
  * units (e.g. "Unidad"), up to 2 decimals otherwise.

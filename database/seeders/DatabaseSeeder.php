@@ -13,6 +13,7 @@ use Database\Seeders\Inventory\WarehouseStockSeeder;
 use Database\Seeders\Organization\BranchSeeder;
 use Database\Seeders\Pricing\VatRateSeeder;
 use Database\Seeders\Purchasing\SupplierSeeder;
+use Database\Seeders\Purchasing\SupplierVoucherSeeder;
 use Database\Seeders\Sales\PaymentMethodSeeder;
 use Database\Seeders\Sales\PointOfSaleSeeder;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
@@ -51,6 +52,7 @@ class DatabaseSeeder extends Seeder
             VatRateSeeder::class,
             PaymentMethodSeeder::class,
             SupplierSeeder::class,
+            SupplierVoucherSeeder::class,
             ArticleSeeder::class,
             WarehouseStockSeeder::class,
         ]);

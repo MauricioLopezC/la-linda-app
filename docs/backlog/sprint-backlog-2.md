@@ -131,10 +131,10 @@ Props/respuestas tipadas con `spatie/laravel-data` en `app/Data/Purchasing/...`.
 ### HU-036 - Registrar un comprobante de proveedor (5 SP)
 
 - [ ] Migración de `supplier_vouchers` (ver DER). `type` ∈ {factura, nota_credito, nota_debito},
-      `letra` ∈ {A, B, C, M} (default A), `point_of_sale` (4 díg.), `number` (8 díg.),
+      `letter` ∈ {A, B, C, M} (default A), `point_of_sale` (4 díg.), `number` (8 díg.),
       `issue_date`, `due_date` nullable, `net_amount` / `vat_amount` / `other_taxes_amount` /
       `total_amount` en `decimal(12,2)`, `status`
-- [ ] `UNIQUE(supplier_id, type, letra, point_of_sale, number)`
+- [ ] `UNIQUE(supplier_id, type, letter, point_of_sale, number)`
 - [ ] Validaciones: obligatorios (letra y punto de venta incluidos), importe total > 0 y = neto +
       IVA + otros tributos, emisión no futura, vencimiento ≥ emisión, proveedor activo
 - [ ] Estado inicial: factura → `pendiente` con saldo = importe; NC/ND → `pendiente_imputar`
@@ -250,7 +250,7 @@ erDiagram
         bigint id PK
         bigint supplier_id FK
         varchar type "factura | nota_credito | nota_debito"
-        varchar letra "A | B | C | M"
+        varchar letter "A | B | C | M"
         varchar point_of_sale "4 dígitos"
         varchar number "8 dígitos"
         date issue_date
@@ -309,7 +309,7 @@ erDiagram
 | id                      | bigserial PK             |                                                                        |
 | supplier_id             | bigint FK → suppliers.id | `NOT NULL`                                                             |
 | type                    | varchar                  | `NOT NULL`, `CHECK (type IN ('factura','nota_credito','nota_debito'))` |
-| letra                   | varchar                  | `NOT NULL`, `CHECK (letra IN ('A','B','C','M'))` — default `A`         |
+| letter                  | varchar                  | `NOT NULL`, `CHECK (letter IN ('A','B','C','M'))` — default `A`       |
 | point_of_sale           | varchar                  | `NOT NULL` — 4 dígitos, tal cual el formulario oficial                 |
 | number                  | varchar                  | `NOT NULL` — 8 dígitos, correlativo dentro del punto de venta          |
 | issue_date              | date                     | `NOT NULL`                                                             |
@@ -322,7 +322,7 @@ erDiagram
 | notes                   | text                     | `NULL`                                                                 |
 | created_at / updated_at | timestamp                |                                                                        |
 
-`UNIQUE(supplier_id, type, letra, point_of_sale, number)`, más índices sobre `supplier_id`,
+`UNIQUE(supplier_id, type, letter, point_of_sale, number)`, más índices sobre `supplier_id`,
 `issue_date` y `status` para los filtros de `HU-055`.
 
 **El saldo pendiente no es una columna.** Se deriva:
@@ -418,7 +418,7 @@ pide el punto 7 del PO: guarda el **importe imputado de cada orden a cada factur
    siguen sin resolverse: no entran a este sprint, así que la decisión se vuelve a diferir.
 6. **Letra de los comprobantes de proveedor (`HU-036`).** ¿La Linda compra solo a responsables
    inscriptos (siempre Factura A) o también a monotributistas / exentos (Factura C)? El campo
-   `letra` se mantiene igual; si solo hay A queda con default `A`, si entran C elegirla es
+   `letter` se mantiene igual; si solo hay A queda con default `A`, si entran C elegirla es
    obligatorio y condiciona el IVA discriminado que llega con `HU-007`. A confirmar con el PO.
 
 ## Demostración de cierre
