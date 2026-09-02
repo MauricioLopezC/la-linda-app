@@ -20,7 +20,7 @@ opcional si sobra capacidad.
 | 4   | Comprobantes de proveedores (factura, NC, ND; datos, tipo/número, emisión/vencimiento, importe, saldo, estado, relación con pagos)                                    | `HU-036`                                                  | **Modificada**: se amplió de "factura o remito" a los tres tipos, y se agregaron vencimiento, saldo pendiente y estado                   |
 | 5   | Modelo de gastos (facturas como obligación, ND aumenta deuda, NC reduce, pagos, saldo por factura, trazabilidad)                                                      | `HU-036` + `HU-054` + `HU-027`                            | `HU-054` es **nueva**; el resto ya cubría su parte                                                                                       |
 | 6   | Órdenes de pago (proveedor, varias facturas, fecha/importe/medio, imputación por factura, total/parcial, total calculado, actualiza saldos)                           | `HU-027`                                                  | **Reformulada**: era "Registrar un pago"; ahora es el documento _orden de pago_ con número, estado y total calculado                     |
-| 7   | Relación N:N orden de pago ↔ factura, con importe imputado en la tabla intermedia; cómo se imputan NC/ND                                                              | `HU-027` (N:N pago↔factura) + `HU-054` (N:N nota↔factura) | Cubierto. La ambigüedad "todo es N:N" queda como **punto abierto para el profesor**                                                      |
+| 7   | Relación N:N orden de pago ↔ factura, con importe imputado en la tabla intermedia; cómo se imputan NC/ND                                                              | `HU-027` (N:N pago↔factura) + `HU-054` (N:N nota↔factura) | Cubierto. La ambigüedad "todo es N:N" quedó **resuelta el 2026-09-02** (punto 1 de "Puntos abiertos")                                    |
 | 8   | Modificación del saldo (baja con pago, baja con NC, sube con ND, no imputar más que el saldo, pagada a saldo cero, parcial queda pendiente, registro de imputaciones) | `HU-054` (reglas de NC/ND) + `HU-027` (reglas de pago)    | Cubierto entre las dos historias                                                                                                         |
 | 9   | Listado de pagos y egresos (filtros por fecha, proveedor, tipo, medio de pago, estado; total del período; detalle por pago)                                           | `HU-055`                                                  | **Nueva**. Distinta de `HU-028` (cuenta corriente por proveedor), que no entra                                                           |
 | 10  | Clientes (ABM, datos personales/razón social, id. fiscal, condición fiscal, contacto, estado, lista de precios asignada)                                              | `HU-021`                                                  | Ya existía. Entra como **alcance opcional**. La "lista de precios asignada" (`HU-022`) **no** entra: depende de `HU-011`, sin planificar |
@@ -39,9 +39,9 @@ opcional si sobra capacidad.
 - **`HU-055` es nueva y no un estiramiento de `HU-028`.** Son dos miradas distintas: `HU-055` es el
   libro de pagos por período; `HU-028` es el saldo de cuenta corriente por proveedor. `HU-028`
   queda como seguimiento barato una vez que exista el motor de saldo.
-- **Imputación de NC/ND:** se asume que la nota se imputa a **facturas concretas** (mueve el saldo
-  de la factura), con relación N:N e importe imputado. Es un punto abierto a confirmar con el
-  profesor (ver más abajo).
+- **Imputación de NC/ND:** la nota se imputa a **facturas concretas** (mueve el saldo de la
+  factura), con relación N:N e importe imputado. **Confirmado el 2026-09-02** (ver punto 1 de
+  "Puntos abiertos" para los fundamentos).
 - **`HU-019` (transferencias entre depósitos) no entra.** El Sprint Backlog 1 la dejó como "primer
   candidato del Sprint 2", pero el pedido del PO para este sprint es íntegramente cuentas por
   pagar; nada de stock. Esa nota queda superada.
@@ -145,16 +145,40 @@ Props/respuestas tipadas con `spatie/laravel-data` en `app/Data/Purchasing/...`.
 - [ ] Sin ruta de edición del importe una vez que el comprobante tiene imputaciones
 - [ ] Seeder con comprobantes de demostración por el service (facturas, alguna NC y ND)
 
+### PR 0 - Motor de saldo (base compartida por `HU-054` y `HU-027`)
+
+Rama `feature/HU-054-motor-de-saldo`. Cierra el cálculo antes de abrir las pantallas de ambas
+historias (ver "Orden de ataque"). **Hecho:**
+
+- [x] Migraciones de esquema de las 3 tablas nuevas: `voucher_applications`, `payment_orders`,
+      `payment_order_items` (solo esquema; sin Actions de emisión ni pantallas)
+- [x] Modelos `VoucherApplication`, `PaymentOrder` (+ enum `PaymentOrderStatus`), `PaymentOrderItem`
+      y factories; relaciones nuevas en `SupplierVoucher` y `Supplier`
+- [x] Derivación real del saldo en `SupplierVoucher`: `pendingBalance()` (factura),
+      `unappliedAmount()` (NC/ND), `outstandingAmount()` (despacha por tipo). Aritmética en centavos
+      enteros (`ConvertsMoneyToCents`), scope `withBalanceAggregates()` para listados sin N+1
+- [x] Action compartida `RecalculateVoucherBalanceStatus` (recalcula y persiste el `status`; respeta
+      `anulada` como terminal). La llamarán los Actions de `HU-054` y `HU-027`
+- [x] `Supplier::hasAssociatedRecords()` pasa a usar la relación real `paymentOrders()` (se quitó el
+      placeholder `hasMany(Model::class)`)
+- [x] Tests: derivación del saldo (incl. NC + ND + pago sobre la misma factura), `unappliedAmount`,
+      scope en 1 query, recálculo de estado factura/nota, guarda de `anulada`
+
+Pendiente para las historias dueñas: patrón de row-lock (`lockForUpdate`) al validar saldo dentro
+de cada Action; `UNIQUE(order_number)` y su generación (`HU-027`, punto abierto 4); mecanismo de
+contrapartida (punto abierto 3).
+
 ### HU-054 - Aplicar notas de crédito y débito al saldo de la factura (5 SP) — riesgo del sprint
 
-- [ ] Migración de `voucher_applications` (nota origen, factura destino, `amount decimal(12,2)`,
-      `user_id`, `created_at`; sin `updated_at`)
+- [x] Migración de `voucher_applications` (nota origen, factura destino, `amount decimal(12,2)`,
+      `user_id`, `created_at`; sin `updated_at`) — _en PR 0_
 - [ ] Action `ApplyCreditOrDebitNote` en `app/Actions/Purchasing/`: dentro de una transacción,
       valida saldos, inserta la(s) fila(s) de imputación y deja el saldo de la factura recalculable
 - [ ] Regla de signo: NC resta al saldo de la factura, ND suma
 - [ ] Validaciones: mismo proveedor, no imputar más que el saldo pendiente de la factura (NC), no
       imputar más que el importe total de la nota, factura con saldo > 0 para NC
-- [ ] Recálculo del `status` de la factura tras cada imputación (pendiente / pagada parcialmente / pagada)
+- [x] Recálculo del `status` de la factura tras cada imputación (pendiente / pagada parcialmente /
+      pagada) — Action `RecalculateVoucherBalanceStatus` _en PR 0_; el Action de HU-054 la invoca
 - [ ] Inmutabilidad: la imputación confirmada no se edita ni se borra; corrección por contrapartida
 - [ ] Pantalla para imputar una NC/ND a una o varias facturas del proveedor con importe por factura
 - [ ] Test unitario del Action: NC + ND sobre la misma factura ⇒ saldo = original − NC + ND
@@ -162,11 +186,13 @@ Props/respuestas tipadas con `spatie/laravel-data` en `app/Data/Purchasing/...`.
 
 ### HU-027 - Emitir una orden de pago a proveedor (8 SP)
 
-- [ ] Migraciones de `payment_orders` (cabecera, sin `updated_at`) y `payment_order_items`
+- [x] Migraciones de `payment_orders` (cabecera, sin `updated_at`) y `payment_order_items`
       (detalle N:N con `amount_applied decimal(12,2)`, `UNIQUE(payment_order_id, supplier_voucher_id)`)
-- [ ] `order_number` correlativo, `payment_method_id` FK a `payment_methods`, `user_id`, `date`, `status`
+      — _en PR 0_
+- [ ] `order_number` correlativo (+ su `UNIQUE`) y su generación; `payment_method_id` FK a
+      `payment_methods` ya está en el esquema de PR 0
 - [ ] Action `IssuePaymentOrder`: transacción que crea la cabecera, inserta las imputaciones,
-      descuenta el saldo de cada factura y recalcula su `status`
+      descuenta el saldo de cada factura y recalcula su `status` (vía `RecalculateVoucherBalanceStatus`)
 - [ ] `total_amount` de la orden = suma de `amount_applied` (nunca input del usuario)
 - [ ] Validaciones: mismo proveedor, factura con saldo > 0, `amount_applied` ≤ saldo pendiente de
       la factura, suma de imputaciones = total de la orden, medio de pago del catálogo
@@ -341,7 +367,7 @@ contrapartida.
 | ----------------- | -------------------------------- | ----------------------------------------------------------------------------------------------- |
 | id                | bigserial PK                     |                                                                                                 |
 | source_voucher_id | bigint FK → supplier_vouchers.id | `NOT NULL` — la NC o ND                                                                         |
-| target_voucher_id | bigint FK → supplier_vouchers.id | `NOT NULL` — la factura                                                                         |
+| target_voucher_id | bigint FK → supplier_vouchers.id | `NOT NULL` — la factura; `CHECK (target_voucher_id <> source_voucher_id)`                        |
 | amount            | decimal(12, 2)                   | `NOT NULL`, `CHECK (amount > 0)` — siempre positivo; el signo lo da el `type` de la nota origen |
 | user_id           | bigint FK → users.id             | `NOT NULL`                                                                                      |
 | created_at        | timestamp                        | `NOT NULL DEFAULT now()` — sin `updated_at`: la fila es inmutable                               |
@@ -362,10 +388,10 @@ nullables y a un discriminador. Son dos hechos distintos del mismo ledger.
 | id                | bigserial PK                   |                                                              |
 | supplier_id       | bigint FK → suppliers.id       | `NOT NULL`                                                   |
 | payment_method_id | bigint FK → payment_methods.id | `NOT NULL` — del catálogo de `HU-052`                        |
-| order_number      | varchar                        | `NOT NULL`, correlativo                                      |
+| order_number      | varchar                        | `NOT NULL`, correlativo — el `UNIQUE` (global vs. por proveedor, punto abierto 4) lo agrega `HU-027` |
 | date              | date                           | `NOT NULL`                                                   |
 | total_amount      | decimal(12, 2)                 | `NOT NULL`, `CHECK (total_amount > 0)` — = suma de los items |
-| status            | varchar                        | `NOT NULL`                                                   |
+| status            | varchar                        | `NOT NULL`, `CHECK (status IN ('emitida','anulada'))` — sin `borrador`: la inmutabilidad la da la ausencia de rutas de escritura |
 | notes             | text                           | `NULL`                                                       |
 | user_id           | bigint FK → users.id           | `NOT NULL`                                                   |
 | created_at        | timestamp                      | `NOT NULL DEFAULT now()`                                     |
@@ -402,12 +428,28 @@ pide el punto 7 del PO: guarda el **importe imputado de cada orden a cada factur
 
 ## Puntos abiertos
 
-1. **La relación N:N de las notas — confirmar con el profesor.** El PO transcribió "todo tiene
-   relación N:N" y la marcó como ambigua. El equipo asume: orden de pago ↔ factura es N:N (claro);
-   NC/ND ↔ factura también N:N vía `voucher_applications`, y **la nota siempre imputa a una factura
-   concreta** (mueve el saldo de esa factura). La alternativa -NC/ND como asientos sueltos de la
-   cuenta corriente del proveedor, sin factura destino- cambia el modelo de `HU-054` y la tabla
-   `voucher_applications`. Bloquea el diseño fino de `HU-054`; hay que cerrarlo en la primera daily.
+1. **La relación N:N de las notas — RESUELTO (2026-09-02).** El PO transcribió "todo tiene relación
+   N:N" y la marcó como ambigua. **Confirmado:** orden de pago ↔ factura es N:N; NC/ND ↔ factura
+   también N:N vía `voucher_applications`, y **la nota siempre imputa a una o varias facturas
+   concretas** (mueve el saldo de esas facturas), con importe imputado en la tabla intermedia.
+   Fundamentos:
+   - **Semántica AFIP:** una NC/ND tipo A lleva "comprobantes asociados" en su propia definición; la
+     nota real ya nace apuntando a facturas. El modelo refleja el documento físico.
+   - **Lo piden los criterios de aceptación:** `HU-054` y `HU-036` exigen saldo _por factura_ y
+     trazabilidad _de cada imputación_; la verificación de `HU-054` es "saldo resultante de esa
+     factura = original − NC + ND". Sin factura destino no se puede afirmar.
+   - **El cálculo queda una función total y sin ambigüedad:**
+     `saldo(factura) = total − Σ pagos − Σ NC + Σ ND`, todo indexado por esa factura. El modelo de
+     asientos sueltos obliga a decidir después "¿qué factura bajó esta NC?" al conciliar.
+   - Es el modelo más chico y testeable solo, lo que conviene para la historia de riesgo.
+
+   La alternativa -NC/ND como asientos sueltos de la cuenta corriente del proveedor, sin factura
+   destino- sólo haría falta para notas que genuinamente no mapean a una factura (bonificaciones por
+   volumen, ajustes financieros). Eso es cuenta corriente por proveedor (`HU-028`), fuera de sprint,
+   y no queda bloqueado: una nota sin imputar (o imputada parcial) ya es un ítem abierto a nivel
+   proveedor. Por eso **no se exige que la suma imputada de una nota == su importe total al momento
+   del alta**: la nota puede quedar parcial o sin imputar, y `Σ notas no imputadas del proveedor` da
+   el crédito/débito a favor pendiente de aplicar sin cambiar la tabla `voucher_applications`.
 2. **¿Se puede pagar una ND con una orden de pago, o siempre rueda al saldo de una factura?** El
    equipo asume que la ND sólo incrementa el saldo de la factura destino y se cancela pagando esa
    factura. `payment_order_items.supplier_voucher_id` apunta siempre a una factura.
@@ -456,9 +498,10 @@ pide el punto 7 del PO: guarda el **importe imputado de cada orden a cada factur
   (imputación N:N + recálculo de estado + inmutabilidad) atraviesa `HU-036` y `HU-027`; si se
   descubre tarde que el modelo no cierra, se rehace código de las tres. Cerrar el cálculo de saldo
   y las reglas de imputación antes de avanzar con pantallas.
-- **El punto abierto 1 (N:N de las notas) bloquea el diseño de `HU-054`.** Si no se confirma con el
-  profesor en los primeros días, el equipo avanza con el supuesto documentado y asume el riesgo de
-  reproceso.
+- **El punto abierto 1 (N:N de las notas) quedó resuelto el 2026-09-02**: la nota imputa a facturas
+  concretas vía `voucher_applications`, con importe imputado en la tabla intermedia. Se destraba el
+  diseño de `HU-054`. Falta confirmar con el profesor el punto 3 (mecanismo de contrapartida) antes
+  de escribir el Action.
 - **Arrastre del Sprint 1.** Al planificar, `HU-016`, `HU-017` y `HU-018` figuraban `Pendiente`. Si
   no cerraron el 28/08, arrastran capacidad y el compromiso de 30 SP baja en consecuencia — se
   ajusta en la primera daily, no en silencio.

@@ -25,6 +25,7 @@ class SupplierVoucherController extends Controller
     public function index(): Response
     {
         $vouchers = SupplierVoucher::query()
+            ->withBalanceAggregates()
             ->with('supplier:id,business_name')
             ->orderByDesc('issue_date')
             ->orderByDesc('id')

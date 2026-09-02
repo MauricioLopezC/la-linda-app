@@ -73,26 +73,24 @@ class Supplier extends Model
         return $this->hasMany(SupplierVoucher::class);
     }
 
+    /** @return HasMany<PaymentOrder, $this> */
+    public function paymentOrders(): HasMany
+    {
+        return $this->hasMany(PaymentOrder::class);
+    }
+
     /**
-     * Check if the supplier has associated transactions (vouchers, payments, etc.)
+     * Check if the supplier has associated transactions (vouchers, payment orders, etc.)
      * preventing destructive physical deletion and locking CUIT edits.
      */
     public function hasAssociatedRecords(): bool
     {
-        if (Schema::hasTable('supplier_vouchers')) {
-            if ($this->vouchers()->exists()) {
-                return true;
-            }
+        if (Schema::hasTable('supplier_vouchers') && $this->vouchers()->exists()) {
+            return true;
         }
 
-        if (Schema::hasTable('payment_orders')) {
-            $hasPaymentOrders = $this->hasMany(Model::class, 'supplier_id')
-                ->from('payment_orders')
-                ->exists();
-
-            if ($hasPaymentOrders) {
-                return true;
-            }
+        if (Schema::hasTable('payment_orders') && $this->paymentOrders()->exists()) {
+            return true;
         }
 
         return false;
