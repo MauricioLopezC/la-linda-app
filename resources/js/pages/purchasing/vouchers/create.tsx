@@ -2,6 +2,7 @@ import { Head, Link, useForm } from '@inertiajs/react';
 import { ArrowLeft, Calculator, Loader2, ReceiptText } from 'lucide-react';
 import type { FormEvent } from 'react';
 import { useMemo } from 'react';
+import { toast } from 'sonner';
 import { store } from '@/actions/App/Http/Controllers/Purchasing/SupplierVoucherController';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
@@ -122,11 +123,12 @@ export default function CreateSupplierVoucher({
     [form.data.other_taxes_amount],
   );
   const discriminatesVat = form.data.letter === 'A' || form.data.letter === 'M';
+  // Mirrors the backend's integer arithmetic: intdiv((netCents * 21) + 50, 100).
   const vatCents =
     netCents === null
       ? null
       : discriminatesVat
-        ? Math.round(netCents * 0.21)
+        ? Math.floor((netCents * 21 + 50) / 100)
         : 0;
   const totalCents =
     netCents === null || vatCents === null || otherTaxesCents === null
@@ -138,7 +140,11 @@ export default function CreateSupplierVoucher({
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    form.submit(store());
+    form.submit(store(), {
+      onSuccess: () =>
+        toast.success('Comprobante de proveedor registrado correctamente.'),
+      onError: () => toast.error('Revisá los datos del comprobante ingresado.'),
+    });
   };
 
   const padFiscalNumber = (

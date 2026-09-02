@@ -2,6 +2,7 @@
 
 namespace App\Actions\Purchasing;
 
+use App\Concerns\ConvertsMoneyToCents;
 use App\Enums\Purchasing\SupplierVoucherLetter;
 use App\Enums\Purchasing\SupplierVoucherType;
 use App\Models\Purchasing\Supplier;
@@ -12,6 +13,8 @@ use Illuminate\Validation\ValidationException;
 
 class CreateSupplierVoucher
 {
+    use ConvertsMoneyToCents;
+
     public function __construct(private ResolveSupplierVoucherStatus $resolveStatus) {}
 
     /**
@@ -41,8 +44,8 @@ class CreateSupplierVoucher
 
             $type = SupplierVoucherType::from($data['type']);
             $letter = SupplierVoucherLetter::from($data['letter']);
-            $netCents = $this->toCents($data['net_amount']);
-            $otherTaxesCents = $this->toCents($data['other_taxes_amount']);
+            $netCents = $this->moneyToCents($data['net_amount']);
+            $otherTaxesCents = $this->moneyToCents($data['other_taxes_amount']);
             $vatCents = $letter->discriminatesVat()
                 ? intdiv(($netCents * 21) + 50, 100)
                 : 0;
@@ -54,8 +57,8 @@ class CreateSupplierVoucher
                 ]);
             }
 
-            $vatAmount = $this->formatCents($vatCents);
-            $totalAmount = $this->formatCents($totalCents);
+            $vatAmount = $this->centsToMoney($vatCents);
+            $totalAmount = $this->centsToMoney($totalCents);
             $status = $this->resolveStatus->handle($type, $totalAmount, $totalAmount);
 
             $voucher = SupplierVoucher::create([
@@ -83,17 +86,5 @@ class CreateSupplierVoucher
 
             return $voucher->load('supplier');
         });
-    }
-
-    private function toCents(string $amount): int
-    {
-        [$whole, $fraction] = array_pad(explode('.', $amount, 2), 2, '');
-
-        return ((int) $whole * 100) + (int) str_pad($fraction, 2, '0');
-    }
-
-    private function formatCents(int $cents): string
-    {
-        return number_format($cents / 100, 2, '.', '');
     }
 }

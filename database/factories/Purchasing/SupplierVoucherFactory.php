@@ -2,6 +2,7 @@
 
 namespace Database\Factories\Purchasing;
 
+use App\Concerns\ConvertsMoneyToCents;
 use App\Enums\Purchasing\SupplierVoucherLetter;
 use App\Enums\Purchasing\SupplierVoucherStatus;
 use App\Enums\Purchasing\SupplierVoucherType;
@@ -14,6 +15,8 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 class SupplierVoucherFactory extends Factory
 {
+    use ConvertsMoneyToCents;
+
     /**
      * Define the model's default state.
      *
@@ -33,10 +36,10 @@ class SupplierVoucherFactory extends Factory
             'number' => fake()->unique()->numerify('########'),
             'issue_date' => fake()->dateTimeBetween('-60 days', 'now'),
             'due_date' => fake()->optional(0.8)->dateTimeBetween('now', '+60 days'),
-            'net_amount' => $this->formatCents($netCents),
-            'vat_amount' => $this->formatCents($vatCents),
-            'other_taxes_amount' => $this->formatCents($otherTaxesCents),
-            'total_amount' => $this->formatCents($netCents + $vatCents + $otherTaxesCents),
+            'net_amount' => $this->centsToMoney($netCents),
+            'vat_amount' => $this->centsToMoney($vatCents),
+            'other_taxes_amount' => $this->centsToMoney($otherTaxesCents),
+            'total_amount' => $this->centsToMoney($netCents + $vatCents + $otherTaxesCents),
             'status' => SupplierVoucherStatus::Pending,
             'notes' => fake()->optional()->sentence(),
         ];
@@ -74,10 +77,5 @@ class SupplierVoucherFactory extends Factory
             'issue_date' => now()->subDays(45)->toDateString(),
             'due_date' => now()->subDays(15)->toDateString(),
         ]);
-    }
-
-    private function formatCents(int $cents): string
-    {
-        return number_format($cents / 100, 2, '.', '');
     }
 }

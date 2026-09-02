@@ -79,6 +79,13 @@ class SupplierVoucher extends Model
         return $this->belongsTo(Supplier::class);
     }
 
+    /**
+     * Provisional pending balance. HU-036 registers vouchers but has no payment
+     * or note applications yet, so the balance always equals the total amount.
+     * HU-054 (credit/debit note applications) and HU-027 (payment orders) replace
+     * this with the real derivation:
+     * total_amount − Σ payment_order_items.amount_applied − Σ credit notes + Σ debit notes.
+     */
     public function pendingBalance(): string
     {
         return $this->total_amount;

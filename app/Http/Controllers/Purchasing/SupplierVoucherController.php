@@ -70,12 +70,8 @@ class SupplierVoucherController extends Controller
         $data = $request->validated();
         $action->handle($data);
 
-        Inertia::flash('toast', [
-            'type' => 'success',
-            'message' => 'Comprobante de proveedor registrado correctamente.',
-        ]);
-
-        return to_route('purchasing.vouchers.index');
+        return to_route('purchasing.vouchers.index')
+            ->with('success', 'Comprobante de proveedor registrado correctamente.');
     }
 
     public function pdf(SupplierVoucher $supplierVoucher): HttpResponse
