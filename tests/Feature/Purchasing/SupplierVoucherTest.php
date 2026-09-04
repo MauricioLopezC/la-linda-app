@@ -5,6 +5,7 @@ use App\Enums\Purchasing\SupplierVoucherStatus;
 use App\Enums\Purchasing\SupplierVoucherType;
 use App\Models\Purchasing\Supplier;
 use App\Models\Purchasing\SupplierVoucher;
+use App\Models\Purchasing\VoucherApplication;
 use App\Models\User;
 use App\Rules\Purchasing\ValidCuit;
 use Illuminate\Database\QueryException;
@@ -263,11 +264,44 @@ test('listing exposes fiscal data derived balance state and overdue marker', fun
             ->where('vouchers.data.0.supplier_business_name', 'Lácteos del Sur')
             ->where('vouchers.data.0.formatted_number', 'A 0007-00001234')
             ->where('vouchers.data.0.total_amount', '121.00')
-            ->where('vouchers.data.0.pending_balance', '121.00')
+            ->where('vouchers.data.0.outstanding_amount', '121.00')
             ->where('vouchers.data.0.status', SupplierVoucherStatus::Pending->value)
             ->where('vouchers.data.0.is_overdue', true));
 
     Carbon::setTestNow();
+});
+
+test('listing exposes a note outstanding amount as what is still unapplied, not its full total', function () {
+    // Regression: outstanding_amount must dispatch by type (HU-054). A note is never a payment or
+    // application target, so reading pendingBalance() unconditionally would always report its
+    // full total even after part of it has been imputed to an invoice.
+    $user = User::factory()->create();
+    $supplier = Supplier::factory()->create();
+    $creditNote = SupplierVoucher::factory()->creditNote()->create([
+        'supplier_id' => $supplier->id,
+        'issue_date' => today(),
+        'net_amount' => '500.00',
+        'vat_amount' => '0.00',
+        'other_taxes_amount' => '0.00',
+        'total_amount' => '500.00',
+    ]);
+    $invoice = SupplierVoucher::factory()->invoice()->create([
+        'supplier_id' => $supplier->id,
+        'issue_date' => today(),
+        'net_amount' => '1000.00',
+        'vat_amount' => '0.00',
+        'other_taxes_amount' => '0.00',
+        'total_amount' => '1000.00',
+    ]);
+    VoucherApplication::factory()->from($creditNote)->to($invoice)->amount('150.00')->create();
+
+    $this->actingAs($user)
+        ->get(route('purchasing.vouchers.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('purchasing/vouchers/index')
+            ->where('vouchers.data.1.id', $creditNote->id)
+            ->where('vouchers.data.1.outstanding_amount', '350.00'));
 });
 
 test('voucher has no edit update or delete route in this story', function () {
