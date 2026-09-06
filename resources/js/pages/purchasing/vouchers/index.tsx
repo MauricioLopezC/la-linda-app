@@ -126,7 +126,7 @@ export default function SupplierVouchersIndex({ vouchers }: Props) {
                       {formatCurrency(voucher.total_amount)}
                     </TableCell>
                     <TableCell className="text-right font-semibold tabular-nums">
-                      {formatCurrency(voucher.pending_balance)}
+                      {formatCurrency(voucher.outstanding_amount)}
                     </TableCell>
                     <TableCell>
                       <Badge
