@@ -22,7 +22,7 @@ class SupplierVoucherListData extends Data
         public ?string $due_date,
         public ?string $due_date_formatted,
         public string $total_amount,
-        public string $pending_balance,
+        public string $outstanding_amount,
         public string $status,
         public string $status_label,
         public bool $is_overdue,
@@ -45,7 +45,10 @@ class SupplierVoucherListData extends Data
             due_date: $voucher->due_date?->toDateString(),
             due_date_formatted: $voucher->due_date?->format('d/m/Y'),
             total_amount: $voucher->total_amount,
-            pending_balance: $voucher->pendingBalance(),
+            // Dispatches by type: pending balance for an invoice, unapplied amount for a note —
+            // a note is never a payment/application target, so pendingBalance() alone would
+            // always report its full total even after it has been partially imputed.
+            outstanding_amount: $voucher->outstandingAmount(),
             status: $voucher->status->value,
             status_label: $voucher->status->label(),
             is_overdue: $voucher->isOverdue(),
