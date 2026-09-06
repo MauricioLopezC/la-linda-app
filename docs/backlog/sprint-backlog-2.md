@@ -1,543 +1,457 @@
 # Sprint Backlog 2 - Supermercados La Linda
 
-**Sprint 2** · viernes 29/08/2026 al viernes 12/09/2026 · equipo de 6 personas
-**Compromiso: 30 story points** (capacidad de referencia: 30 a 40 SP), más `HU-021` como
-alcance opcional.
+**Sprint 2** · 29/08/2026 al 12/09/2026 · equipo de 6 personas
+**Compromiso provisorio: 39 story points** (capacidad de referencia: 30 a 40 SP).
 
-> Este documento referencia los ítems **por ID**. Los criterios de aceptación viven únicamente en
-> `product-backlog.md` y no se copian acá. El razonamiento de cada alta/modificación de historia
-> quedó en las notas `> **... Sprint Planning 2 (2026-08-29)**` de ese mismo fichero.
-
-## Qué pidió el Product Owner y cómo se cubre
-
-El PO pidió el circuito de **cuentas por pagar**: recibir comprobantes de proveedor (factura, nota
-de crédito, nota de débito), representar el egreso que generan, emitir órdenes de pago que los
-cancelen total o parcialmente, y consultar los pagos y egresos del período. Clientes es alcance
-opcional si sobra capacidad.
-
-| #   | Pedido del PO                                                                                                                                                         | Se cubre con                                              | Estado en el backlog                                                                                                                     |
-| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| 4   | Comprobantes de proveedores (factura, NC, ND; datos, tipo/número, emisión/vencimiento, importe, saldo, estado, relación con pagos)                                    | `HU-036`                                                  | **Modificada**: se amplió de "factura o remito" a los tres tipos, y se agregaron vencimiento, saldo pendiente y estado                   |
-| 5   | Modelo de gastos (facturas como obligación, ND aumenta deuda, NC reduce, pagos, saldo por factura, trazabilidad)                                                      | `HU-036` + `HU-054` + `HU-027`                            | `HU-054` es **nueva**; el resto ya cubría su parte                                                                                       |
-| 6   | Órdenes de pago (proveedor, varias facturas, fecha/importe/medio, imputación por factura, total/parcial, total calculado, actualiza saldos)                           | `HU-027`                                                  | **Reformulada**: era "Registrar un pago"; ahora es el documento _orden de pago_ con número, estado y total calculado                     |
-| 7   | Relación N:N orden de pago ↔ factura, con importe imputado en la tabla intermedia; cómo se imputan NC/ND                                                              | `HU-027` (N:N pago↔factura) + `HU-054` (N:N nota↔factura) | Cubierto. La ambigüedad "todo es N:N" quedó **resuelta el 2026-09-02** (punto 1 de "Puntos abiertos")                                    |
-| 8   | Modificación del saldo (baja con pago, baja con NC, sube con ND, no imputar más que el saldo, pagada a saldo cero, parcial queda pendiente, registro de imputaciones) | `HU-054` (reglas de NC/ND) + `HU-027` (reglas de pago)    | Cubierto entre las dos historias                                                                                                         |
-| 9   | Listado de pagos y egresos (filtros por fecha, proveedor, tipo, medio de pago, estado; total del período; detalle por pago)                                           | `HU-055`                                                  | **Nueva**. Distinta de `HU-028` (cuenta corriente por proveedor), que no entra                                                           |
-| 10  | Clientes (ABM, datos personales/razón social, id. fiscal, condición fiscal, contacto, estado, lista de precios asignada)                                              | `HU-021`                                                  | Ya existía. Entra como **alcance opcional**. La "lista de precios asignada" (`HU-022`) **no** entra: depende de `HU-011`, sin planificar |
-
-### Sugerencias del equipo aplicadas al alcance propuesto
-
-- **Se separó el "modelo de gastos + modificación del saldo" en `HU-054`**, en vez de meterlo todo
-  en el registro del comprobante. El motor de saldo (imputación N:N + recálculo + inmutabilidad) es
-  el riesgo del sprint, igual que `HU-017` lo fue en el Sprint 1: conviene que sea una historia
-  propia, testeable sola.
-- **`HU-027` pasa de "pago" a "orden de pago"** porque el PO pidió explícitamente el documento con
-  número, estado y total. Nueva dependencia de `HU-052` (medios de pago).
-- **Las órdenes de compra (`HU-033/034/035/024`) quedan fuera.** El circuito que pidió el PO es
-  comprobante → **orden de pago**, no comprobante → **orden de compra**. No hay que confundirlas:
-  `HU-037` ("imputar el comprobante a órdenes de compra") es otra cosa y no entra.
-- **`HU-055` es nueva y no un estiramiento de `HU-028`.** Son dos miradas distintas: `HU-055` es el
-  libro de pagos por período; `HU-028` es el saldo de cuenta corriente por proveedor. `HU-028`
-  queda como seguimiento barato una vez que exista el motor de saldo.
-- **Imputación de NC/ND:** la nota se imputa a **facturas concretas** (mueve el saldo de la
-  factura), con relación N:N e importe imputado. **Confirmado el 2026-09-02** (ver punto 1 de
-  "Puntos abiertos" para los fundamentos).
-- **`HU-019` (transferencias entre depósitos) no entra.** El Sprint Backlog 1 la dejó como "primer
-  candidato del Sprint 2", pero el pedido del PO para este sprint es íntegramente cuentas por
-  pagar; nada de stock. Esa nota queda superada.
-- **IVA discriminado** en los comprobantes se registra de forma simplificada mientras `HU-007`
-  (alícuotas de IVA) siga pendiente.
+> Este documento referencia los ítems por ID. Los criterios de aceptación viven únicamente en
+> `product-backlog.md`. El alcance fue reformulado el 2026-09-06 a partir de las correcciones del
+> profesor sobre órdenes de compra, comprobantes de proveedor y el modelo de gastos.
 
 ## Objetivo del sprint
 
-Que el supermercado pueda **registrar todo lo que le debe a sus proveedores y todo lo que les
-paga**, con el saldo de cada factura calculado siempre a partir de sus comprobantes y pagos -nunca
-a mano-, cada imputación trazable e inmutable, y un listado de egresos del período. Al cierre no
-hay órdenes de compra ni ingreso de stock por compra: hay una cuenta por pagar que cuadra.
+Que La Linda pueda emitir órdenes de compra, registrar con detalle los comprobantes recibidos de
+proveedores y cancelar la deuda resultante mediante órdenes de pago trazables, inmutables, con
+múltiples medios de pago y documentación propia en PDF.
+
+Al cierre del sprint debe existir este recorrido completo:
+
+```text
+Orden de compra emitida por La Linda
+    → comprobante recibido del proveedor con todos sus renglones
+    → deuda ajustada por NC y ND
+    → orden de pago emitida por La Linda
+```
+
+El sprint no calcula impuestos de compras, no genera PDFs de comprobantes externos y no actualiza
+stock ni costos a partir de esos comprobantes.
+
+## Decisiones confirmadas
+
+1. Una orden de pago puede distribuirse entre varios medios de pago.
+2. La orden de pago genera un PDF emitido por La Linda.
+3. Las anulaciones cambian el estado y conservan cabeceras, detalles, imputaciones y medios.
+4. La numeración de las órdenes de pago es global, correlativa y no reutilizable.
+5. Facturas, notas de crédito y notas de débito registran todos los artículos que figuran en el
+   documento recibido.
+6. Los impuestos no se calculan ni se desagregan: el importe total se transcribe del comprobante.
+7. La Linda no genera un PDF de la factura, NC o ND del proveedor; ofrece una vista de detalle de
+   solo lectura.
+8. No existe una pantalla independiente de reimputación de notas.
+
+## Qué pidió el Product Owner y cómo se cubre
+
+| # | Pedido corregido | Se cubre con | Decisión de alcance |
+|---:|---|---|---|
+| 1 | Emitir una OC con proveedor, artículos, cantidades, precios y total | `HU-033` | Incluida; sin circuito de cotización ni aprobación multinivel |
+| 2 | Listar, filtrar, consultar e imprimir la OC | `HU-033` | Incluido en la misma rodaja vertical |
+| 3 | Registrar factura, NC y ND con todos sus renglones | `HU-036` | Incluido; se admite artículo o concepto financiero |
+| 4 | Tomar el total informado sin calcular IVA ni percepciones | `HU-036` | El total del documento es la cifra autoritativa |
+| 5 | Consultar el comprobante sin inventar un PDF propio | `HU-036` | Listado y detalle web de solo lectura |
+| 6 | NC asociada al cargar o libre para compensar en una OP | `HU-054` + `HU-027` | Modelo mixto, sin pantalla de reimputación |
+| 7 | ND como aumento independiente de la deuda | `HU-054` + `HU-027` | Se cancela en una OP igual que una factura |
+| 8 | Una OP cancela varios comprobantes y acepta varios medios | `HU-027` + `HU-052` | Facturas + ND − NC; medios totalizan el neto |
+| 9 | Documento propio de OP con numeración global | `HU-027` | PDF de La Linda; número único y no reutilizable |
+| 10 | No editar ni borrar operaciones confirmadas | `HU-036` + `HU-027` | Anulación por estado, con motivo y auditoría |
 
 ## Ítems comprometidos
 
-| #   | ID     | Título                                                   | SP     | Estado    | Depende de     |
-| --- | ------ | -------------------------------------------------------- | ------ | --------- | -------------- |
-| 1   | HU-013 | Administrar proveedores                                  | 5      | Pendiente | nada           |
-| 2   | HU-052 | Administrar medios de pago                               | 2      | Pendiente | nada           |
-| 3   | HU-036 | Registrar un comprobante de proveedor                    | 5      | Pendiente | HU-013         |
-| 4   | HU-054 | Aplicar notas de crédito y débito al saldo de la factura | 5      | Pendiente | HU-036         |
-| 5   | HU-027 | Emitir una orden de pago a proveedor                     | 8      | Pendiente | HU-036, HU-052 |
-| 6   | HU-055 | Consultar el listado de pagos y egresos del período      | 5      | Pendiente | HU-027, HU-036 |
-|     |        | **Total comprometido**                                   | **30** |           |                |
+| # | ID | Título | SP | Estado | Depende de |
+|---:|---|---|---:|---|---|
+| 1 | HU-013 | Administrar proveedores | 5 | Pendiente | nada |
+| 2 | HU-052 | Administrar medios de pago | 2 | Pendiente | nada |
+| 3 | HU-033 | Emitir y consultar órdenes de compra | 8 | Pendiente | HU-013, HU-005 |
+| 4 | HU-036 | Registrar y consultar comprobantes de proveedor con detalle | 8 | Pendiente | HU-013, HU-008 |
+| 5 | HU-054 | Gestionar notas de crédito y débito del proveedor | 3 | Pendiente | HU-036 |
+| 6 | HU-027 | Emitir y anular una orden de pago a proveedor | 13 | Pendiente | HU-036, HU-054, HU-052 |
+| | | **Total comprometido** | **39** | | |
 
-### Alcance opcional (no cuenta para el compromiso)
+No se incorpora alcance opcional. `HU-055` y `HU-021` vuelven al Product Backlog sin asignación al
+Sprint 2 para proteger el circuito obligatorio corregido.
 
-| #   | ID     | Título               | SP  | Depende de | Nota                                                                 |
-| --- | ------ | -------------------- | --- | ---------- | -------------------------------------------------------------------- |
-| 7   | HU-021 | Administrar clientes | 5   | nada       | Se arranca solo si el alcance obligatorio está cerrado. Sin `HU-022` |
+## Historias absorbidas
+
+`HU-034`, `HU-035` y `HU-024` no se eliminan del Product Backlog, pero dejan de desarrollarse de
+forma independiente. `HU-033` absorbe el detalle, el cálculo del total, la emisión, el listado, la
+consulta y el PDF de la orden de compra.
+
+Esta reunificación evita entregar por separado una cabecera o un cálculo que todavía no permitan
+emitir un documento utilizable.
 
 ## Orden de ataque
 
-Las dependencias son sobre las **tablas**, no sobre las pantallas: como en el Sprint 1, la
-migración y el modelo son el primer commit de cada historia y se pushean apenas pasan.
+```text
+Primera etapa, en paralelo
+├── HU-013  proveedores
+└── HU-052  catálogo de medios de pago
 
-```
-dia 1:  HU-013 (proveedores) ─┐   sin dependencias entre si, arrancan en paralelo
-        HU-052 (medios pago) ─┘   HU-052 son 2 SP: cierra temprano
+Segunda etapa, en paralelo
+├── HU-033  orden de compra completa
+└── HU-036  comprobantes y detalle de artículos
 
-luego, sobre la tabla de comprobantes:
+Tercera etapa
+└── HU-054  comportamiento de NC y ND
 
-   HU-036                     HU-054                     HU-027
-   registrar comprobante      imputar NC/ND al saldo     emitir orden de pago
-   (factura / NC / ND)        + motor de saldo           imputacion N:N + total
-   5 SP                       5 SP  <-- riesgo           8 SP
-
-luego, aguas abajo:
-
-   HU-055  listado de pagos y egresos del periodo  (5 SP)  <-- candidato de recorte
+Cuarta etapa
+└── HU-027  orden de pago, múltiples medios, PDF y anulación
 ```
 
-- `HU-054` y `HU-027` **comparten el cálculo de saldo pendiente de la factura** (importe total −
-  pagos imputados − NC imputadas + ND imputadas). Ese cálculo se define una vez y lo usan las dos.
-  Conviene cerrarlo antes de abrir las pantallas de ambas.
-- `HU-055` es el único ítem aguas abajo de verdad: puede construir filtros y export contra tablas
-  vacías, pero no se da por terminado hasta que `HU-027` emita órdenes reales. **Si llegado el
-  miércoles 10/09 `HU-027` todavía no emite órdenes, la conversación es con el PO -sacar `HU-055`
-  y cerrar en 25 SP-**, nunca un recorte silencioso. Mismo criterio que se usó con `HU-018`.
-- `HU-027` son 8 SP: conviene arrancarla con dos o tres personas y que quien cierre `HU-052` y
-  `HU-013` se sume ahí.
+- `HU-033` y `HU-036` pueden avanzar en paralelo porque solo comparten maestros ya existentes.
+- El detalle del comprobante no se imputa a la OC durante este sprint; esa conciliación sigue en
+  `HU-037`.
+- `HU-027` comienza por el dominio y la transacción atómica antes de construir el formulario o el
+  PDF.
+- La persona que cierre `HU-052` se suma a `HU-027`, que concentra el mayor riesgo.
 
 ## Desglose en tareas
 
-Stack del proyecto: Laravel + Inertia.js + React sobre PostgreSQL (SQLite en dev/tests),
-desplegado en Laravel Cloud. Lógica de negocio en `app/Actions/Purchasing/...` (ver `.ai/rules/app.md`).
-Props/respuestas tipadas con `spatie/laravel-data` en `app/Data/Purchasing/...`.
+Stack: Laravel + Inertia.js + React sobre PostgreSQL, con SQLite en desarrollo y tests. La lógica
+de negocio vive en `app/Actions/Purchasing` y las salidas tipadas en `app/Data/Purchasing`.
 
 ### HU-013 - Administrar proveedores (5 SP)
 
-- [ ] Migración de `suppliers` con `tax_id` (CUIT) único, `tax_condition` de lista cerrada, datos
-      comerciales y bancarios, `is_active`
-- [ ] Columnas `*_normalized` donde haga falta comparar sin acentos ni mayúsculas (convención del repo)
-- [ ] Validación de dígito verificador de CUIT
-- [ ] Baja lógica siempre que haya comprobantes, pagos u órdenes asociados
-- [ ] Pantallas de listado (filtros por razón social, CUIT, rubro, estado) y ABM
-- [ ] Registro de cambios del proveedor en el log de auditoría (o `TODO` marcado si `EPIC-10` aún no da el service)
-- [ ] Seeder con proveedores de demostración
+- [ ] Alta, modificación, consulta y cambio de estado de proveedores
+- [ ] CUIT único y validado; datos comerciales y bancarios
+- [ ] Filtros por razón social, CUIT, rubro y estado
+- [ ] Impedir la eliminación física cuando tenga documentos asociados
+- [ ] Datos de demostración y pruebas de las reglas de negocio
 
 ### HU-052 - Administrar medios de pago (2 SP)
 
-- [ ] Migración de `payment_methods` (`name`, `name_normalized` único, `is_active`, `is_online_enabled`)
-- [ ] Bloqueo de baja de un medio ya usado en una orden de pago registrada
-- [ ] ABM de medios de pago
-- [ ] Seeder con el catálogo de demostración (efectivo, transferencia, cheque, ...)
+- [ ] Catálogo de medios con nombre único y estado activo
+- [ ] Impedir la baja de un medio utilizado en una operación
+- [ ] Permitir que una misma operación use varios medios activos
+- [ ] Mantener los datos transaccionales del cheque o transferencia fuera del catálogo
+- [ ] Datos de demostración: efectivo, transferencia y cheque
 
-### HU-036 - Registrar un comprobante de proveedor (5 SP)
+### HU-033 - Emitir y consultar órdenes de compra (8 SP)
 
-- [ ] Migración de `supplier_vouchers` (ver DER). `type` ∈ {factura, nota_credito, nota_debito},
-      `letter` ∈ {A, B, C, M} (default A), `point_of_sale` (4 díg.), `number` (8 díg.),
-      `issue_date`, `due_date` nullable, `net_amount` / `vat_amount` / `other_taxes_amount` /
-      `total_amount` en `decimal(12,2)`, `status`
-- [ ] `UNIQUE(supplier_id, type, letter, point_of_sale, number)`
-- [ ] Validaciones: obligatorios (letra y punto de venta incluidos), importe total > 0 y = neto +
-      IVA + otros tributos, emisión no futura, vencimiento ≥ emisión, proveedor activo
-- [ ] Estado inicial: factura → `pendiente` con saldo = importe; NC/ND → `pendiente_imputar`
-- [ ] Cálculo del saldo pendiente como campo derivado (no columna escrita a mano)
-- [ ] Pantalla de alta y listado con proveedor, tipo, letra, punto de venta y número, fechas,
-      importe, saldo, estado, y marca de "vencido" derivada de `due_date`
-- [ ] IVA discriminado simplificado (sin FK a `alicuotas_iva`, que llega con `HU-007`)
-- [ ] Sin ruta de edición del importe una vez que el comprobante tiene imputaciones
-- [ ] Seeder con comprobantes de demostración por el service (facturas, alguna NC y ND)
+- [ ] Cabecera de OC: número, proveedor, depósito, condición de pago, fechas, observaciones y estado
+- [ ] Detalle con artículo, cantidad, precio unitario pactado y subtotal
+- [ ] Total automático como suma de subtotales, sin cálculo impositivo
+- [ ] Estados mínimos: `borrador`, `emitida`, `cancelada`
+- [ ] Permitir edición solo en borrador; emisión y cancelación sin efecto sobre stock
+- [ ] Numeración única de la OC
+- [ ] Listado con filtros por proveedor, estado, depósito y fechas
+- [ ] Vista de detalle de solo lectura para órdenes emitidas
+- [ ] PDF con identificación de La Linda y todo el contenido de la orden
+- [ ] Pruebas de emisión, total, inmutabilidad, filtros, cancelación y PDF
 
-### PR 0 - Motor de saldo (base compartida por `HU-054` y `HU-027`)
+### HU-036 - Registrar y consultar comprobantes con detalle (8 SP)
 
-Rama `feature/HU-054-motor-de-saldo`. Cierra el cálculo antes de abrir las pantallas de ambas
-historias (ver "Orden de ataque"). **Hecho:**
+- [ ] Cabecera de `supplier_vouchers`: proveedor, tipo, letra, punto de venta, número, fechas,
+      importe total, observaciones y estado
+- [ ] Eliminar del alcance `net_amount`, `vat_amount` y `other_taxes_amount`
+- [ ] Identidad fiscal única por proveedor + tipo + letra + punto de venta + número
+- [ ] Crear detalle con posición, artículo opcional, descripción original, cantidad, unidad,
+      precio unitario e importe de renglón
+- [ ] Exigir que cada artículo del documento tenga su renglón; admitir renglones de concepto para
+      cargos, descuentos o ajustes sin artículo del catálogo
+- [ ] Conservar una copia de descripción y unidad para que el documento histórico no cambie cuando
+      cambie el catálogo
+- [ ] No exigir igualdad entre suma de renglones y total del documento; mostrar la diferencia como
+      control informativo sin clasificarla como impuesto
+- [ ] Factura y ND nacen pendientes; NC nace disponible para `HU-054`
+- [ ] Saldo y estado derivados, nunca ingresados manualmente
+- [ ] Listado con filtros y marca de vencimiento
+- [ ] Vista de detalle de solo lectura con todos los renglones
+- [ ] Ausencia de rutas de edición, eliminación y PDF para el comprobante externo
+- [ ] Anulación con motivo, usuario y fecha; cabecera y renglones se conservan
+- [ ] Pruebas de validación, detalle, inmutabilidad, consulta y anulación
 
-- [x] Migraciones de esquema de las 3 tablas nuevas: `voucher_applications`, `payment_orders`,
-      `payment_order_items` (solo esquema; sin Actions de emisión ni pantallas)
-- [x] Modelos `VoucherApplication`, `PaymentOrder` (+ enum `PaymentOrderStatus`), `PaymentOrderItem`
-      y factories; relaciones nuevas en `SupplierVoucher` y `Supplier`
-- [x] Derivación real del saldo en `SupplierVoucher`: `pendingBalance()` (factura),
-      `unappliedAmount()` (NC/ND), `outstandingAmount()` (despacha por tipo). Aritmética en centavos
-      enteros (`ConvertsMoneyToCents`), scope `withBalanceAggregates()` para listados sin N+1
-- [x] Action compartida `RecalculateVoucherBalanceStatus` (recalcula y persiste el `status`; respeta
-      `anulada` como terminal). La llamarán los Actions de `HU-054` y `HU-027`
-- [x] `Supplier::hasAssociatedRecords()` pasa a usar la relación real `paymentOrders()` (se quitó el
-      placeholder `hasMany(Model::class)`)
-- [x] Tests: derivación del saldo (incl. NC + ND + pago sobre la misma factura), `unappliedAmount`,
-      scope en 1 query, recálculo de estado factura/nota, guarda de `anulada`
+### HU-054 - Gestionar notas de crédito y débito (3 SP)
 
-Pendiente para las historias dueñas: patrón de row-lock (`lockForUpdate`) al validar saldo dentro
-de cada Action; `UNIQUE(order_number)` y su generación (`HU-027`, punto abierto 4); mecanismo de
-contrapartida (punto abierto 3).
+- [ ] Al cargar una NC, permitir asociarla opcionalmente a una factura del mismo proveedor
+- [ ] Validar saldo de factura e importe disponible de la NC
+- [ ] Reducir inmediatamente el saldo de la factura por el importe asociado
+- [ ] Mantener disponible cualquier parte no asociada de la NC
+- [ ] Dejar una NC libre disponible para compensarla dentro de una OP
+- [ ] Tratar la ND como obligación independiente con saldo propio
+- [ ] No crear una pantalla de reimputación
+- [ ] Registrar usuario y fecha de cada asociación sin permitir edición o borrado
+- [ ] Pruebas de NC asociada, NC libre, remanente y ND pendiente
 
-### HU-054 - Aplicar notas de crédito y débito al saldo de la factura (5 SP) — riesgo del sprint
+### HU-027 - Emitir y anular una orden de pago (13 SP)
 
-- [x] Migración de `voucher_applications` (nota origen, factura destino, `amount decimal(12,2)`,
-      `user_id`, `created_at`; sin `updated_at`) — _en PR 0_
-- [ ] Action `ApplyCreditOrDebitNote` en `app/Actions/Purchasing/`: dentro de una transacción,
-      valida saldos, inserta la(s) fila(s) de imputación y deja el saldo de la factura recalculable
-- [ ] Regla de signo: NC resta al saldo de la factura, ND suma
-- [ ] Validaciones: mismo proveedor, no imputar más que el saldo pendiente de la factura (NC), no
-      imputar más que el importe total de la nota, factura con saldo > 0 para NC
-- [x] Recálculo del `status` de la factura tras cada imputación (pendiente / pagada parcialmente /
-      pagada) — Action `RecalculateVoucherBalanceStatus` _en PR 0_; el Action de HU-054 la invoca
-- [ ] Inmutabilidad: la imputación confirmada no se edita ni se borra; corrección por contrapartida
-- [ ] Pantalla para imputar una NC/ND a una o varias facturas del proveedor con importe por factura
-- [ ] Test unitario del Action: NC + ND sobre la misma factura ⇒ saldo = original − NC + ND
-- [ ] Test: intento de imputar por encima del saldo ⇒ rechazado con mensaje de negocio
-
-### HU-027 - Emitir una orden de pago a proveedor (8 SP)
-
-- [x] Migraciones de `payment_orders` (cabecera, sin `updated_at`) y `payment_order_items`
-      (detalle N:N con `amount_applied decimal(12,2)`, `UNIQUE(payment_order_id, supplier_voucher_id)`)
-      — _en PR 0_
-- [ ] `order_number` correlativo (+ su `UNIQUE`) y su generación; `payment_method_id` FK a
-      `payment_methods` ya está en el esquema de PR 0
-- [ ] Action `IssuePaymentOrder`: transacción que crea la cabecera, inserta las imputaciones,
-      descuenta el saldo de cada factura y recalcula su `status` (vía `RecalculateVoucherBalanceStatus`)
-- [ ] `total_amount` de la orden = suma de `amount_applied` (nunca input del usuario)
-- [ ] Validaciones: mismo proveedor, factura con saldo > 0, `amount_applied` ≤ saldo pendiente de
-      la factura, suma de imputaciones = total de la orden, medio de pago del catálogo
-- [ ] Pagos totales y parciales; una factura a saldo cero queda `pagada`, parcial queda `pagada parcialmente`
-- [ ] Inmutabilidad de la orden confirmada; corrección por contrapartida
-- [ ] Pantalla: elegir proveedor → lista de facturas pendientes con su saldo → tildar e imputar
-      importe por factura → ver el total de la orden → elegir medio de pago → confirmar
-- [ ] Test: orden que imputa parciales a dos facturas ⇒ saldos descontados, ninguna imputación
-      supera el saldo de su factura, `total_amount` = suma imputada
-- [ ] Seeder con alguna orden de pago de demostración por el service
-
-### HU-055 - Listado de pagos y egresos del período (5 SP) — candidato de recorte
-
-- [ ] Consulta de egresos: órdenes de pago y comprobantes con fecha, proveedor, tipo, medio de
-      pago, importe, estado
-- [ ] Filtros combinables: rango de fechas, proveedor, tipo de comprobante, medio de pago, estado
-- [ ] Total de egresos del período = suma de pagos imputados en el rango (no de comprobantes impagos)
-- [ ] Detalle por pago: comprobantes afectados e importe imputado a cada uno
-- [ ] Export a CSV y Excel respetando los filtros aplicados (reutiliza el patrón de exportación
-      cuando exista; si `HU-009` aún no lo construyó, se implementa acá y se anota la deuda)
-- [ ] Verificación de que no hay acción de editar ni eliminar en ninguna vista
-
-### HU-021 - Administrar clientes (5 SP) — solo si el alcance obligatorio está cerrado
-
-- [ ] Migración de `customers`: tipo de persona, razón social / nombre y apellido, CUIT/DNI,
-      condición fiscal, domicilio, teléfono, correo, `is_active`
-- [ ] Cliente genérico "Consumidor Final" no editable ni eliminable, sembrado por seeder
-- [ ] Validaciones: condición fiscal obligatoria, CUIT obligatorio/único/DV válido para RI, correo válido
-- [ ] Baja lógica cuando hay ventas asociadas
-- [ ] Columna `price_list_id` nullable **sin** lógica de resolución (eso es `HU-022` + `EPIC-01`, fuera de alcance)
-- [ ] Pantallas de listado y ABM
-
-### Tareas transversales del sprint
-
-- [ ] DER de las entidades de este sprint validado contra el esquema real
-- [ ] Despliegue del incremento en Laravel Cloud y verificación de que la demo corre sobre el entorno desplegado
-- [ ] Nuevo seed data del sprint cargado en producción con `cloud command:run production --cmd='php artisan db:seed --force'` (el `deployCommand` no siembra)
-- [ ] Capturas de pantalla de todas las interfaces construidas
-- [ ] Juego de datos de demostración coherente entre seeders (proveedores → comprobantes → NC/ND → órdenes de pago)
+- [ ] Cabecera con proveedor, número global, fecha, estado, observaciones y usuario
+- [ ] Numeración global, correlativa, automática, única y no reutilizable
+- [ ] Selección de facturas y ND pendientes y NC disponibles del mismo proveedor
+- [ ] Importe aplicado por comprobante, con pagos totales y parciales
+- [ ] Total neto automático: facturas + ND − NC
+- [ ] Rechazar aplicaciones superiores al saldo o importe disponible
+- [ ] Agregar uno o varios medios del catálogo, cada uno con su importe
+- [ ] Validar que la suma de medios coincida con el total neto
+- [ ] Datos específicos según medio: referencia, cuenta origen, número de operación o cheque y fecha
+- [ ] Confirmación atómica con bloqueo de saldos para evitar doble imputación concurrente
+- [ ] Actualización derivada de saldos y estados de todos los comprobantes afectados
+- [ ] PDF de OP emitido por La Linda con comprobantes, aplicaciones, medios, total y estado
+- [ ] Anulación con motivo, usuario y fecha, sin borrar cabecera, imputaciones ni medios
+- [ ] Al anular, excluir los efectos de la OP y restituir los saldos derivados
+- [ ] Exigir anular primero la OP antes de anular un comprobante incluido en ella
+- [ ] Pruebas de varios comprobantes, varios medios, concurrencia, PDF e inversión por anulación
 
 ## Diseño de datos (DER)
 
-Motor PostgreSQL en producción, SQLite en desarrollo y tests. Convención del código: nombres de
-tabla y columna en inglés, booleanos en vez de `estado` varchar, columnas `*_normalized` para
-comparar sin acentos ni mayúsculas, `CHECK` inline en la columna (`rawColumn`), no `ALTER TABLE`.
+La fuente de verdad del esquema implementado son las migraciones. Este DER documenta el modelo
+objetivo corregido. Las migraciones ya existentes que todavía representen impuestos desagregados,
+NC/ND N:N obligatorias o un único medio por OP deben adaptarse antes de considerar terminadas las
+historias correspondientes.
 
-**La fuente de verdad del esquema son las migraciones.** Acá está lo que las migraciones no
-explican: por qué el esquema es así.
-
-**Importes en `decimal(12, 2)`** (no `decimal(12,3)` como las cantidades de stock): son dinero, dos
-decimales. Los modelos las castean como `decimal:2`, así que llegan a PHP como string y la
-aritmética exacta la hace Postgres (`saldo = total - :imputado` sobre `numeric`).
-
-### Diagrama (Mermaid)
+Los importes usan `decimal(12,2)` y las cantidades de artículos `decimal(12,3)`. Los saldos se
+derivan de las operaciones vigentes; no se mantienen como columnas editables.
 
 ```mermaid
 erDiagram
-    SUPPLIERS {
-        bigint id PK
-        varchar business_name
-        varchar business_name_normalized
-        varchar tax_id UK
-        varchar tax_condition
-        varchar address
-        varchar rubro
-        varchar bank_account
-        boolean is_active
-        timestamp created_at
-        timestamp updated_at
-    }
-    PAYMENT_METHODS {
-        bigint id PK
-        varchar name
-        varchar name_normalized UK
-        boolean is_online_enabled
-        boolean is_active
-        timestamp created_at
-        timestamp updated_at
-    }
-    SUPPLIER_VOUCHERS {
-        bigint id PK
-        bigint supplier_id FK
-        varchar type "factura | nota_credito | nota_debito"
-        varchar letter "A | B | C | M"
-        varchar point_of_sale "4 dígitos"
-        varchar number "8 dígitos"
-        date issue_date
-        date due_date "NULL"
-        decimal net_amount "decimal(12,2)"
-        decimal vat_amount "decimal(12,2)"
-        decimal other_taxes_amount "decimal(12,2)"
-        decimal total_amount "decimal(12,2), = net + vat + other_taxes, > 0"
-        varchar status "pendiente | pagada_parcial | pagada | pendiente_imputar | anulada"
-        text notes
-        timestamp created_at
-        timestamp updated_at
-    }
-    VOUCHER_APPLICATIONS {
-        bigint id PK
-        bigint source_voucher_id FK "la NC o ND"
-        bigint target_voucher_id FK "la factura"
-        decimal amount "decimal(12,2), > 0"
-        bigint user_id FK
-        timestamp created_at
-    }
-    PAYMENT_ORDERS {
-        bigint id PK
-        bigint supplier_id FK
-        bigint payment_method_id FK
-        varchar order_number
-        date date
-        decimal total_amount "decimal(12,2), = suma de items"
-        varchar status
-        text notes
-        bigint user_id FK
-        timestamp created_at
-    }
-    PAYMENT_ORDER_ITEMS {
-        bigint id PK
-        bigint payment_order_id FK
-        bigint supplier_voucher_id FK "una factura"
-        decimal amount_applied "decimal(12,2), > 0"
-    }
+    SUPPLIERS ||--o{ PURCHASE_ORDERS : "recibe"
+    PURCHASE_ORDERS ||--|{ PURCHASE_ORDER_ITEMS : "contiene"
+    ARTICLES ||--o{ PURCHASE_ORDER_ITEMS : "se solicita"
 
-    SUPPLIERS ||--o{ SUPPLIER_VOUCHERS : emite
+    SUPPLIERS ||--o{ SUPPLIER_VOUCHERS : "emite"
+    SUPPLIER_VOUCHERS ||--|{ SUPPLIER_VOUCHER_ITEMS : "detalla"
+    ARTICLES ||--o{ SUPPLIER_VOUCHER_ITEMS : "identifica opcionalmente"
+    SUPPLIER_VOUCHERS ||--o{ VOUCHER_APPLICATIONS : "NC origen"
+    SUPPLIER_VOUCHERS ||--o{ VOUCHER_APPLICATIONS : "factura destino"
+
     SUPPLIERS ||--o{ PAYMENT_ORDERS : "recibe pago de"
-    PAYMENT_METHODS ||--o{ PAYMENT_ORDERS : "medio de"
-    SUPPLIER_VOUCHERS ||--o{ VOUCHER_APPLICATIONS : "origen (NC/ND)"
-    SUPPLIER_VOUCHERS ||--o{ VOUCHER_APPLICATIONS : "destino (factura)"
-    PAYMENT_ORDERS ||--o{ PAYMENT_ORDER_ITEMS : detalla
-    SUPPLIER_VOUCHERS ||--o{ PAYMENT_ORDER_ITEMS : "imputada en"
+    PAYMENT_ORDERS ||--|{ PAYMENT_ORDER_ITEMS : "aplica"
+    SUPPLIER_VOUCHERS ||--o{ PAYMENT_ORDER_ITEMS : "se cancela o compensa"
+    PAYMENT_ORDERS ||--|{ PAYMENT_ORDER_METHODS : "se instrumenta con"
+    PAYMENT_METHODS ||--o{ PAYMENT_ORDER_METHODS : "clasifica"
 ```
 
-`user_id` apunta a `users`, tabla del starter kit, no modelada acá.
+### `purchase_orders` - HU-033
 
-### `supplier_vouchers` — HU-036
+| Columna | Tipo | Regla |
+|---|---|---|
+| id | bigint PK | |
+| supplier_id | FK → suppliers | proveedor activo |
+| warehouse_id | FK → warehouses | depósito activo |
+| order_number | varchar | único; no reutilizable |
+| payment_terms | varchar/text | nullable |
+| issue_date | date | obligatoria |
+| expected_delivery_date | date | nullable; no anterior a emisión |
+| total_amount | decimal(12,2) | suma de renglones |
+| status | varchar | `borrador`, `emitida`, `cancelada` |
+| notes | text | nullable |
+| created_at / updated_at | timestamp | |
 
-| Columna                 | Tipo                     | Notas                                                                  |
-| ----------------------- | ------------------------ | ---------------------------------------------------------------------- |
-| id                      | bigserial PK             |                                                                        |
-| supplier_id             | bigint FK → suppliers.id | `NOT NULL`                                                             |
-| type                    | varchar                  | `NOT NULL`, `CHECK (type IN ('factura','nota_credito','nota_debito'))` |
-| letter                  | varchar                  | `NOT NULL`, `CHECK (letter IN ('A','B','C','M'))` — default `A`       |
-| point_of_sale           | varchar                  | `NOT NULL` — 4 dígitos, tal cual el formulario oficial                 |
-| number                  | varchar                  | `NOT NULL` — 8 dígitos, correlativo dentro del punto de venta          |
-| issue_date              | date                     | `NOT NULL`                                                             |
-| due_date                | date                     | `NULL` — vencimiento de pago; muchas facturas A no lo traen            |
-| net_amount              | decimal(12, 2)           | `NOT NULL` — importe neto gravado                                      |
-| vat_amount              | decimal(12, 2)           | `NOT NULL` — suma del IVA discriminado; simplificado hasta `HU-007`    |
-| other_taxes_amount      | decimal(12, 2)           | `NOT NULL DEFAULT 0` — otros tributos (percepciones IIBB, etc.)        |
-| total_amount            | decimal(12, 2)           | `NOT NULL`, `CHECK (total_amount > 0)` — = net + vat + other_taxes     |
-| status                  | varchar                  | `NOT NULL` — recalculado, nunca input directo                          |
-| notes                   | text                     | `NULL`                                                                 |
-| created_at / updated_at | timestamp                |                                                                        |
+### `purchase_order_items` - HU-033
 
-`UNIQUE(supplier_id, type, letter, point_of_sale, number)`, más índices sobre `supplier_id`,
-`issue_date` y `status` para los filtros de `HU-055`.
+| Columna | Tipo | Regla |
+|---|---|---|
+| id | bigint PK | |
+| purchase_order_id | FK → purchase_orders | |
+| article_id | FK → articles | obligatorio |
+| quantity | decimal(12,3) | mayor a cero |
+| unit_price | decimal(12,2) | mayor a cero |
+| line_total | decimal(12,2) | cantidad × precio unitario |
 
-**El saldo pendiente no es una columna.** Se deriva:
-`total_amount − Σ payment_order_items.amount_applied − Σ NC aplicadas + Σ ND aplicadas`, todas
-imputaciones cuyo `target`/`voucher` es esta factura. Guardar el saldo como columna obligaría a
-mantenerlo sincronizado en cada imputación y en cada contrapartida; se calcula. Si el rendimiento
-lo pide más adelante, se agrega una columna cacheada actualizada por el mismo Action, nunca por HTTP.
+Un artículo aparece una sola vez por OC. La emisión vuelve inmutables la cabecera y el detalle.
 
-**`status` sólo aplica a facturas.** NC y ND nacen `pendiente_imputar` y pasan a `imputada` (o
-`imputada_parcial`) según cuánto de su importe se haya aplicado. `anulada` es estado terminal por
-contrapartida.
+### `supplier_vouchers` - HU-036
 
-### `voucher_applications` — HU-054 (imputación de NC/ND a facturas)
+| Columna | Tipo | Regla |
+|---|---|---|
+| id | bigint PK | |
+| supplier_id | FK → suppliers | proveedor activo |
+| type | varchar | `factura`, `nota_credito`, `nota_debito` |
+| letter | varchar(1) | `A`, `B`, `C`, `M` |
+| point_of_sale | varchar(4) | conserva ceros iniciales |
+| number | varchar(8) | conserva ceros iniciales |
+| issue_date | date | no futura |
+| due_date | date | nullable; no anterior a emisión |
+| total_amount | decimal(12,2) | transcripto; mayor a cero |
+| status | varchar | derivado según tipo, saldo y anulación |
+| notes | text | nullable |
+| annulled_at | timestamp | nullable |
+| annulled_by | FK → users | nullable |
+| annulment_reason | text | nullable; obligatorio al anular |
+| created_at / updated_at | timestamp | no habilitan edición funcional |
 
-| Columna           | Tipo                             | Notas                                                                                           |
-| ----------------- | -------------------------------- | ----------------------------------------------------------------------------------------------- |
-| id                | bigserial PK                     |                                                                                                 |
-| source_voucher_id | bigint FK → supplier_vouchers.id | `NOT NULL` — la NC o ND                                                                         |
-| target_voucher_id | bigint FK → supplier_vouchers.id | `NOT NULL` — la factura; `CHECK (target_voucher_id <> source_voucher_id)`                        |
-| amount            | decimal(12, 2)                   | `NOT NULL`, `CHECK (amount > 0)` — siempre positivo; el signo lo da el `type` de la nota origen |
-| user_id           | bigint FK → users.id             | `NOT NULL`                                                                                      |
-| created_at        | timestamp                        | `NOT NULL DEFAULT now()` — sin `updated_at`: la fila es inmutable                               |
+No se almacenan neto, IVA ni percepciones. La identidad fiscal es única por proveedor, tipo,
+letra, punto de venta y número.
 
-Índices sobre `source_voucher_id` y `target_voucher_id`. Sin `UNIQUE` sobre el par: una misma nota
-puede imputarse a la misma factura en dos momentos distintos (dos filas), y la suma es lo que
-cuenta. La contrapartida de una imputación es otra fila de `voucher_applications` con
-`source`/`target` invertidos o una nota de signo opuesto — a definir en el refinamiento.
+### `supplier_voucher_items` - HU-036
 
-**Por qué una tabla propia y no reusar `payment_order_items`:** una imputación de NC/ND no es un
-pago (no tiene medio de pago ni sale plata), y mezclar las dos cosas en una tabla obliga a columnas
-nullables y a un discriminador. Son dos hechos distintos del mismo ledger.
+| Columna | Tipo | Regla |
+|---|---|---|
+| id | bigint PK | |
+| supplier_voucher_id | FK → supplier_vouchers | |
+| position | integer | orden original del documento |
+| article_id | FK → articles | nullable solo para conceptos |
+| description | varchar/text | copia de la descripción original |
+| quantity | decimal(12,3) | mayor a cero |
+| unit_of_measure | varchar | copia histórica |
+| unit_price | decimal(12,2) | mayor a cero |
+| line_total | decimal(12,2) | mayor a cero; transcripto |
 
-### `payment_orders` — HU-027 (cabecera)
+La suma de `line_total` es informativa y puede diferir de `supplier_vouchers.total_amount` porque
+los impuestos no se desagregan. Esa diferencia no bloquea el alta.
 
-| Columna           | Tipo                           | Notas                                                        |
-| ----------------- | ------------------------------ | ------------------------------------------------------------ |
-| id                | bigserial PK                   |                                                              |
-| supplier_id       | bigint FK → suppliers.id       | `NOT NULL`                                                   |
-| payment_method_id | bigint FK → payment_methods.id | `NOT NULL` — del catálogo de `HU-052`                        |
-| order_number      | varchar                        | `NOT NULL`, correlativo — el `UNIQUE` (global vs. por proveedor, punto abierto 4) lo agrega `HU-027` |
-| date              | date                           | `NOT NULL`                                                   |
-| total_amount      | decimal(12, 2)                 | `NOT NULL`, `CHECK (total_amount > 0)` — = suma de los items |
-| status            | varchar                        | `NOT NULL`, `CHECK (status IN ('emitida','anulada'))` — sin `borrador`: la inmutabilidad la da la ausencia de rutas de escritura |
-| notes             | text                           | `NULL`                                                       |
-| user_id           | bigint FK → users.id           | `NOT NULL`                                                   |
-| created_at        | timestamp                      | `NOT NULL DEFAULT now()`                                     |
+### `voucher_applications` - HU-054
 
-**Sin `updated_at`, a propósito**, igual que `stock_movements` en el Sprint 1: la inmutabilidad se
-sostiene en que no hay ruta `PUT`/`PATCH`/`DELETE` para el recurso. La corrección es una
-contrapartida, no una edición. Índices sobre `supplier_id`, `payment_method_id`, `date` y `status`
-para `HU-055`.
+Registra únicamente la asociación directa de una NC a una factura durante el alta.
 
-### `payment_order_items` — HU-027 (detalle, N:N orden ↔ factura)
+| Columna | Tipo | Regla |
+|---|---|---|
+| id | bigint PK | |
+| source_voucher_id | FK → supplier_vouchers | debe ser NC |
+| target_voucher_id | FK → supplier_vouchers | debe ser factura del mismo proveedor |
+| amount | decimal(12,2) | mayor a cero y dentro de ambos saldos |
+| user_id | FK → users | responsable |
+| created_at | timestamp | inmutable |
 
-| Columna             | Tipo                             | Notas                                             |
-| ------------------- | -------------------------------- | ------------------------------------------------- |
-| id                  | bigserial PK                     |                                                   |
-| payment_order_id    | bigint FK → payment_orders.id    | `NOT NULL`                                        |
-| supplier_voucher_id | bigint FK → supplier_vouchers.id | `NOT NULL` — siempre una factura, nunca una NC/ND |
-| amount_applied      | decimal(12, 2)                   | `NOT NULL`, `CHECK (amount_applied > 0)`          |
+Las ND no usan esta tabla. Una NC libre o su remanente se compensa en `payment_order_items`.
 
-`UNIQUE(payment_order_id, supplier_voucher_id)` — una factura aparece a lo sumo una vez por orden.
-Índice sobre `supplier_voucher_id` (filtro y cálculo del saldo). Esta es la tabla intermedia que
-pide el punto 7 del PO: guarda el **importe imputado de cada orden a cada factura**.
+### `payment_orders` - HU-027
 
-### Reglas de saldo (puntos 5 y 8 del PO), resumidas
+| Columna | Tipo | Regla |
+|---|---|---|
+| id | bigint PK | |
+| supplier_id | FK → suppliers | |
+| order_number | varchar | `UNIQUE` global, automático y no reutilizable |
+| date | date | |
+| total_amount | decimal(12,2) | facturas + ND − NC; mayor a cero |
+| status | varchar | `emitida`, `anulada` |
+| notes | text | nullable |
+| user_id | FK → users | emisor |
+| annulled_at | timestamp | nullable |
+| annulled_by | FK → users | nullable |
+| annulment_reason | text | nullable; obligatorio al anular |
+| created_at | timestamp | sin edición funcional |
 
-- **Baja** el saldo de la factura: cada `payment_order_items.amount_applied` y cada
-  `voucher_applications.amount` cuya nota origen es una **nota de crédito**.
-- **Sube** el saldo de la factura: cada `voucher_applications.amount` cuya nota origen es una **nota
-  de débito**.
-- **No se puede imputar** un importe mayor al saldo pendiente de la factura (validado en el Action,
-  con el `CHECK` de la base como última red).
-- Factura **pagada** cuando el saldo llega a cero; **pagada parcialmente** mientras `0 < saldo < total`.
-- Toda imputación queda registrada (fila en `payment_order_items` o en `voucher_applications`) con
-  usuario y fecha, y es inmutable.
+`payment_method_id` no pertenece a esta cabecera porque la relación es uno a muchos.
 
-## Puntos abiertos
+### `payment_order_items` - HU-027
 
-1. **La relación N:N de las notas — RESUELTO (2026-09-02).** El PO transcribió "todo tiene relación
-   N:N" y la marcó como ambigua. **Confirmado:** orden de pago ↔ factura es N:N; NC/ND ↔ factura
-   también N:N vía `voucher_applications`, y **la nota siempre imputa a una o varias facturas
-   concretas** (mueve el saldo de esas facturas), con importe imputado en la tabla intermedia.
-   Fundamentos:
-   - **Semántica AFIP:** una NC/ND tipo A lleva "comprobantes asociados" en su propia definición; la
-     nota real ya nace apuntando a facturas. El modelo refleja el documento físico.
-   - **Lo piden los criterios de aceptación:** `HU-054` y `HU-036` exigen saldo _por factura_ y
-     trazabilidad _de cada imputación_; la verificación de `HU-054` es "saldo resultante de esa
-     factura = original − NC + ND". Sin factura destino no se puede afirmar.
-   - **El cálculo queda una función total y sin ambigüedad:**
-     `saldo(factura) = total − Σ pagos − Σ NC + Σ ND`, todo indexado por esa factura. El modelo de
-     asientos sueltos obliga a decidir después "¿qué factura bajó esta NC?" al conciliar.
-   - Es el modelo más chico y testeable solo, lo que conviene para la historia de riesgo.
+| Columna | Tipo | Regla |
+|---|---|---|
+| id | bigint PK | |
+| payment_order_id | FK → payment_orders | |
+| supplier_voucher_id | FK → supplier_vouchers | factura, ND o NC del proveedor |
+| amount_applied | decimal(12,2) | siempre positivo |
 
-   La alternativa -NC/ND como asientos sueltos de la cuenta corriente del proveedor, sin factura
-   destino- sólo haría falta para notas que genuinamente no mapean a una factura (bonificaciones por
-   volumen, ajustes financieros). Eso es cuenta corriente por proveedor (`HU-028`), fuera de sprint,
-   y no queda bloqueado: una nota sin imputar (o imputada parcial) ya es un ítem abierto a nivel
-   proveedor. Por eso **no se exige que la suma imputada de una nota == su importe total al momento
-   del alta**: la nota puede quedar parcial o sin imputar, y `Σ notas no imputadas del proveedor` da
-   el crédito/débito a favor pendiente de aplicar sin cambiar la tabla `voucher_applications`.
-2. **¿Se puede pagar una ND con una orden de pago, o siempre rueda al saldo de una factura?** El
-   equipo asume que la ND sólo incrementa el saldo de la factura destino y se cancela pagando esa
-   factura. `payment_order_items.supplier_voucher_id` apunta siempre a una factura.
-3. **Contrapartida de una imputación:** ¿fila inversa en la misma tabla, o comprobante/nota de
-   signo opuesto? A refinar antes de tocar `HU-054`.
-4. **Numeración de `order_number`:** ¿correlativa global, o por proveedor? A confirmar con el PO.
-5. **Transferencias entre depósitos (`HU-019`)** y el diseño de agrupación de sus dos movimientos
-   siguen sin resolverse: no entran a este sprint, así que la decisión se vuelve a diferir.
-6. **Letra de los comprobantes de proveedor (`HU-036`).** ¿La Linda compra solo a responsables
-   inscriptos (siempre Factura A) o también a monotributistas / exentos (Factura C)? El campo
-   `letter` se mantiene igual; si solo hay A queda con default `A`, si entran C elegirla es
-   obligatorio y condiciona el IVA discriminado que llega con `HU-007`. A confirmar con el PO.
+El signo se deriva del tipo: factura y ND suman; NC resta. Un comprobante aparece una sola vez por
+OP, pero puede participar en distintas órdenes hasta agotar su saldo o importe disponible.
+
+### `payment_order_methods` - HU-027
+
+| Columna | Tipo | Regla |
+|---|---|---|
+| id | bigint PK | |
+| payment_order_id | FK → payment_orders | |
+| payment_method_id | FK → payment_methods | medio activo |
+| amount | decimal(12,2) | mayor a cero |
+| reference | varchar | nullable |
+| source_account | varchar | nullable; transferencia |
+| transaction_number | varchar | nullable; transferencia |
+| check_number | varchar | nullable; cheque |
+| check_due_date | date | nullable; cheque |
+
+La suma de `amount` debe coincidir con `payment_orders.total_amount`.
+
+## Reglas de saldo y anulación
+
+- Factura pendiente = total − pagos vigentes − NC directas vigentes.
+- ND pendiente = total − pagos vigentes.
+- NC disponible = total − asociaciones directas vigentes − compensaciones en OP vigentes.
+- Total OP = aplicaciones a facturas + aplicaciones a ND − aplicaciones de NC.
+- Suma de medios de la OP = total OP.
+- Los importes se validan dentro de una transacción con bloqueo para impedir doble aplicación.
+- Una operación anulada y sus relaciones permanecen guardadas, pero no participan de los cálculos.
+- Para anular un comprobante incluido en una OP vigente, primero se anula la OP.
+- Toda anulación registra motivo, usuario y fecha.
+- Ningún número de OP anulado vuelve a utilizarse.
+
+## Trabajo existente que debe adaptarse
+
+El repositorio ya contiene una primera versión del modelo anterior. No se considera válida como
+cierre de las historias hasta corregir, como mínimo:
+
+- campos y validaciones de neto, IVA y otros tributos en comprobantes;
+- ausencia del detalle de artículos de factura, NC y ND;
+- imputación N:N obligatoria de NC y ND contra facturas;
+- orden de pago limitada a facturas;
+- un único `payment_method_id` en la cabecera de la OP;
+- cálculo de saldo que no excluye operaciones anuladas.
+
+La adaptación se realiza con migraciones seguras según el estado compartido de la base; no se
+reescribe una migración ya ejecutada en otros entornos sin verificarlo primero.
+
+## Puntos de refinamiento no bloqueantes
+
+1. Definir el formato visible de la numeración de OC. La numeración de OP ya quedó confirmada como
+   global; se recomienda una secuencia independiente `OP-000001`.
+2. Confirmar si “cheque” necesita distinguir propiedad (`propio`/`tercero`) además de modalidad o
+   vencimiento. El DER permite guardar la referencia y la fecha sin cerrar esa clasificación.
+3. Definir si la unidad del renglón siempre se copia del artículo o puede transcribirse del
+   comprobante cuando el proveedor usa otra presentación.
+
+Estos puntos afinan datos o presentación; no cambian el flujo comprometido.
 
 ## Demostración de cierre
 
-1. Alta de un proveedor y de un par de medios de pago.
-2. Registrar una factura del proveedor con importe y vencimiento: aparece `pendiente`, saldo = importe.
-3. Registrar una nota de crédito e imputarla a esa factura: el saldo baja.
-4. Registrar una nota de débito e imputarla: el saldo sube.
-5. Emitir una orden de pago para ese proveedor, tildando esa factura y otra, imputando importes
-   parciales y eligiendo un medio de pago: se ve el total de la orden calculado y los saldos de las
-   facturas actualizados; una queda `pagada parcialmente`.
-6. Intentar imputar más que el saldo de una factura: el sistema lo rechaza.
-7. Completar el pago de una factura: queda `pagada`.
-8. Abrir el listado de pagos y egresos, filtrar por período / proveedor / tipo / medio de pago /
-   estado, ver el total de egresos y el detalle de cada pago con sus comprobantes.
-9. Mostrar el DER actualizado.
-10. (Opcional) Alta, edición y consulta de un cliente.
+1. Registrar un proveedor y habilitar efectivo, transferencia y cheque.
+2. Crear una OC con varios artículos y precios pactados; verificar total, emisión, listado y PDF.
+3. Registrar una factura con todos sus renglones y un total diferente del subtotal de líneas;
+   comprobar que se guarda sin calcular impuestos.
+4. Abrir el detalle de la factura y comprobar que no existen edición, eliminación ni PDF.
+5. Registrar una NC asociada a la factura y verificar que baja su saldo.
+6. Registrar una NC libre y una ND con sus respectivos detalles.
+7. Emitir una OP con dos facturas, la ND y la NC libre, usando efectivo y transferencia.
+8. Verificar `facturas + ND − NC`, suma de medios, número global y PDF de la OP.
+9. Anular la OP con motivo y verificar que las filas siguen visibles y los saldos se restituyen.
+10. Volver a emitir una OP y comprobar que el número anulado no se reutiliza.
+11. Mostrar el DER actualizado.
 
-## Fuera del sprint, y por qué
+## Fuera del sprint
 
-| Ítem                                                    | Motivo                                                                                                                                                                  |
-| ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| HU-033, HU-034, HU-035, HU-024 (órdenes de compra)      | El circuito que pidió el PO es comprobante → orden de **pago**, no orden de **compra**. Las órdenes de compra son otro flujo y no hacen falta para cuentas por pagar    |
-| HU-037, HU-038 (imputar comprobante a OC, último costo) | Dependen de las órdenes de compra y de `HU-015`. `HU-037` se revisará cuando entre, porque hoy asume que el comprobante lleva detalle de artículos                      |
-| HU-026 (ingreso de stock desde el comprobante)          | Toca stock y depende de `HU-017`; el PO no pidió stock en este sprint                                                                                                   |
-| HU-014 (contactos de proveedor)                         | No hace falta para registrar comprobantes ni pagos; se protege la capacidad para el motor de saldo                                                                      |
-| HU-028 (cuenta corriente por proveedor)                 | `HU-055` cubre el "listado de pagos y egresos" que pidió el PO. `HU-028` es la mirada por saldo y queda como seguimiento barato una vez que exista el motor de `HU-054` |
-| HU-022 (lista de precios a un cliente)                  | Depende de `HU-011` (listas de precios), sin planificar. El alta de cliente lleva sólo la columna `price_list_id` nullable, sin lógica de resolución                    |
-| HU-019 (transferencias entre depósitos)                 | El Sprint Backlog 1 la anotó como candidata, pero el pedido del PO para el Sprint 2 es íntegramente cuentas por pagar                                                   |
-| HU-007 (alícuotas de IVA)                               | El IVA discriminado del comprobante se registra simplificado hasta que esta historia entre                                                                              |
+| Ítem | Motivo |
+|---|---|
+| HU-034, HU-035 y HU-024 | Absorbidas por HU-033; no se implementan por separado |
+| HU-037 | La conciliación comprobante ↔ OC no hace falta para emitir ni registrar ambos documentos |
+| HU-038 | Actualización de costos y cierre por recepción dependen de HU-037 |
+| HU-026 | El ingreso de stock desde compras pertenece al circuito de recepción |
+| HU-055 | El listado gerencial de egresos se posterga para proteger el flujo transaccional corregido |
+| HU-028 | La cuenta corriente consolidada se construye después del motor de pagos |
+| HU-021 y HU-022 | Clientes y listas de precios no pertenecen al objetivo corregido del sprint |
+| HU-019 | Transferencias entre depósitos no pertenecen al modelo de gastos |
+| HU-007 | Los impuestos de compras no se calculan ni se desagregan en este sprint |
 
 ## Riesgos
 
-- **`HU-054` concentra el riesgo del sprint**, como `HU-017` en el Sprint 1. El motor de saldo
-  (imputación N:N + recálculo de estado + inmutabilidad) atraviesa `HU-036` y `HU-027`; si se
-  descubre tarde que el modelo no cierra, se rehace código de las tres. Cerrar el cálculo de saldo
-  y las reglas de imputación antes de avanzar con pantallas.
-- **El punto abierto 1 (N:N de las notas) quedó resuelto el 2026-09-02**: la nota imputa a facturas
-  concretas vía `voucher_applications`, con importe imputado en la tabla intermedia. Se destraba el
-  diseño de `HU-054`. Falta confirmar con el profesor el punto 3 (mecanismo de contrapartida) antes
-  de escribir el Action.
-- **Arrastre del Sprint 1.** Al planificar, `HU-016`, `HU-017` y `HU-018` figuraban `Pendiente`. Si
-  no cerraron el 28/08, arrastran capacidad y el compromiso de 30 SP baja en consecuencia — se
-  ajusta en la primera daily, no en silencio.
-- **Todavía no hay velocidad medida y confiable.** El Sprint 1 recién cierra; los 30 SP salen de
-  una estimación con muy poco historial. El dato que importa al cierre es la nueva referencia, no el desvío.
-- **`HU-013` es la primera historia del módulo CMP**: no hay patrones de compras construidos, así
-  que su costo incluye montar la carpeta `app/Actions/Purchasing`, los `Data` y las convenciones del módulo.
+- **Compromiso al límite:** 39 SP sobre una capacidad de referencia de 30 a 40. No se agrega alcance
+  opcional y cualquier desvío se conversa con el PO; no se recorta silenciosamente una regla
+  contable.
+- **HU-027 concentra 13 SP:** varios comprobantes, varios medios, numeración, PDF y anulación deben
+  confirmarse de forma atómica. El equipo debe trabajar sobre ella en conjunto.
+- **Reproceso técnico:** parte del esquema existente implementa decisiones ahora corregidas. El
+  costo de adaptación debe considerarse trabajo real del sprint.
+- **Total versus renglones:** la diferencia es esperable si el proveedor muestra importes de línea
+  sin impuestos. No debe reintroducirse un cálculo impositivo para forzar igualdad.
+- **Inmutabilidad:** no alcanza con ocultar botones; el servidor debe rechazar actualización y
+  eliminación de documentos confirmados.
+- **Anulación:** todas las consultas de saldo deben excluir operaciones anuladas de forma uniforme,
+  sin borrar sus relaciones.
 
 ## Definition of Done provisoria
 
-Sigue sin acordarse con el Product Owner. Mientras tanto, una historia se toma como terminada si cumple:
+Una historia se considera terminada cuando cumple:
 
-- [ ] Criterios de aceptación del ítem verificados contra `product-backlog.md`
-- [ ] Validaciones aplicadas también del lado del servidor, no sólo en la interfaz
-- [ ] Cada write con reglas de negocio o efectos colaterales encapsulado en un Action con test propio
-- [ ] Código integrado a la rama principal y desplegado en Laravel Cloud
+- [ ] Criterios de aceptación verificados contra `product-backlog.md`
+- [ ] Validaciones aplicadas en el servidor, no solo en la interfaz
+- [ ] Writes con reglas de negocio encapsulados en Actions y cubiertos por tests
+- [ ] Operaciones monetarias ejecutadas de forma atómica y sin pérdida de precisión
+- [ ] Ausencia de rutas de edición o borrado para documentos confirmados
 - [ ] Entidades nuevas o modificadas reflejadas en el DER
-- [ ] `composer run ci:check` en verde (Pint, PHPStan, Pest, ESLint, Prettier, tsc)
-- [ ] Capturas de pantalla tomadas
+- [ ] Código integrado y desplegado en Laravel Cloud
+- [ ] `composer run ci:check` en verde
+- [ ] Capturas de pantalla y PDFs propios preparados para la Sprint Review
 
 ## Cómo se genera el Excel del entregable
 
-Igual que el Sprint 1: derivado de un solo sentido, nunca se edita el `.xlsx`.
+El Excel se deriva en un solo sentido desde este documento y no se edita manualmente.
 
-- **Qué ítems entran y en qué orden:** la tabla "Ítems comprometidos" de este documento (prioridad
-  1 a 6; `HU-021` va como fila 7 marcada "opcional").
-- **Qué dice cada ítem:** su sección homónima en `product-backlog.md`, buscada por ID.
-
-| Columna del Excel       | De dónde sale                                                                                                |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------ |
-| ID                      | el ID de la tabla de ítems comprometidos                                                                     |
-| TÍTULO                  | el encabezado del ítem en `product-backlog.md`                                                               |
-| PRIORIDAD               | la posición del ítem en la tabla de este documento                                                           |
-| CÓMO / NECESITO / PARA  | la línea `**Como** X, **necesito** Y, **para** Z` del ítem, partida en tres                                  |
-| CRITERIOS DE ACEPTACIÓN | el bloque `Criterios de aceptación` del ítem, aplanado en una celda                                          |
-| PUNTOS DE FUNCIÓN       | el campo `Estimación` del ítem (son story points; se vuelca en esa columna porque es la que pide la cátedra) |
-
-> **Regla que evita el desincronizado:** si durante el sprint hay que tocar un criterio de
-> aceptación, se toca en `product-backlog.md`. Siempre, sin excepciones.
+- Las filas son los seis ítems de “Ítems comprometidos”, en ese orden.
+- No hay fila de alcance opcional.
+- `HU-034`, `HU-035`, `HU-024`, `HU-055` y `HU-021` no aparecen como compromiso del Sprint 2.
+- Los criterios de aceptación se obtienen de `product-backlog.md`.
