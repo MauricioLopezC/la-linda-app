@@ -67,6 +67,12 @@ class Supplier extends Model
         return $query->where('is_active', true);
     }
 
+    /** @return HasMany<PurchaseOrder, $this> */
+    public function purchaseOrders(): HasMany
+    {
+        return $this->hasMany(PurchaseOrder::class);
+    }
+
     /** @return HasMany<SupplierVoucher, $this> */
     public function vouchers(): HasMany
     {
@@ -80,11 +86,15 @@ class Supplier extends Model
     }
 
     /**
-     * Check if the supplier has associated transactions (vouchers, payment orders, etc.)
+     * Check if the supplier has associated transactions (purchase orders, vouchers, payment orders, etc.)
      * preventing destructive physical deletion and locking CUIT edits.
      */
     public function hasAssociatedRecords(): bool
     {
+        if (Schema::hasTable('purchase_orders') && $this->purchaseOrders()->exists()) {
+            return true;
+        }
+
         if (Schema::hasTable('supplier_vouchers') && $this->vouchers()->exists()) {
             return true;
         }

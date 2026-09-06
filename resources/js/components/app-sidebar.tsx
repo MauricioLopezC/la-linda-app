@@ -2,6 +2,7 @@ import { Link } from '@inertiajs/react';
 import {
   Boxes,
   Building2,
+  CreditCard,
   FileEdit,
   FolderTree,
   FolderGit2,
@@ -9,6 +10,7 @@ import {
   Package,
   ReceiptText,
   Ruler,
+  ShoppingCart,
   Tags,
   LayoutGrid,
   Sliders,
@@ -39,12 +41,13 @@ import { index as stockParameters } from '@/routes/inventory/parameters';
 import { index as stocks } from '@/routes/inventory/stocks';
 import { index as warehouses } from '@/routes/inventory/warehouses';
 import { index as branches } from '@/routes/organization/branches';
+import { index as purchaseOrders } from '@/routes/purchasing/orders';
 import { index as suppliers } from '@/routes/purchasing/suppliers';
 import { index as supplierVouchers } from '@/routes/purchasing/vouchers';
-// Módulos "Alícuotas de IVA" y "Medios de Pago"/"Puntos de Venta" no están en el
+import { index as paymentMethods } from '@/routes/sales/payment-methods';
+// Módulos "Alícuotas de IVA" y "Puntos de Venta" no están en el
 // alcance de este sprint; se ocultan del menú sin borrar el código que los soporta.
 // import { index as vatRates } from '@/routes/pricing/vat-rates';
-// import { index as paymentMethods } from '@/routes/sales/payment-methods';
 // import { index as pointsOfSale } from '@/routes/sales/points-of-sale';
 import type { NavGroup, NavItem } from '@/types';
 
@@ -123,6 +126,11 @@ const navGroups: NavGroup[] = [
         icon: Truck,
       },
       {
+        title: 'Órdenes de Compra',
+        href: purchaseOrders(),
+        icon: ShoppingCart,
+      },
+      {
         title: 'Comprobantes',
         href: supplierVouchers(),
         icon: ReceiptText,
@@ -145,17 +153,16 @@ const navGroups: NavGroup[] = [
       // },
     ],
   },
-  // Fuera de alcance de este sprint: ver nota sobre imports comentados arriba.
-  // {
-  //   label: 'Ventas',
-  //   items: [
-  //     {
-  //       title: 'Medios de Pago',
-  //       href: paymentMethods(),
-  //       icon: CreditCard,
-  //     },
-  //   ],
-  // },
+  {
+    label: 'Ventas',
+    items: [
+      {
+        title: 'Medios de Pago',
+        href: paymentMethods(),
+        icon: CreditCard,
+      },
+    ],
+  },
   // {
   //   label: 'Precios',
   //   items: [

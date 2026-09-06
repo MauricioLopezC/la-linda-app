@@ -3,6 +3,7 @@
 namespace App\Models\Inventory;
 
 use App\Models\Organization\Branch;
+use App\Models\Purchasing\PurchaseOrder;
 use App\Models\Sales\PointOfSale;
 use Database\Factories\Inventory\WarehouseFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -90,6 +91,16 @@ class Warehouse extends Model
     public function stockMovements(): HasMany
     {
         return $this->hasMany(StockMovement::class);
+    }
+
+    /**
+     * Get the purchase orders destined for this warehouse.
+     *
+     * @return HasMany<PurchaseOrder, $this>
+     */
+    public function purchaseOrders(): HasMany
+    {
+        return $this->hasMany(PurchaseOrder::class);
     }
 
     /**

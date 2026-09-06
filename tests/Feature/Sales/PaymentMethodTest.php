@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Purchasing\PaymentOrder;
 use App\Models\Sales\PaymentMethod;
 use App\Models\User;
 use Illuminate\Database\QueryException;
@@ -66,4 +67,25 @@ test('payment method status can be toggled while sales usage is not implemented'
         ->assertSessionHasNoErrors();
 
     expect($paymentMethod->fresh()->is_active)->toBeFalse();
+});
+
+test('payment method cannot be deactivated if it has been used in a payment order', function () {
+    $user = User::factory()->create();
+    $paymentMethod = PaymentMethod::factory()->create(['is_active' => true]);
+
+    PaymentOrder::factory()->create([
+        'payment_method_id' => $paymentMethod->id,
+    ]);
+
+    $this->actingAs($user)->patch(route('sales.payment-methods.toggle', $paymentMethod))
+        ->assertSessionHasErrors(['payment_method']);
+
+    expect($paymentMethod->fresh()->is_active)->toBeTrue();
+
+    $this->actingAs($user)->put(route('sales.payment-methods.update', $paymentMethod), [
+        'name' => $paymentMethod->name,
+        'is_active' => false,
+    ])->assertSessionHasErrors(['payment_method']);
+
+    expect($paymentMethod->fresh()->is_active)->toBeTrue();
 });

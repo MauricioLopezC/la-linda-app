@@ -317,7 +317,7 @@ export default function StockConsultationIndex({
             className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4"
           >
             {/* Search Input */}
-            <div className="relative">
+            <div className="relative min-w-0">
               <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Buscar por código o descripción..."
@@ -329,7 +329,7 @@ export default function StockConsultationIndex({
             </div>
 
             {/* Category Select */}
-            <div>
+            <div className="min-w-0">
               <Select
                 value={selectedCategory}
                 onValueChange={handleCategoryChange}
@@ -349,7 +349,7 @@ export default function StockConsultationIndex({
             </div>
 
             {/* Warehouse Select */}
-            <div>
+            <div className="min-w-0">
               <Select
                 value={selectedWarehouse}
                 onValueChange={handleWarehouseChange}
@@ -369,7 +369,7 @@ export default function StockConsultationIndex({
             </div>
 
             {/* Status Select */}
-            <div>
+            <div className="min-w-0">
               <Select value={selectedStatus} onValueChange={handleStatusChange}>
                 <SelectTrigger>
                   <SelectValue placeholder="Estado de existencias" />

@@ -12,6 +12,7 @@ use Database\Seeders\Inventory\WarehouseSeeder;
 use Database\Seeders\Inventory\WarehouseStockSeeder;
 use Database\Seeders\Organization\BranchSeeder;
 use Database\Seeders\Pricing\VatRateSeeder;
+use Database\Seeders\Purchasing\PurchaseOrderSeeder;
 use Database\Seeders\Purchasing\SupplierSeeder;
 use Database\Seeders\Purchasing\SupplierVoucherSeeder;
 use Database\Seeders\Sales\PaymentMethodSeeder;
@@ -54,6 +55,7 @@ class DatabaseSeeder extends Seeder
             SupplierSeeder::class,
             SupplierVoucherSeeder::class,
             ArticleSeeder::class,
+            PurchaseOrderSeeder::class,
             WarehouseStockSeeder::class,
         ]);
     }
