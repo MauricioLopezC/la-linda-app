@@ -7,6 +7,7 @@ use App\Actions\Purchasing\CreatePurchaseOrder;
 use App\Enums\Purchasing\PurchaseOrderStatus;
 use App\Models\Catalog\Article;
 use App\Models\Inventory\Warehouse;
+use App\Models\Purchasing\PurchaseOrder;
 use App\Models\Purchasing\Supplier;
 use App\Models\User;
 use Illuminate\Database\Seeder;
@@ -61,7 +62,7 @@ class PurchaseOrderSeeder extends Seeder
         $artGalletitas = Article::query()->where('internal_code', 'ART-0015')->first();
 
         // 1. OC-000001 - Emitida - Arcor S.A.I.C. -> Depósito Central
-        if ($arcor && $artDuraznos && $artChoclo) {
+        if (! PurchaseOrder::where('order_number', 'OC-000001')->exists() && $arcor && $artDuraznos && $artChoclo) {
             $createPurchaseOrder->handle([
                 'supplier_id' => $arcor->id,
                 'warehouse_id' => $central->id,
@@ -87,7 +88,7 @@ class PurchaseOrderSeeder extends Seeder
         }
 
         // 2. OC-000002 - Emitida - Molinos Río de la Plata -> Depósito Central
-        if ($molinos && $artHarina && $artArroz && $artFideos) {
+        if (! PurchaseOrder::where('order_number', 'OC-000002')->exists() && $molinos && $artHarina && $artArroz && $artFideos) {
             $createPurchaseOrder->handle([
                 'supplier_id' => $molinos->id,
                 'warehouse_id' => $central->id,
@@ -118,7 +119,7 @@ class PurchaseOrderSeeder extends Seeder
         }
 
         // 3. OC-000003 - Cancelada - Mastellone Hermanos -> Depósito Central
-        if ($mastellone && $artLeche) {
+        if (! PurchaseOrder::where('order_number', 'OC-000003')->exists() && $mastellone && $artLeche) {
             $order3 = $createPurchaseOrder->handle([
                 'supplier_id' => $mastellone->id,
                 'warehouse_id' => $central->id,
@@ -127,7 +128,7 @@ class PurchaseOrderSeeder extends Seeder
                 'issue_date' => today()->subDays(25)->toDateString(),
                 'expected_delivery_date' => today()->subDays(18)->toDateString(),
                 'notes' => 'Pedido de leche fresca para distribución en sucursales.',
-                'status' => PurchaseOrderStatus::Draft->value,
+                'status' => PurchaseOrderStatus::Issued->value,
                 'items' => [
                     [
                         'article_id' => $artLeche->id,
@@ -145,7 +146,7 @@ class PurchaseOrderSeeder extends Seeder
         }
 
         // 4. OC-000004 - Emitida - Cervecería Quilmes -> Depósito Central
-        if ($quilmes && $artCerveza) {
+        if (! PurchaseOrder::where('order_number', 'OC-000004')->exists() && $quilmes && $artCerveza) {
             $createPurchaseOrder->handle([
                 'supplier_id' => $quilmes->id,
                 'warehouse_id' => $central->id,
@@ -166,7 +167,7 @@ class PurchaseOrderSeeder extends Seeder
         }
 
         // 5. OC-000005 - Emitida - Distribuidora San Cayetano -> Depósito Norte
-        if ($sanCayetano && $artTomate && $artAzucar) {
+        if (! PurchaseOrder::where('order_number', 'OC-000005')->exists() && $sanCayetano && $artTomate && $artAzucar) {
             $createPurchaseOrder->handle([
                 'supplier_id' => $sanCayetano->id,
                 'warehouse_id' => $norte->id,
@@ -192,7 +193,7 @@ class PurchaseOrderSeeder extends Seeder
         }
 
         // 6. OC-000006 - Borrador - Unilever de Argentina -> Depósito Central
-        if ($unilever && $artAceite && $artGalletitas) {
+        if (! PurchaseOrder::where('order_number', 'OC-000006')->exists() && $unilever && $artAceite && $artGalletitas) {
             $createPurchaseOrder->handle([
                 'supplier_id' => $unilever->id,
                 'warehouse_id' => $central->id,
@@ -218,7 +219,7 @@ class PurchaseOrderSeeder extends Seeder
         }
 
         // 7. OC-000007 - Emitida - Arcor S.A.I.C. -> Depósito E-commerce
-        if ($arcor && $artDuraznos && $artGalletitas) {
+        if (! PurchaseOrder::where('order_number', 'OC-000007')->exists() && $arcor && $artDuraznos && $artGalletitas) {
             $createPurchaseOrder->handle([
                 'supplier_id' => $arcor->id,
                 'warehouse_id' => $ecommerce->id,
@@ -244,7 +245,7 @@ class PurchaseOrderSeeder extends Seeder
         }
 
         // 8. OC-000008 - Borrador - Molinos Río de la Plata -> Depósito Norte
-        if ($molinos && $artHarina && $artArroz) {
+        if (! PurchaseOrder::where('order_number', 'OC-000008')->exists() && $molinos && $artHarina && $artArroz) {
             $createPurchaseOrder->handle([
                 'supplier_id' => $molinos->id,
                 'warehouse_id' => $norte->id,
@@ -270,7 +271,7 @@ class PurchaseOrderSeeder extends Seeder
         }
 
         // 9. OC-000009 - Cancelada - Distribuidora San Cayetano -> Depósito Central
-        if ($sanCayetano && $artAzucar) {
+        if (! PurchaseOrder::where('order_number', 'OC-000009')->exists() && $sanCayetano && $artAzucar) {
             $order9 = $createPurchaseOrder->handle([
                 'supplier_id' => $sanCayetano->id,
                 'warehouse_id' => $central->id,
@@ -279,7 +280,7 @@ class PurchaseOrderSeeder extends Seeder
                 'issue_date' => today()->subDays(15)->toDateString(),
                 'expected_delivery_date' => today()->subDays(8)->toDateString(),
                 'notes' => 'Orden complementaria de azúcar.',
-                'status' => PurchaseOrderStatus::Draft->value,
+                'status' => PurchaseOrderStatus::Issued->value,
                 'items' => [
                     [
                         'article_id' => $artAzucar->id,
