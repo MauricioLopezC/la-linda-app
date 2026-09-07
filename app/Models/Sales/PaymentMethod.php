@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * @property int $id
@@ -53,7 +55,18 @@ class PaymentMethod extends Model
 
     public function isInUse(): bool
     {
-        // Future relation with Sale once sales/invoicing is implemented.
+        if (Schema::hasTable('payment_order_methods') && DB::table('payment_order_methods')->where('payment_method_id', $this->id)->exists()) {
+            return true;
+        }
+
+        if (Schema::hasTable('payment_orders') && Schema::hasColumn('payment_orders', 'payment_method_id') && DB::table('payment_orders')->where('payment_method_id', $this->id)->exists()) {
+            return true;
+        }
+
+        if (Schema::hasTable('sales') && DB::table('sales')->where('payment_method_id', $this->id)->exists()) {
+            return true;
+        }
+
         return false;
     }
 

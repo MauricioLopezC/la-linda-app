@@ -238,7 +238,7 @@ export default function StockMovementHistoryIndex({
             onSubmit={handleSearchSubmit}
             className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7"
           >
-            <div className="relative xl:col-span-2">
+            <div className="relative min-w-0 xl:col-span-2">
               <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Buscar artículo..."
@@ -249,7 +249,7 @@ export default function StockMovementHistoryIndex({
               />
             </div>
 
-            <div>
+            <div className="min-w-0">
               <Select
                 value={selectedWarehouse}
                 onValueChange={(val) => {
@@ -271,7 +271,7 @@ export default function StockMovementHistoryIndex({
               </Select>
             </div>
 
-            <div>
+            <div className="min-w-0">
               <Select
                 value={selectedType}
                 onValueChange={(val) => {
@@ -293,7 +293,7 @@ export default function StockMovementHistoryIndex({
               </Select>
             </div>
 
-            <div>
+            <div className="min-w-0">
               <Select
                 value={selectedUser}
                 onValueChange={(val) => {
@@ -315,7 +315,7 @@ export default function StockMovementHistoryIndex({
               </Select>
             </div>
 
-            <div className="flex gap-2 xl:col-span-2">
+            <div className="flex min-w-0 gap-2 xl:col-span-2">
               <Input
                 type="date"
                 value={dateFrom}

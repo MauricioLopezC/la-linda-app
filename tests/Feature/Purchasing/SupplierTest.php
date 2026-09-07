@@ -2,6 +2,7 @@
 
 use App\Enums\Purchasing\SupplierTaxCondition;
 use App\Models\Purchasing\Supplier;
+use App\Models\Purchasing\SupplierVoucher;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -214,4 +215,46 @@ test('user can physically delete a supplier without associated records', functio
         ->assertSessionHasNoErrors();
 
     $this->assertDatabaseMissing('suppliers', ['id' => $supplier->id]);
+});
+
+test('supplier with associated records cannot be physically deleted', function () {
+    $user = User::factory()->create();
+    $supplier = Supplier::factory()->create();
+    SupplierVoucher::factory()->create([
+        'supplier_id' => $supplier->id,
+    ]);
+
+    $this->actingAs($user)->delete(route('purchasing.suppliers.destroy', $supplier))
+        ->assertSessionHasErrors(['supplier']);
+
+    $this->assertDatabaseHas('suppliers', ['id' => $supplier->id]);
+});
+
+test('supplier with associated records cannot change CUIT', function () {
+    $user = User::factory()->create();
+    $supplier = Supplier::factory()->create(['tax_id' => '30500858628']);
+    SupplierVoucher::factory()->create([
+        'supplier_id' => $supplier->id,
+    ]);
+
+    $this->actingAs($user)->put(route('purchasing.suppliers.update', $supplier), [
+        'business_name' => $supplier->business_name,
+        'tax_id' => '30-50279317-5',
+        'tax_condition' => $supplier->tax_condition->value,
+    ])->assertSessionHasErrors(['tax_id']);
+
+    expect($supplier->fresh()->tax_id)->toBe('30500858628');
+});
+
+test('supplier with associated records can still be deactivated logically', function () {
+    $user = User::factory()->create();
+    $supplier = Supplier::factory()->create(['is_active' => true]);
+    SupplierVoucher::factory()->create([
+        'supplier_id' => $supplier->id,
+    ]);
+
+    $this->actingAs($user)->patch(route('purchasing.suppliers.toggle', $supplier))
+        ->assertSessionHasNoErrors();
+
+    expect($supplier->fresh()->is_active)->toBeFalse();
 });

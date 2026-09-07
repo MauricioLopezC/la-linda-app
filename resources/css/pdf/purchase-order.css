@@ -1,0 +1,228 @@
+@page {
+  margin: 24px 26px 20px;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  color: #161616;
+  font-family:
+    DejaVu Sans,
+    Arial,
+    sans-serif;
+  font-size: 10px;
+  line-height: 1.35;
+  margin: 0;
+}
+p,
+h1,
+h2,
+h3 {
+  margin: 0;
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+.document {
+  border: 1.4px solid #111;
+}
+.header-badge {
+  background: #1e293b;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 6px;
+  text-align: center;
+  text-transform: uppercase;
+}
+.masthead-table td {
+  border-bottom: 1.4px solid #111;
+  padding: 12px 14px;
+  vertical-align: top;
+}
+.masthead-table .brand-cell {
+  border-right: 1.4px solid #111;
+  width: 55%;
+}
+.brand-name {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.brand-kicker {
+  color: #4b4b4b;
+  font-size: 8.5px;
+  letter-spacing: 0.08em;
+  margin-top: 2px;
+  text-transform: uppercase;
+}
+.brand-info {
+  margin-top: 14px;
+  font-size: 9.5px;
+}
+.order-cell {
+  width: 45%;
+  padding-left: 16px;
+}
+.order-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 6px;
+}
+.order-number {
+  font-family:
+    DejaVu Sans Mono,
+    monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e3a8a;
+}
+.field-line {
+  margin-top: 5px;
+}
+.field-label {
+  font-weight: 700;
+  color: #334155;
+}
+.parties-table td {
+  border-bottom: 1.4px solid #111;
+  padding: 10px 14px;
+  vertical-align: top;
+  width: 50%;
+}
+.parties-table td:first-child {
+  border-right: 1.4px solid #111;
+}
+.section-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  color: #1e293b;
+  border-bottom: 1px dashed #94a3b8;
+  padding-bottom: 3px;
+}
+.items-table {
+  border-bottom: 1.4px solid #111;
+}
+.items-table th {
+  background: #f1f5f9;
+  border-bottom: 1.2px solid #111;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 8px 10px;
+  text-align: left;
+  text-transform: uppercase;
+}
+.items-table th.amount,
+.items-table td.amount {
+  text-align: right;
+}
+.items-table td {
+  border-bottom: 1px solid #e2e8f0;
+  padding: 8px 10px;
+  font-size: 9.5px;
+}
+.items-table tr:last-child td {
+  border-bottom: none;
+}
+.code-col {
+  font-family:
+    DejaVu Sans Mono,
+    monospace;
+  font-weight: 700;
+  width: 14%;
+}
+.desc-col {
+  width: 44%;
+}
+.unit-col {
+  width: 10%;
+  text-align: center;
+}
+.qty-col {
+  width: 12%;
+  text-align: right;
+}
+.price-col {
+  width: 10%;
+  text-align: right;
+}
+.total-col {
+  width: 10%;
+  text-align: right;
+}
+.summary-wrap {
+  border-bottom: 1.4px solid #111;
+}
+.summary-table td {
+  padding: 10px 14px;
+  vertical-align: top;
+}
+.notes-cell {
+  width: 60%;
+  border-right: 1.4px solid #111;
+  font-size: 9px;
+}
+.notes-title {
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #475569;
+  margin-bottom: 4px;
+}
+.total-cell {
+  width: 40%;
+  text-align: right;
+  padding: 12px 14px;
+}
+.total-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #334155;
+  text-transform: uppercase;
+}
+.total-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-top: 4px;
+}
+.tax-note {
+  font-size: 8px;
+  color: #64748b;
+  margin-top: 4px;
+  font-style: italic;
+}
+.footer-bar {
+  padding: 7px 14px;
+  font-size: 8.5px;
+  color: #64748b;
+  display: flex;
+  justify-content: space-between;
+}
+.status-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 8.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  border-radius: 3px;
+}
+.status-borrador {
+  background: #fef3c7;
+  color: #92400e;
+}
+.status-emitida {
+  background: #dcfce7;
+  color: #166534;
+}
+.status-cancelada {
+  background: #fee2e2;
+  color: #991b1b;
+}

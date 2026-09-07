@@ -11,6 +11,7 @@ use App\Http\Controllers\Inventory\StockParameterController;
 use App\Http\Controllers\Inventory\WarehouseController;
 use App\Http\Controllers\Organization\BranchController;
 use App\Http\Controllers\Pricing\VatRateController;
+use App\Http\Controllers\Purchasing\PurchaseOrderController;
 use App\Http\Controllers\Purchasing\SupplierController;
 use App\Http\Controllers\Purchasing\SupplierVoucherController;
 use App\Http\Controllers\Sales\PaymentMethodController;
@@ -120,6 +121,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('create', [SupplierVoucherController::class, 'create'])->name('create');
         Route::post('/', [SupplierVoucherController::class, 'store'])->name('store');
         Route::get('{supplier_voucher}/pdf', [SupplierVoucherController::class, 'pdf'])->name('pdf');
+    });
+
+    Route::prefix('purchasing/orders')->name('purchasing.orders.')->group(function () {
+        Route::get('/', [PurchaseOrderController::class, 'index'])->name('index');
+        Route::get('create', [PurchaseOrderController::class, 'create'])->name('create');
+        Route::post('/', [PurchaseOrderController::class, 'store'])->name('store');
+        Route::get('{purchase_order}', [PurchaseOrderController::class, 'show'])->name('show');
+        Route::get('{purchase_order}/edit', [PurchaseOrderController::class, 'edit'])->name('edit');
+        Route::put('{purchase_order}', [PurchaseOrderController::class, 'update'])->name('update');
+        Route::post('{purchase_order}/issue', [PurchaseOrderController::class, 'issue'])->name('issue');
+        Route::post('{purchase_order}/cancel', [PurchaseOrderController::class, 'cancel'])->name('cancel');
+        Route::get('{purchase_order}/pdf', [PurchaseOrderController::class, 'pdf'])->name('pdf');
     });
 });
 
