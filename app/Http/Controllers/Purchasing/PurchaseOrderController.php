@@ -23,6 +23,7 @@ use App\Models\Purchasing\Supplier;
 use App\Rules\Purchasing\ValidCuit;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
@@ -86,11 +87,30 @@ class PurchaseOrderController extends Controller
         ]);
     }
 
+    public function searchArticles(Request $request): JsonResponse
+    {
+        $search = trim((string) $request->query('search', ''));
+        $query = Article::query()->active()->with('unitOfMeasure');
+
+        if ($search !== '') {
+            $lower = mb_strtolower($search);
+            $query->where(function (Builder $q) use ($lower) {
+                $q->whereRaw('LOWER(description) LIKE ?', ["%{$lower}%"])
+                    ->orWhereRaw('LOWER(internal_code) LIKE ?', ["%{$lower}%"])
+                    ->orWhereRaw('LOWER(barcode) LIKE ?', ["%{$lower}%"]);
+            });
+        }
+
+        $articles = $query->orderBy('description')->limit(20)->get();
+
+        return response()->json(PurchaseOrderArticleOptionData::collect($articles));
+    }
+
     public function create(): Response
     {
         $suppliers = Supplier::query()->active()->orderBy('business_name')->get();
         $warehouses = Warehouse::query()->active()->orderBy('name')->get();
-        $articles = Article::query()->active()->with('unitOfMeasure')->orderBy('description')->get();
+        $articles = Article::query()->active()->with('unitOfMeasure')->orderBy('description')->limit(20)->get();
 
         return Inertia::render('purchasing/orders/form', [
             'order' => null,
@@ -125,7 +145,7 @@ class PurchaseOrderController extends Controller
 
         $suppliers = Supplier::query()->active()->orderBy('business_name')->get();
         $warehouses = Warehouse::query()->active()->orderBy('name')->get();
-        $articles = Article::query()->active()->with('unitOfMeasure')->orderBy('description')->get();
+        $articles = Article::query()->active()->with('unitOfMeasure')->orderBy('description')->limit(20)->get();
 
         return Inertia::render('purchasing/orders/form', [
             'order' => PurchaseOrderData::fromModel($purchaseOrder),
@@ -160,7 +180,7 @@ class PurchaseOrderController extends Controller
 
     public function pdf(PurchaseOrder $purchaseOrder): HttpResponse
     {
-        $purchaseOrder->loadMissing(['supplier', 'warehouse', 'items.article.unitOfMeasure', 'user']);
+        $purchaseOrder->loadMissing(['supplier', 'warehouse.branch', 'items.article.unitOfMeasure', 'user']);
 
         $filename = 'orden-de-compra-'.$purchaseOrder->order_number.'.pdf';
         $cssPath = resource_path('css/pdf/purchase-order.css');

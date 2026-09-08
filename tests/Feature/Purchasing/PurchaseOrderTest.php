@@ -1,5 +1,8 @@
 <?php
 
+use App\Actions\Purchasing\CancelPurchaseOrder;
+use App\Actions\Purchasing\CreatePurchaseOrder;
+use App\Enums\Catalog\ArticleStatus;
 use App\Enums\Purchasing\PurchaseOrderStatus;
 use App\Models\Catalog\Article;
 use App\Models\Inventory\StockBalance;
@@ -9,6 +12,7 @@ use App\Models\Purchasing\PurchaseOrder;
 use App\Models\Purchasing\PurchaseOrderItem;
 use App\Models\Purchasing\Supplier;
 use App\Models\User;
+use Database\Seeders\Purchasing\PurchaseOrderSeeder;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('guest cannot access purchase order routes', function () {
@@ -437,6 +441,19 @@ test('user cannot cancel an already cancelled purchase order', function () {
     ])->assertSessionHasErrors(['status']);
 });
 
+test('user cannot cancel a purchase order in draft status', function () {
+    $user = User::factory()->create();
+    $order = PurchaseOrder::factory()->create([
+        'status' => PurchaseOrderStatus::Draft,
+    ]);
+
+    $this->actingAs($user)->post(route('purchasing.orders.cancel', $order), [
+        'reason' => 'Intento de cancelar un borrador',
+    ])->assertSessionHasErrors(['status']);
+
+    expect($order->fresh()->status)->toBe(PurchaseOrderStatus::Draft);
+});
+
 test('emitting or cancelling a purchase order does not modify stock balances or stock movements', function () {
     $user = User::factory()->create();
     $supplier = Supplier::factory()->create(['is_active' => true]);
@@ -516,4 +533,62 @@ test('supplier with purchase orders cannot be physically deleted', function () {
         ->assertSessionHasErrors(['supplier']);
 
     $this->assertDatabaseHas('suppliers', ['id' => $supplier->id]);
+});
+
+test('user can search active articles via search-articles endpoint', function () {
+    $user = User::factory()->create();
+
+    $activeMatching1 = Article::factory()->create([
+        'description' => 'Yerba Mate Playadito 1kg',
+        'internal_code' => 'YER-001',
+        'status' => ArticleStatus::Active,
+    ]);
+
+    $activeMatching2 = Article::factory()->create([
+        'description' => 'Yerba Mate Taragui 500g',
+        'internal_code' => 'YER-002',
+        'status' => ArticleStatus::Active,
+    ]);
+
+    $activeNonMatching = Article::factory()->create([
+        'description' => 'Azúcar Ledesma 1kg',
+        'internal_code' => 'AZU-001',
+        'status' => ArticleStatus::Active,
+    ]);
+
+    $inactiveMatching = Article::factory()->create([
+        'description' => 'Yerba Mate Nobleza Gaucha',
+        'internal_code' => 'YER-003',
+        'status' => ArticleStatus::Inactive,
+    ]);
+
+    $response = $this->actingAs($user)->getJson(route('purchasing.orders.search-articles', ['search' => 'yerba']));
+
+    $response->assertOk();
+    $data = $response->json();
+
+    expect($data)->toHaveCount(2);
+    $ids = array_column($data, 'id');
+    expect($ids)->toContain($activeMatching1->id);
+    expect($ids)->toContain($activeMatching2->id);
+    expect($ids)->not->toContain($activeNonMatching->id);
+    expect($ids)->not->toContain($inactiveMatching->id);
+});
+
+test('purchase order seeder is idempotent and can run multiple times cleanly', function () {
+    $seeder = app(PurchaseOrderSeeder::class);
+
+    $seeder->run(
+        app(CreatePurchaseOrder::class),
+        app(CancelPurchaseOrder::class)
+    );
+
+    $countAfterFirst = PurchaseOrder::count();
+
+    $seeder->run(
+        app(CreatePurchaseOrder::class),
+        app(CancelPurchaseOrder::class)
+    );
+
+    expect(PurchaseOrder::count())->toBe($countAfterFirst);
 });

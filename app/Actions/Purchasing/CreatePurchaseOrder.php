@@ -87,6 +87,9 @@ class CreatePurchaseOrder
             $seenArticles = [];
             $totalCents = 0;
 
+            $articleIds = array_map(fn (array $item): int => (int) $item['article_id'], $itemsData);
+            $articles = Article::whereIn('id', $articleIds)->get()->keyBy('id');
+
             foreach ($itemsData as $index => $itemData) {
                 $articleId = (int) $itemData['article_id'];
 
@@ -97,7 +100,13 @@ class CreatePurchaseOrder
                 }
                 $seenArticles[$articleId] = true;
 
-                $article = Article::findOrFail($articleId);
+                $article = $articles->get($articleId);
+                if (! $article) {
+                    throw ValidationException::withMessages([
+                        "items.{$index}.article_id" => 'El artículo seleccionado no existe.',
+                    ]);
+                }
+
                 if ($article->status !== ArticleStatus::Active) {
                     throw ValidationException::withMessages([
                         "items.{$index}.article_id" => "El artículo '{$article->description}' no está activo.",

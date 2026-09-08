@@ -17,10 +17,11 @@ return new class extends Migration
             $table->foreignId('warehouse_id')->constrained('warehouses');
             $table->string('order_number', 32)->unique();
             $table->string('payment_terms', 255)->nullable();
-            $table->date('issue_date');
+            $table->date('issue_date')->index();
             $table->rawColumn('expected_delivery_date', 'date check (expected_delivery_date is null or expected_delivery_date >= issue_date)')->nullable();
             $table->rawColumn('total_amount', 'decimal(12, 2) check (total_amount >= 0)')->default(0);
             $table->rawColumn('status', "varchar(20) check (status in ('borrador', 'emitida', 'cancelada'))")->default('borrador');
+            $table->index('status');
             $table->text('notes')->nullable();
             $table->foreignId('user_id')->nullable()->constrained('users');
             $table->timestamp('cancelled_at')->nullable();

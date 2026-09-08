@@ -17,6 +17,12 @@ class CancelPurchaseOrder
             ]);
         }
 
+        if (! $purchaseOrder->canBeCancelled()) {
+            throw ValidationException::withMessages([
+                'status' => 'Solo se pueden cancelar órdenes de compra en estado emitida.',
+            ]);
+        }
+
         $trimmedReason = trim($reason);
         if ($trimmedReason === '') {
             throw ValidationException::withMessages([

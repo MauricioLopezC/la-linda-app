@@ -129,6 +129,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/', [PurchaseOrderController::class, 'index'])->name('index');
         Route::get('create', [PurchaseOrderController::class, 'create'])->name('create');
         Route::post('/', [PurchaseOrderController::class, 'store'])->name('store');
+        Route::get('search-articles', [PurchaseOrderController::class, 'searchArticles'])->name('search-articles');
         Route::get('{purchase_order}', [PurchaseOrderController::class, 'show'])->name('show');
         Route::get('{purchase_order}/edit', [PurchaseOrderController::class, 'edit'])->name('edit');
         Route::put('{purchase_order}', [PurchaseOrderController::class, 'update'])->name('update');
