@@ -3,11 +3,12 @@
 use App\Enums\Purchasing\SupplierVoucherLetter;
 use App\Enums\Purchasing\SupplierVoucherStatus;
 use App\Enums\Purchasing\SupplierVoucherType;
+use App\Models\Catalog\Article;
+use App\Models\Purchasing\PaymentOrderItem;
 use App\Models\Purchasing\Supplier;
 use App\Models\Purchasing\SupplierVoucher;
-use App\Models\Purchasing\VoucherApplication;
+use App\Models\Purchasing\SupplierVoucherItem;
 use App\Models\User;
-use App\Rules\Purchasing\ValidCuit;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -15,9 +16,9 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Testing\AssertableInertia as Assert;
 
 /** @return array<string, mixed> */
-function validSupplierVoucherData(Supplier $supplier, array $overrides = []): array
+function validSupplierVoucherData(Supplier $supplier, ?Article $article = null, array $overrides = []): array
 {
-    return array_merge([
+    return array_replace_recursive([
         'supplier_id' => $supplier->id,
         'type' => SupplierVoucherType::Invoice->value,
         'letter' => SupplierVoucherLetter::A->value,
@@ -25,9 +26,26 @@ function validSupplierVoucherData(Supplier $supplier, array $overrides = []): ar
         'number' => '345',
         'issue_date' => today()->toDateString(),
         'due_date' => today()->addDays(30)->toDateString(),
-        'net_amount' => '1000,00',
-        'other_taxes_amount' => '15,50',
+        'total_amount' => '1.300,50',
         'notes' => '  Compra mensual  ',
+        'items' => [
+            [
+                'article_id' => $article?->id,
+                'description' => '  Harina 000 original  ',
+                'quantity' => '1,05',
+                'unit_of_measure' => '  kg  ',
+                'unit_price' => '1.000,00',
+                'line_total' => '1.050,00',
+            ],
+            [
+                'article_id' => null,
+                'description' => 'Cargo financiero',
+                'quantity' => '1',
+                'unit_of_measure' => 'unidad',
+                'unit_price' => '200,00',
+                'line_total' => '200,00',
+            ],
+        ],
     ], $overrides);
 }
 
@@ -36,186 +54,195 @@ test('guest cannot access supplier voucher pages', function () {
 
     $this->get(route('purchasing.vouchers.index'))->assertRedirect(route('login'));
     $this->get(route('purchasing.vouchers.create'))->assertRedirect(route('login'));
+    $this->get(route('purchasing.vouchers.articles', ['search' => 'harina']))->assertRedirect(route('login'));
     $this->post(route('purchasing.vouchers.store'))->assertRedirect(route('login'));
-    $this->get(route('purchasing.vouchers.pdf', $voucher))->assertRedirect(route('login'));
+    $this->get(route('purchasing.vouchers.show', $voucher))->assertRedirect(route('login'));
+    $this->post(route('purchasing.vouchers.annul', $voucher))->assertRedirect(route('login'));
 });
 
-test('creation page only offers active suppliers and closed fiscal options', function () {
+test('creation page only loads active suppliers without preloading the article catalog', function () {
     $user = User::factory()->create();
     $activeSupplier = Supplier::factory()->create(['business_name' => 'Proveedor Activo']);
-    Supplier::factory()->inactive()->create(['business_name' => 'Proveedor Inactivo']);
-
-    $this->actingAs($user)
-        ->get(route('purchasing.vouchers.create'))
+    Supplier::factory()->inactive()->create();
+    $this->actingAs($user)->get(route('purchasing.vouchers.create'))
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('purchasing/vouchers/create')
             ->has('suppliers', 1)
             ->where('suppliers.0.id', $activeSupplier->id)
-            ->where('suppliers.0.business_name', 'Proveedor Activo')
+            ->missing('articles')
             ->has('voucherTypes', 3)
-            ->has('letters', 4)
-            ->where('today', today()->toDateString()));
+            ->has('letters', 4));
 });
 
-test('user can register an invoice with normalized fiscal numbers and automatic amounts', function () {
+test('article search returns only matching active articles and limits the result set', function () {
     $user = User::factory()->create();
-    $supplier = Supplier::factory()->create();
+    $matchingArticle = Article::factory()->create([
+        'internal_code' => 'ART-BUSCADOR',
+        'description' => 'Harina especial para buscador',
+        'barcode' => '7791234567000',
+    ]);
+    Article::factory()->inactive()->create([
+        'description' => 'Harina especial para buscador inactiva',
+    ]);
+    Article::factory()->count(25)->create([
+        'description' => 'Producto masivo buscador',
+    ]);
 
     $this->actingAs($user)
-        ->post(route('purchasing.vouchers.store'), validSupplierVoucherData($supplier))
-        ->assertSessionHasNoErrors()
-        ->assertRedirect(route('purchasing.vouchers.index'));
+        ->getJson(route('purchasing.vouchers.articles', ['search' => 'ART-BUSCADOR']))
+        ->assertOk()
+        ->assertJsonCount(1)
+        ->assertJsonPath('0.id', $matchingArticle->id)
+        ->assertJsonPath('0.internal_code', 'ART-BUSCADOR');
+
+    $this->actingAs($user)
+        ->getJson(route('purchasing.vouchers.articles', ['search' => '7791234567000']))
+        ->assertOk()
+        ->assertJsonPath('0.id', $matchingArticle->id);
+
+    $this->actingAs($user)
+        ->getJson(route('purchasing.vouchers.articles', ['search' => 'masivo buscador']))
+        ->assertOk()
+        ->assertJsonCount(20);
+});
+
+test('article search requires at least two characters', function () {
+    $this->actingAs(User::factory()->create())
+        ->getJson(route('purchasing.vouchers.articles', ['search' => 'a']))
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['search']);
+});
+
+test('user registers the transcribed total and complete historical lines', function () {
+    $user = User::factory()->create();
+    $supplier = Supplier::factory()->create();
+    $article = Article::factory()->create(['description' => 'Descripción actual']);
+
+    $response = $this->actingAs($user)
+        ->post(route('purchasing.vouchers.store'), validSupplierVoucherData($supplier, $article))
+        ->assertSessionHasNoErrors();
 
     $voucher = SupplierVoucher::query()->sole();
+    $response->assertRedirect(route('purchasing.vouchers.show', $voucher));
 
     expect($voucher)
         ->supplier_id->toBe($supplier->id)
-        ->type->toBe(SupplierVoucherType::Invoice)
-        ->letter->toBe(SupplierVoucherLetter::A)
         ->point_of_sale->toBe('0012')
         ->number->toBe('00000345')
-        ->net_amount->toBe('1000.00')
-        ->vat_amount->toBe('210.00')
-        ->other_taxes_amount->toBe('15.50')
-        ->total_amount->toBe('1225.50')
+        ->total_amount->toBe('1300.50')
         ->status->toBe(SupplierVoucherStatus::Pending)
-        ->pendingBalance()->toBe('1225.50')
-        ->notes->toBe('Compra mensual');
+        ->notes->toBe('Compra mensual')
+        ->itemsTotal()->toBe('1250.00')
+        ->differenceAmount()->toBe('50.50');
+
+    expect($voucher->items)->toHaveCount(2)
+        ->and($voucher->items[0]->article_id)->toBe($article->id)
+        ->and($voucher->items[0]->description)->toBe('Harina 000 original')
+        ->and($voucher->items[0]->unit_of_measure)->toBe('kg')
+        ->and($voucher->items[0]->quantity)->toBe('1.050')
+        ->and($voucher->items[0]->unit_price)->toBe('1000.00')
+        ->and($voucher->items[0]->line_total)->toBe('1050.00')
+        ->and($voucher->items[1]->article_id)->toBeNull();
 });
 
-test('credit and debit notes are born pending application', function (SupplierVoucherType $type) {
-    $user = User::factory()->create();
+test('item quantity accepts no more than two decimal places', function () {
     $supplier = Supplier::factory()->create();
 
-    $this->actingAs($user)
-        ->post(route('purchasing.vouchers.store'), validSupplierVoucherData($supplier, [
+    $this->actingAs(User::factory()->create())
+        ->post(route('purchasing.vouchers.store'), validSupplierVoucherData($supplier, null, [
+            'items' => [[
+                'article_id' => null,
+                'description' => 'Concepto fraccionado',
+                'quantity' => '1,234',
+                'unit_of_measure' => 'kg',
+                'unit_price' => '1.000,00',
+                'line_total' => '1.234,00',
+            ]],
+        ]))
+        ->assertSessionHasErrors(['items.0.quantity']);
+});
+
+test('voucher types are born with their derived initial state', function (
+    SupplierVoucherType $type,
+    SupplierVoucherStatus $expectedStatus,
+) {
+    $supplier = Supplier::factory()->create();
+
+    $this->actingAs(User::factory()->create())
+        ->post(route('purchasing.vouchers.store'), validSupplierVoucherData($supplier, null, [
             'type' => $type->value,
             'due_date' => null,
         ]))
         ->assertSessionHasNoErrors();
 
-    expect(SupplierVoucher::query()->sole()->status)
-        ->toBe(SupplierVoucherStatus::PendingApplication);
+    expect(SupplierVoucher::query()->sole()->status)->toBe($expectedStatus);
 })->with([
-    'credit note' => SupplierVoucherType::CreditNote,
-    'debit note' => SupplierVoucherType::DebitNote,
+    'invoice pending payment' => [SupplierVoucherType::Invoice, SupplierVoucherStatus::Pending],
+    'debit note pending payment' => [SupplierVoucherType::DebitNote, SupplierVoucherStatus::Pending],
+    'credit note available' => [SupplierVoucherType::CreditNote, SupplierVoucherStatus::PendingApplication],
 ]);
 
-test('required voucher fields are validated', function () {
-    $user = User::factory()->create();
-
-    $this->actingAs($user)
+test('required header and at least one line are validated', function () {
+    $this->actingAs(User::factory()->create())
         ->post(route('purchasing.vouchers.store'), [])
         ->assertSessionHasErrors([
             'supplier_id', 'type', 'letter', 'point_of_sale', 'number',
-            'issue_date',
+            'issue_date', 'total_amount', 'items',
         ]);
 });
 
-test('voucher rejects inactive or missing suppliers', function () {
-    $user = User::factory()->create();
-    $inactiveSupplier = Supplier::factory()->inactive()->create();
+test('inactive suppliers and articles are rejected', function () {
+    $supplier = Supplier::factory()->inactive()->create();
+    $article = Article::factory()->inactive()->create();
 
-    $this->actingAs($user)
-        ->post(route('purchasing.vouchers.store'), validSupplierVoucherData($inactiveSupplier))
-        ->assertSessionHasErrors(['supplier_id']);
-
-    $this->actingAs($user)
-        ->post(route('purchasing.vouchers.store'), validSupplierVoucherData($inactiveSupplier, ['supplier_id' => 999999]))
-        ->assertSessionHasErrors(['supplier_id']);
+    $this->actingAs(User::factory()->create())
+        ->post(route('purchasing.vouchers.store'), validSupplierVoucherData($supplier, $article))
+        ->assertSessionHasErrors(['supplier_id', 'items.0.article_id']);
 });
 
-test('voucher validates dates and fiscal number format', function () {
-    $user = User::factory()->create();
+test('dates fiscal numbers and positive amounts are validated', function () {
     $supplier = Supplier::factory()->create();
 
-    $this->actingAs($user)
-        ->post(route('purchasing.vouchers.store'), validSupplierVoucherData($supplier, [
+    $this->actingAs(User::factory()->create())
+        ->post(route('purchasing.vouchers.store'), validSupplierVoucherData($supplier, null, [
             'point_of_sale' => '12345',
             'number' => '12A',
             'issue_date' => today()->addDay()->toDateString(),
             'due_date' => today()->subDay()->toDateString(),
+            'total_amount' => '0',
+            'items' => [[
+                'article_id' => null,
+                'description' => 'Ajuste',
+                'quantity' => '0',
+                'unit_of_measure' => 'unidad',
+                'unit_price' => '-1',
+                'line_total' => '0',
+            ]],
         ]))
-        ->assertSessionHasErrors(['point_of_sale', 'number', 'issue_date', 'due_date']);
+        ->assertSessionHasErrors([
+            'point_of_sale', 'number', 'issue_date', 'due_date', 'total_amount',
+            'items.0.quantity', 'items.0.unit_price', 'items.0.line_total',
+        ]);
 });
 
-test('voucher validates monetary values', function (array $amounts, array $errors) {
-    $user = User::factory()->create();
+test('derived and removed fields cannot be supplied by the client', function () {
     $supplier = Supplier::factory()->create();
 
-    $this->actingAs($user)
-        ->post(route('purchasing.vouchers.store'), validSupplierVoucherData($supplier, $amounts))
-        ->assertSessionHasErrors($errors);
-})->with([
-    'zero calculated total' => [['net_amount' => '0', 'other_taxes_amount' => '0'], ['net_amount']],
-    'negative component' => [['net_amount' => '-1', 'other_taxes_amount' => '0'], ['net_amount']],
-    'too many decimals' => [['net_amount' => '1000.001'], ['net_amount']],
-    'above decimal limit' => [['net_amount' => '10000000000', 'other_taxes_amount' => '0'], ['net_amount']],
-]);
-
-test('derived amounts status and pending balance cannot be supplied by the client', function () {
-    $user = User::factory()->create();
-    $supplier = Supplier::factory()->create();
-
-    $this->actingAs($user)
-        ->post(route('purchasing.vouchers.store'), validSupplierVoucherData($supplier, [
-            'vat_amount' => '1.00',
-            'total_amount' => '1.00',
+    $this->actingAs(User::factory()->create())
+        ->post(route('purchasing.vouchers.store'), validSupplierVoucherData($supplier, null, [
+            'net_amount' => '100',
+            'vat_amount' => '21',
+            'other_taxes_amount' => '5',
             'status' => SupplierVoucherStatus::Paid->value,
-            'pending_balance' => '0.00',
+            'outstanding_amount' => '0',
         ]))
-        ->assertSessionHasErrors(['vat_amount', 'total_amount', 'status', 'pending_balance']);
+        ->assertSessionHasErrors([
+            'net_amount', 'vat_amount', 'other_taxes_amount', 'status', 'outstanding_amount',
+        ]);
 });
 
-test('letters A and M calculate VAT automatically at a fixed 21 percent with commercial rounding', function (
-    SupplierVoucherLetter $letter,
-    string $netAmount,
-    string $expectedVat,
-    string $expectedTotal,
-) {
-    $user = User::factory()->create();
-    $supplier = Supplier::factory()->create();
-
-    $this->actingAs($user)
-        ->post(route('purchasing.vouchers.store'), validSupplierVoucherData($supplier, [
-            'letter' => $letter->value,
-            'net_amount' => $netAmount,
-            'other_taxes_amount' => '0.00',
-        ]))
-        ->assertSessionHasNoErrors();
-
-    $voucher = SupplierVoucher::query()->sole();
-
-    expect($voucher->vat_amount)->toBe($expectedVat)
-        ->and($voucher->total_amount)->toBe($expectedTotal);
-})->with([
-    'A standard amount' => [SupplierVoucherLetter::A, '100.00', '21.00', '121.00'],
-    'M rounds half cent upward' => [SupplierVoucherLetter::M, '0.03', '0.01', '0.04'],
-]);
-
-test('letters B and C do not discriminate VAT', function (SupplierVoucherLetter $letter) {
-    $user = User::factory()->create();
-    $supplier = Supplier::factory()->create();
-
-    $this->actingAs($user)
-        ->post(route('purchasing.vouchers.store'), validSupplierVoucherData($supplier, [
-            'letter' => $letter->value,
-            'net_amount' => '100.00',
-            'other_taxes_amount' => '5.00',
-        ]))
-        ->assertSessionHasNoErrors();
-
-    $voucher = SupplierVoucher::query()->sole();
-
-    expect($voucher->vat_amount)->toBe('0.00')
-        ->and($voucher->total_amount)->toBe('105.00');
-})->with([
-    'B does not discriminate VAT' => SupplierVoucherLetter::B,
-    'C has no VAT' => SupplierVoucherLetter::C,
-]);
-
-test('voucher fiscal identity is unique and each component participates in it', function () {
+test('fiscal identity is unique by all five components', function () {
     $user = User::factory()->create();
     $supplier = Supplier::factory()->create();
     $otherSupplier = Supplier::factory()->create();
@@ -233,137 +260,104 @@ test('voucher fiscal identity is unique and each component participates in it', 
         ['number' => '346'],
     ] as $variation) {
         $this->actingAs($user)
-            ->post(route('purchasing.vouchers.store'), validSupplierVoucherData($supplier, $variation))
+            ->post(route('purchasing.vouchers.store'), validSupplierVoucherData($supplier, null, $variation))
             ->assertSessionHasNoErrors();
     }
 
     expect(SupplierVoucher::query()->count())->toBe(6);
 });
 
-test('listing exposes fiscal data derived balance state and overdue marker', function () {
-    Carbon::setTestNow('2026-08-31 12:00:00');
-    $user = User::factory()->create();
+test('show exposes saved header and all lines as read only data', function () {
     $supplier = Supplier::factory()->create(['business_name' => 'Lácteos del Sur']);
-    $voucher = SupplierVoucher::factory()->overdue()->create([
+    $voucher = SupplierVoucher::factory()->create([
         'supplier_id' => $supplier->id,
         'point_of_sale' => '0007',
         'number' => '00001234',
-        'net_amount' => '100.00',
-        'vat_amount' => '21.00',
-        'other_taxes_amount' => '0.00',
         'total_amount' => '121.00',
     ]);
+    SupplierVoucherItem::factory()->for($voucher)->create([
+        'position' => 1,
+        'description' => 'Leche entera según factura',
+        'unit_of_measure' => 'caja',
+        'line_total' => '100.00',
+    ]);
 
-    $this->actingAs($user)
-        ->get(route('purchasing.vouchers.index'))
+    $this->actingAs(User::factory()->create())
+        ->get(route('purchasing.vouchers.show', $voucher))
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
-            ->component('purchasing/vouchers/index')
+            ->component('purchasing/vouchers/show')
+            ->where('voucher.supplier_business_name', 'Lácteos del Sur')
+            ->where('voucher.formatted_number', 'A 0007-00001234')
+            ->where('voucher.total_amount', '121.00')
+            ->where('voucher.items_total', '100.00')
+            ->where('voucher.difference_amount', '21.00')
+            ->has('voucher.items', 1)
+            ->where('voucher.items.0.description', 'Leche entera según factura')
+            ->where('voucher.items.0.unit_of_measure', 'caja'));
+});
+
+test('listing supports overdue filter and exposes derived balance', function () {
+    Carbon::setTestNow('2026-08-31 12:00:00');
+    $supplier = Supplier::factory()->create(['business_name' => 'Proveedor vencido']);
+    $overdue = SupplierVoucher::factory()->overdue()->create([
+        'supplier_id' => $supplier->id,
+        'total_amount' => '121.00',
+    ]);
+    SupplierVoucher::factory()->create(['due_date' => today()->addDay()]);
+
+    $this->actingAs(User::factory()->create())
+        ->get(route('purchasing.vouchers.index', ['only_overdue' => 1]))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
             ->has('vouchers.data', 1)
-            ->where('vouchers.data.0.id', $voucher->id)
-            ->where('vouchers.data.0.supplier_business_name', 'Lácteos del Sur')
-            ->where('vouchers.data.0.formatted_number', 'A 0007-00001234')
-            ->where('vouchers.data.0.total_amount', '121.00')
+            ->where('vouchers.data.0.id', $overdue->id)
             ->where('vouchers.data.0.outstanding_amount', '121.00')
-            ->where('vouchers.data.0.status', SupplierVoucherStatus::Pending->value)
             ->where('vouchers.data.0.is_overdue', true));
 
     Carbon::setTestNow();
 });
 
-test('listing exposes a note outstanding amount as what is still unapplied, not its full total', function () {
-    // Regression: outstanding_amount must dispatch by type (HU-054). A note is never a payment or
-    // application target, so reading pendingBalance() unconditionally would always report its
-    // full total even after part of it has been imputed to an invoice.
+test('voucher can be annulled with audit data while preserving its lines', function () {
+    Carbon::setTestNow('2026-09-06 15:30:00');
     $user = User::factory()->create();
-    $supplier = Supplier::factory()->create();
-    $creditNote = SupplierVoucher::factory()->creditNote()->create([
-        'supplier_id' => $supplier->id,
-        'issue_date' => today(),
-        'net_amount' => '500.00',
-        'vat_amount' => '0.00',
-        'other_taxes_amount' => '0.00',
-        'total_amount' => '500.00',
-    ]);
-    $invoice = SupplierVoucher::factory()->invoice()->create([
-        'supplier_id' => $supplier->id,
-        'issue_date' => today(),
-        'net_amount' => '1000.00',
-        'vat_amount' => '0.00',
-        'other_taxes_amount' => '0.00',
-        'total_amount' => '1000.00',
-    ]);
-    VoucherApplication::factory()->from($creditNote)->to($invoice)->amount('150.00')->create();
+    $voucher = SupplierVoucher::factory()->create();
+    $item = SupplierVoucherItem::factory()->for($voucher)->create();
 
     $this->actingAs($user)
-        ->get(route('purchasing.vouchers.index'))
-        ->assertOk()
-        ->assertInertia(fn (Assert $page) => $page
-            ->component('purchasing/vouchers/index')
-            ->where('vouchers.data.1.id', $creditNote->id)
-            ->where('vouchers.data.1.outstanding_amount', '350.00'));
+        ->post(route('purchasing.vouchers.annul', $voucher), ['reason' => 'Documento emitido por error'])
+        ->assertSessionHasNoErrors();
+
+    $voucher->refresh();
+    expect($voucher->status)->toBe(SupplierVoucherStatus::Cancelled)
+        ->and($voucher->annulled_by)->toBe($user->id)
+        ->and($voucher->annulled_at?->toDateTimeString())->toBe('2026-09-06 15:30:00')
+        ->and($voucher->annulment_reason)->toBe('Documento emitido por error')
+        ->and($voucher->outstandingAmount())->toBe('0.00')
+        ->and($item->fresh())->not->toBeNull();
+
+    Carbon::setTestNow();
 });
 
-test('voucher has no edit update or delete route in this story', function () {
+test('voucher with an active payment cannot be annulled', function () {
+    $voucher = SupplierVoucher::factory()->create();
+    PaymentOrderItem::factory()->forInvoice($voucher, '50.00')->create();
+
+    $this->actingAs(User::factory()->create())
+        ->post(route('purchasing.vouchers.annul', $voucher), ['reason' => 'Intento inválido'])
+        ->assertSessionHasErrors(['status']);
+
+    expect($voucher->fresh()->status)->toBe(SupplierVoucherStatus::Pending);
+});
+
+test('voucher has no editing deletion or PDF route', function () {
     expect(Route::has('purchasing.vouchers.edit'))->toBeFalse()
         ->and(Route::has('purchasing.vouchers.update'))->toBeFalse()
-        ->and(Route::has('purchasing.vouchers.destroy'))->toBeFalse();
+        ->and(Route::has('purchasing.vouchers.destroy'))->toBeFalse()
+        ->and(Route::has('purchasing.vouchers.pdf'))->toBeFalse();
 });
 
-test('authenticated user can download the internal voucher PDF', function () {
-    $user = User::factory()->create();
-    $supplier = Supplier::factory()->create(['business_name' => 'Proveedor PDF']);
-    $voucher = SupplierVoucher::factory()->create([
-        'supplier_id' => $supplier->id,
-        'point_of_sale' => '0004',
-        'number' => '00001234',
-    ]);
-
-    $response = $this->actingAs($user)->get(route('purchasing.vouchers.pdf', $voucher));
-
-    $response->assertOk()
-        ->assertHeader('content-type', 'application/pdf')
-        ->assertDownload('comprobante-A-0004-00001234.pdf');
-
-    expect($response->getContent())->toStartWith('%PDF');
-});
-
-test('voucher PDF uses the selected type and letter with the educational company identity', function (
-    SupplierVoucherType $type,
-    SupplierVoucherLetter $letter,
-    string $expectedTitle,
-) {
-    $supplier = Supplier::factory()->create();
-    $voucher = SupplierVoucher::factory()->make([
-        'supplier_id' => $supplier->id,
-        'type' => $type,
-        'letter' => $letter,
-    ]);
-    $voucher->id = 36;
-    $voucher->setRelation('supplier', $supplier);
-
-    $html = view('pdf.purchasing.supplier-voucher', [
-        'voucher' => $voucher,
-        'supplierTaxId' => ValidCuit::format($supplier->tax_id),
-        'company' => config('company'),
-        'stylesheet' => '',
-    ])->render();
-
-    expect($html)
-        ->toContain($expectedTitle)
-        ->toContain('Supermercados La Linda S.A.')
-        ->toContain('30-71654321-4')
-        ->toContain('Salta Capital, Salta')
-        ->toContain('No reemplaza ni modifica el comprobante fiscal original')
-        ->and(ValidCuit::isValidChecksum(ValidCuit::sanitize((string) config('company.tax_id'))))->toBeTrue();
-})->with([
-    'factura A' => [SupplierVoucherType::Invoice, SupplierVoucherLetter::A, 'Factura A'],
-    'nota de crédito B' => [SupplierVoucherType::CreditNote, SupplierVoucherLetter::B, 'Nota de crédito B'],
-    'nota de débito C' => [SupplierVoucherType::DebitNote, SupplierVoucherLetter::C, 'Nota de débito C'],
-    'factura M' => [SupplierVoucherType::Invoice, SupplierVoucherLetter::M, 'Factura M'],
-]);
-
-test('database protects fiscal uniqueness and amount consistency', function () {
+test('database protects fiscal uniqueness and positive totals', function () {
     $supplier = Supplier::factory()->create();
     SupplierVoucher::factory()->create([
         'supplier_id' => $supplier->id,
@@ -384,10 +378,7 @@ test('database protects fiscal uniqueness and amount consistency', function () {
         'point_of_sale' => '0002',
         'number' => '00000002',
         'issue_date' => today()->toDateString(),
-        'net_amount' => '100.00',
-        'vat_amount' => '21.00',
-        'other_taxes_amount' => '0.00',
-        'total_amount' => '120.00',
+        'total_amount' => '0.00',
         'status' => SupplierVoucherStatus::Pending->value,
         'created_at' => now(),
         'updated_at' => now(),
@@ -395,11 +386,10 @@ test('database protects fiscal uniqueness and amount consistency', function () {
 });
 
 test('supplier with vouchers cannot be physically deleted', function () {
-    $user = User::factory()->create();
     $supplier = Supplier::factory()->create();
     SupplierVoucher::factory()->create(['supplier_id' => $supplier->id]);
 
-    $this->actingAs($user)
+    $this->actingAs(User::factory()->create())
         ->delete(route('purchasing.suppliers.destroy', $supplier))
         ->assertSessionHasErrors(['supplier']);
 

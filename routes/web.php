@@ -119,8 +119,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::prefix('purchasing/vouchers')->name('purchasing.vouchers.')->group(function () {
         Route::get('/', [SupplierVoucherController::class, 'index'])->name('index');
         Route::get('create', [SupplierVoucherController::class, 'create'])->name('create');
+        Route::get('articles', [SupplierVoucherController::class, 'searchArticles'])->name('articles');
         Route::post('/', [SupplierVoucherController::class, 'store'])->name('store');
-        Route::get('{supplier_voucher}/pdf', [SupplierVoucherController::class, 'pdf'])->name('pdf');
+        Route::get('{supplier_voucher}', [SupplierVoucherController::class, 'show'])->name('show');
+        Route::post('{supplier_voucher}/annul', [SupplierVoucherController::class, 'annul'])->name('annul');
     });
 
     Route::prefix('purchasing/orders')->name('purchasing.orders.')->group(function () {
