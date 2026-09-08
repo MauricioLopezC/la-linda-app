@@ -14,14 +14,18 @@ class SupplierVoucherFactory extends Factory
 {
     public function definition(): array
     {
+        $issueDate = fake()->dateTimeBetween(now()->subDays(60), now());
+
         return [
             'supplier_id' => Supplier::factory(),
             'type' => SupplierVoucherType::Invoice,
             'letter' => SupplierVoucherLetter::A,
             'point_of_sale' => fake()->numerify('####'),
             'number' => fake()->unique()->numerify('########'),
-            'issue_date' => fake()->dateTimeBetween('-60 days', 'now'),
-            'due_date' => fake()->optional(0.8)->dateTimeBetween('now', '+60 days'),
+            'issue_date' => $issueDate,
+            'due_date' => fake()->boolean(80)
+                ? (clone $issueDate)->modify('+'.fake()->numberBetween(0, 60).' days')
+                : null,
             'total_amount' => fake()->randomFloat(2, 100, 5_000_000),
             'status' => SupplierVoucherStatus::Pending,
             'notes' => fake()->optional()->sentence(),
