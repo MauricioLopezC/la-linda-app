@@ -22,6 +22,16 @@ enum SupplierVoucherType: string
         return $this === self::Invoice;
     }
 
+    public function isCreditNote(): bool
+    {
+        return $this === self::CreditNote;
+    }
+
+    public function createsPayableBalance(): bool
+    {
+        return $this !== self::CreditNote;
+    }
+
     /** @return array<int, array{value: string, label: string}> */
     public static function toOptions(): array
     {

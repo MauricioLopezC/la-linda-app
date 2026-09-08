@@ -2,7 +2,6 @@
 
 namespace Database\Factories\Purchasing;
 
-use App\Concerns\ConvertsMoneyToCents;
 use App\Enums\Purchasing\SupplierVoucherLetter;
 use App\Enums\Purchasing\SupplierVoucherStatus;
 use App\Enums\Purchasing\SupplierVoucherType;
@@ -10,23 +9,12 @@ use App\Models\Purchasing\Supplier;
 use App\Models\Purchasing\SupplierVoucher;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-/**
- * @extends Factory<SupplierVoucher>
- */
+/** @extends Factory<SupplierVoucher> */
 class SupplierVoucherFactory extends Factory
 {
-    use ConvertsMoneyToCents;
-
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
     public function definition(): array
     {
-        $netCents = fake()->numberBetween(10_000, 5_000_000);
-        $vatCents = (int) round($netCents * 0.21);
-        $otherTaxesCents = fake()->numberBetween(0, 50_000);
+        $issueDate = fake()->dateTimeBetween(now()->subDays(60), now());
 
         return [
             'supplier_id' => Supplier::factory(),
@@ -34,14 +22,16 @@ class SupplierVoucherFactory extends Factory
             'letter' => SupplierVoucherLetter::A,
             'point_of_sale' => fake()->numerify('####'),
             'number' => fake()->unique()->numerify('########'),
-            'issue_date' => fake()->dateTimeBetween('-60 days', 'now'),
-            'due_date' => fake()->optional(0.8)->dateTimeBetween('now', '+60 days'),
-            'net_amount' => $this->centsToMoney($netCents),
-            'vat_amount' => $this->centsToMoney($vatCents),
-            'other_taxes_amount' => $this->centsToMoney($otherTaxesCents),
-            'total_amount' => $this->centsToMoney($netCents + $vatCents + $otherTaxesCents),
+            'issue_date' => $issueDate,
+            'due_date' => fake()->boolean(80)
+                ? (clone $issueDate)->modify('+'.fake()->numberBetween(0, 60).' days')
+                : null,
+            'total_amount' => fake()->randomFloat(2, 100, 5_000_000),
             'status' => SupplierVoucherStatus::Pending,
             'notes' => fake()->optional()->sentence(),
+            'annulled_at' => null,
+            'annulled_by' => null,
+            'annulment_reason' => null,
         ];
     }
 
@@ -66,8 +56,7 @@ class SupplierVoucherFactory extends Factory
     {
         return $this->state(fn (): array => [
             'type' => SupplierVoucherType::DebitNote,
-            'status' => SupplierVoucherStatus::PendingApplication,
-            'due_date' => null,
+            'status' => SupplierVoucherStatus::Pending,
         ]);
     }
 

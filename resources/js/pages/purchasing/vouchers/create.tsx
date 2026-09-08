@@ -1,22 +1,26 @@
 import { Head, Link, useForm } from '@inertiajs/react';
-import { ArrowLeft, Calculator, Loader2, ReceiptText } from 'lucide-react';
+import { ArrowLeft, ChevronsUpDown, Loader2, Plus, Trash2 } from 'lucide-react';
 import type { FormEvent } from 'react';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { store } from '@/actions/App/Http/Controllers/Purchasing/SupplierVoucherController';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+  Command,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import {
   Select,
   SelectContent,
@@ -25,18 +29,27 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { formatCurrency } from '@/lib/utils';
 import { dashboard } from '@/routes';
-import { index } from '@/routes/purchasing/vouchers';
+import {
+  articles as searchArticles,
+  index,
+} from '@/routes/purchasing/vouchers';
 import type { BreadcrumbItem } from '@/types';
 
 type Supplier = App.Data.Purchasing.SupplierOptionData;
 type Option = App.Data.Purchasing.SupplierVoucherOptionData;
+type Article = App.Data.Purchasing.PurchaseOrderArticleOptionData;
 
-type Props = {
-  suppliers: Supplier[];
-  voucherTypes: Option[];
-  letters: Option[];
-  today: string;
+type VoucherItemForm = {
+  article_id: string | null;
+  article_label: string | null;
+  description: string;
+  quantity: string;
+  unit_of_measure: string;
+  unit_price: string;
+  line_total: string;
+  line_total_touched: boolean;
 };
 
 type VoucherFormData = {
@@ -47,48 +60,87 @@ type VoucherFormData = {
   number: string;
   issue_date: string;
   due_date: string;
-  net_amount: string;
-  other_taxes_amount: string;
+  total_amount: string;
   notes: string;
+  items: VoucherItemForm[];
 };
 
-function decimalToCents(value: string): number | null {
-  const normalized = value.trim().replace(',', '.');
+type Props = {
+  suppliers: Supplier[];
+  voucherTypes: Option[];
+  letters: Option[];
+  today: string;
+};
 
-  if (!/^\d+(?:\.\d{1,2})?$/.test(normalized)) {
-    return null;
+const emptyItem = (): VoucherItemForm => ({
+  article_id: null,
+  article_label: null,
+  description: '',
+  quantity: '1',
+  unit_of_measure: '',
+  unit_price: '',
+  line_total: '',
+  line_total_touched: false,
+});
+
+function formatDecimalInput(value: string, decimals: number): string {
+  const sanitized = value.replace(/[^\d,]/g, '');
+  const [integerPart = '', ...decimalParts] = sanitized.split(',');
+  const decimalDigits = decimalParts.join('').slice(0, decimals);
+
+  return sanitized.includes(',')
+    ? `${integerPart},${decimalDigits}`
+    : integerPart;
+}
+
+function completeDecimalInput(value: string, decimals: number): string {
+  if (value === '') {
+    return '';
   }
 
-  const [whole, decimals = ''] = normalized.split('.');
+  const [integerPart = '0', decimalPart = ''] = formatDecimalInput(
+    value,
+    decimals,
+  ).split(',');
 
-  return Number(whole) * 100 + Number(decimals.padEnd(2, '0'));
+  return `${integerPart || '0'},${decimalPart.padEnd(decimals, '0')}`;
 }
 
-function normalizeAmount(value: string): string {
-  const cents = decimalToCents(value);
-
-  return cents === null ? value : (cents / 100).toFixed(2);
+function argentineMoneyValue(value: string): number {
+  return Number(canonicalMoney(value)) || 0;
 }
 
-function formatAmountForDisplay(value: string): string {
-  const [whole = '', decimals] = value.split('.', 2);
-  const digits = whole.replace(/\D/g, '').replace(/^0+(?=\d)/, '') || '0';
-  const groupedWhole = digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-
-  return decimals === undefined
-    ? groupedWhole
-    : `${groupedWhole},${decimals.slice(0, 2)}`;
-}
-
-function parseDisplayedAmount(value: string): string {
+function formatArgentineMoneyInput(value: string): string {
   const sanitized = value.replace(/[^\d,]/g, '');
+
+  if (sanitized === '') {
+    return '';
+  }
+
   const hasDecimalSeparator = sanitized.includes(',');
-  const [whole = '', decimals = ''] = sanitized.split(',', 2);
-  const normalizedWhole = whole.replace(/^0+(?=\d)/, '') || '0';
+  const [integerPart = '', ...decimalParts] = sanitized.split(',');
+  const integerDigits = integerPart.replace(/^0+(?=\d)/, '') || '0';
+  const groupedInteger = integerDigits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  const decimalDigits = decimalParts.join('').slice(0, 2);
 
   return hasDecimalSeparator
-    ? `${normalizedWhole}.${decimals.slice(0, 2)}`
-    : normalizedWhole;
+    ? `${groupedInteger},${decimalDigits}`
+    : groupedInteger;
+}
+
+function completeArgentineMoney(value: string): string {
+  if (value === '') {
+    return '';
+  }
+
+  const [integerPart, decimalPart = ''] =
+    formatArgentineMoneyInput(value).split(',');
+
+  return `${integerPart},${decimalPart.padEnd(2, '0')}`;
+}
+
+function canonicalMoney(value: string): string {
+  return value.replaceAll('.', '').replace(',', '.');
 }
 
 function onlyDigits(value: string, maximumLength: number): string {
@@ -109,53 +161,119 @@ export default function CreateSupplierVoucher({
     number: '',
     issue_date: today,
     due_date: '',
-    net_amount: '0.00',
-    other_taxes_amount: '0.00',
+    total_amount: '',
     notes: '',
+    items: [emptyItem()],
   });
 
-  const netCents = useMemo(
-    () => decimalToCents(form.data.net_amount),
-    [form.data.net_amount],
+  const errors = form.errors as Record<string, string>;
+  const itemsTotal = useMemo(
+    () =>
+      form.data.items.reduce(
+        (total, item) => total + argentineMoneyValue(item.line_total),
+        0,
+      ),
+    [form.data.items],
   );
-  const otherTaxesCents = useMemo(
-    () => decimalToCents(form.data.other_taxes_amount),
-    [form.data.other_taxes_amount],
-  );
-  const discriminatesVat = form.data.letter === 'A' || form.data.letter === 'M';
-  // Mirrors the backend's integer arithmetic: intdiv((netCents * 21) + 50, 100).
-  const vatCents =
-    netCents === null
-      ? null
-      : discriminatesVat
-        ? Math.floor((netCents * 21 + 50) / 100)
-        : 0;
-  const totalCents =
-    netCents === null || vatCents === null || otherTaxesCents === null
-      ? null
-      : netCents + vatCents + otherTaxesCents;
+  const totalAmount = argentineMoneyValue(form.data.total_amount);
+  const difference = totalAmount - itemsTotal;
 
-  const formattedDerivedAmount = (cents: number | null) =>
-    cents === null ? '' : formatAmountForDisplay((cents / 100).toFixed(2));
+  const updateItem = <K extends keyof VoucherItemForm>(
+    indexToUpdate: number,
+    field: K,
+    value: VoucherItemForm[K],
+  ) => {
+    form.setData(
+      'items',
+      form.data.items.map((item, index) => {
+        if (index !== indexToUpdate) {
+          return item;
+        }
+
+        const nextItem = { ...item, [field]: value };
+
+        if (
+          (field === 'quantity' || field === 'unit_price') &&
+          !nextItem.line_total_touched
+        ) {
+          const quantity = argentineMoneyValue(nextItem.quantity);
+          const unitPrice = argentineMoneyValue(nextItem.unit_price);
+
+          nextItem.line_total =
+            quantity > 0 && unitPrice > 0
+              ? formatArgentineMoneyInput(
+                  (Math.round(quantity * unitPrice * 100) / 100)
+                    .toFixed(2)
+                    .replace('.', ','),
+                )
+              : '';
+        }
+
+        return nextItem;
+      }),
+    );
+  };
+
+  const setLineTotal = (indexToUpdate: number, value: string) => {
+    form.setData(
+      'items',
+      form.data.items.map((item, index) =>
+        index === indexToUpdate
+          ? {
+              ...item,
+              line_total: value,
+              line_total_touched: value.trim() !== '',
+            }
+          : item,
+      ),
+    );
+  };
+
+  const selectArticle = (indexToUpdate: number, article: Article | null) => {
+    form.setData(
+      'items',
+      form.data.items.map((item, index) =>
+        index === indexToUpdate
+          ? {
+              ...item,
+              article_id: article ? String(article.id) : null,
+              article_label: article
+                ? `${article.internal_code} · ${article.description}`
+                : null,
+              description:
+                article && item.description.trim() === ''
+                  ? article.description
+                  : item.description,
+              unit_of_measure:
+                article && item.unit_of_measure.trim() === ''
+                  ? article.unit_of_measure
+                  : item.unit_of_measure,
+            }
+          : item,
+      ),
+    );
+  };
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    form.transform((data) => ({
+      ...data,
+      total_amount: canonicalMoney(data.total_amount),
+      items: data.items.map((item) => ({
+        article_id: item.article_id,
+        article_label: item.article_label,
+        description: item.description,
+        unit_of_measure: item.unit_of_measure,
+        quantity: canonicalMoney(item.quantity),
+        unit_price: canonicalMoney(item.unit_price),
+        line_total: canonicalMoney(item.line_total),
+      })),
+    }));
     form.submit(store(), {
-      onSuccess: () =>
-        toast.success('Comprobante de proveedor registrado correctamente.'),
-      onError: () => toast.error('Revisá los datos del comprobante ingresado.'),
+      onSuccess: () => toast.success('Comprobante registrado correctamente.'),
+      onError: () =>
+        toast.error('Revisá los datos del comprobante y sus ítems.'),
     });
-  };
-
-  const padFiscalNumber = (
-    field: 'point_of_sale' | 'number',
-    length: number,
-  ) => {
-    const value = form.data[field];
-
-    if (value !== '') {
-      form.setData(field, value.padStart(length, '0'));
-    }
   };
 
   return (
@@ -169,7 +287,7 @@ export default function CreateSupplierVoucher({
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <Heading
             title="Registrar comprobante"
-            description="Ingresá la factura o nota emitida por un proveedor activo. El estado y el saldo se calculan automáticamente."
+            description="Transcribí la cabecera y todos los ítems del documento recibido."
           />
           <Button variant="outline" asChild>
             <Link href={index()}>
@@ -179,355 +297,521 @@ export default function CreateSupplierVoucher({
           </Button>
         </div>
 
-        {suppliers.length === 0 && (
-          <Alert className="border-warning-fg/30 bg-warning-bg text-warning-fg">
-            <ReceiptText />
-            <AlertTitle>No hay proveedores activos</AlertTitle>
-            <AlertDescription className="text-warning-fg">
-              Activá o registrá un proveedor antes de cargar un comprobante.
-            </AlertDescription>
-          </Alert>
-        )}
+        <Card>
+          <CardHeader>
+            <CardTitle>Cabecera del comprobante</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="space-y-1.5 md:col-span-2">
+              <Label htmlFor="supplier_id">Proveedor *</Label>
+              <Select
+                value={form.data.supplier_id}
+                onValueChange={(value) => form.setData('supplier_id', value)}
+              >
+                <SelectTrigger id="supplier_id" className="w-full">
+                  <SelectValue placeholder="Seleccionar proveedor" />
+                </SelectTrigger>
+                <SelectContent>
+                  {suppliers.map((supplier) => (
+                    <SelectItem key={supplier.id} value={String(supplier.id)}>
+                      {supplier.business_name} · {supplier.tax_id}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <InputError message={errors.supplier_id} />
+            </div>
 
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(320px,0.45fr)]">
-          <div className="flex flex-col gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Identificación fiscal</CardTitle>
-                <CardDescription>
-                  La combinación de estos datos identifica al comprobante y no
-                  podrá repetirse.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="grid gap-4 sm:grid-cols-2">
-                <div className="grid gap-2 sm:col-span-2">
-                  <Label htmlFor="supplier_id">Proveedor *</Label>
-                  <Select
-                    value={form.data.supplier_id}
-                    onValueChange={(value) =>
-                      form.setData('supplier_id', value)
-                    }
-                  >
-                    <SelectTrigger id="supplier_id">
-                      <SelectValue placeholder="Seleccioná un proveedor activo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {suppliers.map((supplier) => (
-                        <SelectItem
-                          key={supplier.id}
-                          value={String(supplier.id)}
-                        >
-                          {supplier.business_name} · {supplier.tax_id}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <InputError message={form.errors.supplier_id} />
-                </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="type">Tipo *</Label>
+              <Select
+                value={form.data.type}
+                onValueChange={(value) => form.setData('type', value)}
+              >
+                <SelectTrigger id="type" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {voucherTypes.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <InputError message={errors.type} />
+            </div>
 
-                <div className="grid gap-2">
-                  <Label htmlFor="type">Tipo *</Label>
-                  <Select
-                    value={form.data.type}
-                    onValueChange={(value) => form.setData('type', value)}
-                  >
-                    <SelectTrigger id="type">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {voucherTypes.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <InputError message={form.errors.type} />
-                </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="letter">Letra *</Label>
+              <Select
+                value={form.data.letter}
+                onValueChange={(value) => form.setData('letter', value)}
+              >
+                <SelectTrigger id="letter" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {letters.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <InputError message={errors.letter} />
+            </div>
 
-                <div className="grid gap-2">
-                  <Label htmlFor="letter">Letra *</Label>
-                  <Select
-                    value={form.data.letter}
-                    onValueChange={(value) => form.setData('letter', value)}
-                  >
-                    <SelectTrigger id="letter">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {letters.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <InputError message={form.errors.letter} />
-                </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="point_of_sale">Punto de venta *</Label>
+              <Input
+                id="point_of_sale"
+                inputMode="numeric"
+                placeholder="0001"
+                value={form.data.point_of_sale}
+                onChange={(event) =>
+                  form.setData(
+                    'point_of_sale',
+                    onlyDigits(event.target.value, 4),
+                  )
+                }
+                onBlur={() =>
+                  form.data.point_of_sale &&
+                  form.setData(
+                    'point_of_sale',
+                    form.data.point_of_sale.padStart(4, '0'),
+                  )
+                }
+              />
+              <InputError message={errors.point_of_sale} />
+            </div>
 
-                <div className="grid gap-2">
-                  <Label htmlFor="point_of_sale">Punto de venta *</Label>
-                  <Input
-                    id="point_of_sale"
-                    value={form.data.point_of_sale}
-                    onChange={(event) =>
-                      form.setData(
-                        'point_of_sale',
-                        onlyDigits(event.target.value, 4),
-                      )
-                    }
-                    onBlur={() => padFiscalNumber('point_of_sale', 4)}
-                    inputMode="numeric"
-                    maxLength={4}
-                    placeholder="0001"
-                    required
+            <div className="space-y-1.5">
+              <Label htmlFor="number">Número *</Label>
+              <Input
+                id="number"
+                inputMode="numeric"
+                placeholder="00000001"
+                value={form.data.number}
+                onChange={(event) =>
+                  form.setData('number', onlyDigits(event.target.value, 8))
+                }
+                onBlur={() =>
+                  form.data.number &&
+                  form.setData('number', form.data.number.padStart(8, '0'))
+                }
+              />
+              <InputError message={errors.number} />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="issue_date">Fecha de emisión *</Label>
+              <Input
+                id="issue_date"
+                type="date"
+                max={today}
+                value={form.data.issue_date}
+                onChange={(event) =>
+                  form.setData('issue_date', event.target.value)
+                }
+              />
+              <InputError message={errors.issue_date} />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="due_date">Fecha de vencimiento</Label>
+              <Input
+                id="due_date"
+                type="date"
+                min={form.data.issue_date}
+                value={form.data.due_date}
+                onChange={(event) =>
+                  form.setData('due_date', event.target.value)
+                }
+              />
+              <InputError message={errors.due_date} />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="total_amount">Importe total transcripto *</Label>
+              <Input
+                id="total_amount"
+                inputMode="decimal"
+                placeholder="0,00"
+                value={form.data.total_amount}
+                onChange={(event) =>
+                  form.setData(
+                    'total_amount',
+                    formatArgentineMoneyInput(event.target.value),
+                  )
+                }
+                onBlur={() =>
+                  form.setData(
+                    'total_amount',
+                    completeArgentineMoney(form.data.total_amount),
+                  )
+                }
+              />
+              <InputError message={errors.total_amount} />
+            </div>
+
+            <div className="space-y-1.5 md:col-span-2 xl:col-span-3">
+              <Label htmlFor="notes">Observaciones</Label>
+              <Textarea
+                id="notes"
+                rows={3}
+                maxLength={2000}
+                value={form.data.notes}
+                onChange={(event) => form.setData('notes', event.target.value)}
+              />
+              <InputError message={errors.notes} />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex-row items-center justify-between gap-4">
+            <div>
+              <CardTitle>Ítems del documento</CardTitle>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Usá “Concepto sin artículo” para cargos, descuentos o ajustes.
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() =>
+                form.setData('items', [...form.data.items, emptyItem()])
+              }
+            >
+              <Plus className="size-4" /> Agregar ítem
+            </Button>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <InputError message={errors.items} />
+            {form.data.items.map((item, itemIndex) => (
+              <div
+                key={itemIndex}
+                className="grid gap-3 rounded-lg border bg-muted/20 p-4 md:grid-cols-2 xl:grid-cols-12"
+              >
+                <div className="space-y-1.5 md:col-span-2 xl:col-span-3">
+                  <ArticleSearch
+                    selectedLabel={item.article_label}
+                    onSelect={(article) => selectArticle(itemIndex, article)}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Son los primeros 4 dígitos del número fiscal impreso por el
-                    proveedor, antes del guion. Podés ingresar menos dígitos; se
-                    completará con ceros.
-                  </p>
-                  <InputError message={form.errors.point_of_sale} />
+                  <InputError
+                    message={errors[`items.${itemIndex}.article_id`]}
+                  />
                 </div>
 
-                <div className="grid gap-2">
-                  <Label htmlFor="number">Número *</Label>
+                <div className="space-y-1.5 md:col-span-2 xl:col-span-3">
+                  <Label>Descripción original *</Label>
                   <Input
-                    id="number"
-                    value={form.data.number}
+                    value={item.description}
+                    maxLength={500}
                     onChange={(event) =>
-                      form.setData('number', onlyDigits(event.target.value, 8))
+                      updateItem(itemIndex, 'description', event.target.value)
                     }
-                    onBlur={() => padFiscalNumber('number', 8)}
-                    inputMode="numeric"
-                    maxLength={8}
-                    placeholder="00000001"
-                    required
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Son los 8 dígitos correlativos posteriores al guion que
-                    identifican el comprobante dentro de ese punto de venta.
-                  </p>
-                  <InputError message={form.errors.number} />
+                  <InputError
+                    message={errors[`items.${itemIndex}.description`]}
+                  />
                 </div>
-              </CardContent>
-            </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Fechas</CardTitle>
-                <CardDescription>
-                  La emisión no puede ser futura y el vencimiento es opcional.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="grid gap-4 sm:grid-cols-2">
-                <div className="grid gap-2">
-                  <Label htmlFor="issue_date">Fecha de emisión *</Label>
+                <div className="space-y-1.5 xl:col-span-1">
+                  <Label>Cantidad *</Label>
                   <Input
-                    id="issue_date"
-                    type="date"
-                    max={today}
-                    value={form.data.issue_date}
+                    inputMode="decimal"
+                    value={item.quantity}
                     onChange={(event) =>
-                      form.setData('issue_date', event.target.value)
-                    }
-                    required
-                  />
-                  <InputError message={form.errors.issue_date} />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="due_date">Fecha de vencimiento</Label>
-                  <Input
-                    id="due_date"
-                    type="date"
-                    min={form.data.issue_date}
-                    value={form.data.due_date}
-                    onChange={(event) =>
-                      form.setData('due_date', event.target.value)
-                    }
-                  />
-                  <InputError message={form.errors.due_date} />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Importes</CardTitle>
-                <CardDescription>
-                  El sistema calcula el IVA y el total; no se ingresan
-                  manualmente.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="grid gap-4 sm:grid-cols-2">
-                <div className="grid gap-2">
-                  <Label htmlFor="net_amount">Importe neto gravado *</Label>
-                  <Input
-                    id="net_amount"
-                    value={formatAmountForDisplay(form.data.net_amount)}
-                    onChange={(event) =>
-                      form.setData(
-                        'net_amount',
-                        parseDisplayedAmount(event.target.value),
+                      updateItem(
+                        itemIndex,
+                        'quantity',
+                        formatDecimalInput(event.target.value, 2),
                       )
                     }
                     onBlur={() =>
-                      form.setData(
-                        'net_amount',
-                        normalizeAmount(form.data.net_amount),
+                      updateItem(
+                        itemIndex,
+                        'quantity',
+                        completeDecimalInput(item.quantity, 2),
                       )
                     }
+                  />
+                  <InputError message={errors[`items.${itemIndex}.quantity`]} />
+                </div>
+
+                <div className="space-y-1.5 xl:col-span-1">
+                  <Label>Unidad *</Label>
+                  <Input
+                    value={item.unit_of_measure}
+                    maxLength={50}
+                    onChange={(event) =>
+                      updateItem(
+                        itemIndex,
+                        'unit_of_measure',
+                        event.target.value,
+                      )
+                    }
+                  />
+                  <InputError
+                    message={errors[`items.${itemIndex}.unit_of_measure`]}
+                  />
+                </div>
+
+                <div className="space-y-1.5 xl:col-span-2">
+                  <Label>Precio unitario *</Label>
+                  <Input
                     inputMode="decimal"
                     placeholder="0,00"
-                    required
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    {discriminatesVat
-                      ? 'Base usada para calcular automáticamente el IVA del 21%.'
-                      : form.data.letter === 'B'
-                        ? 'Para letra B, ingresá el importe con IVA incluido; no se discrimina.'
-                        : 'Para letra C, ingresá el importe de la operación sin IVA.'}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Los miles se separan automáticamente con puntos. Usá coma
-                    para ingresar centavos.
-                  </p>
-                  <InputError message={form.errors.net_amount} />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="vat_amount">IVA</Label>
-                  <Input
-                    id="vat_amount"
-                    value={formattedDerivedAmount(vatCents)}
-                    readOnly
-                    aria-readonly="true"
-                    className="bg-muted tabular-nums"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    {discriminatesVat
-                      ? 'Calculado automáticamente al 21%.'
-                      : 'No se discrimina ni calcula IVA para esta letra.'}
-                  </p>
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="other_taxes_amount">
-                    Otros tributos / percepciones
-                  </Label>
-                  <Input
-                    id="other_taxes_amount"
-                    value={formatAmountForDisplay(form.data.other_taxes_amount)}
+                    value={item.unit_price}
                     onChange={(event) =>
-                      form.setData(
-                        'other_taxes_amount',
-                        parseDisplayedAmount(event.target.value),
+                      updateItem(
+                        itemIndex,
+                        'unit_price',
+                        formatArgentineMoneyInput(event.target.value),
                       )
                     }
                     onBlur={() =>
-                      form.setData(
-                        'other_taxes_amount',
-                        normalizeAmount(form.data.other_taxes_amount),
+                      updateItem(
+                        itemIndex,
+                        'unit_price',
+                        completeArgentineMoney(item.unit_price),
                       )
                     }
-                    inputMode="decimal"
-                    placeholder="0,00"
                   />
-                  <InputError message={form.errors.other_taxes_amount} />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="total_amount">Importe total</Label>
-                  <Input
-                    id="total_amount"
-                    value={formattedDerivedAmount(totalCents)}
-                    readOnly
-                    aria-readonly="true"
-                    className="bg-muted font-semibold tabular-nums"
+                  <InputError
+                    message={errors[`items.${itemIndex}.unit_price`]}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Neto + IVA + otros tributos.
-                  </p>
                 </div>
-              </CardContent>
-            </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Observaciones</CardTitle>
-                <CardDescription>
-                  Información adicional opcional.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="grid gap-2">
-                <Label htmlFor="notes">Notas</Label>
-                <Textarea
-                  id="notes"
-                  value={form.data.notes}
-                  onChange={(event) =>
-                    form.setData('notes', event.target.value)
-                  }
-                  rows={4}
-                  maxLength={2000}
-                />
-                <InputError message={form.errors.notes} />
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="flex flex-col gap-4 xl:sticky xl:top-6 xl:self-start">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calculator className="size-5" />
-                  Control del total
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-4">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Suma calculada</span>
-                  <span className="font-semibold tabular-nums">
-                    {totalCents === null
-                      ? '—'
-                      : `$ ${(totalCents / 100).toLocaleString('es-AR', {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}`}
-                  </span>
+                <div className="space-y-1.5 xl:col-span-2">
+                  <Label>Importe del ítem *</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      inputMode="decimal"
+                      placeholder="0,00"
+                      value={item.line_total}
+                      onChange={(event) =>
+                        setLineTotal(
+                          itemIndex,
+                          formatArgentineMoneyInput(event.target.value),
+                        )
+                      }
+                      onBlur={() =>
+                        setLineTotal(
+                          itemIndex,
+                          completeArgentineMoney(item.line_total),
+                        )
+                      }
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      disabled={form.data.items.length === 1}
+                      onClick={() =>
+                        form.setData(
+                          'items',
+                          form.data.items.filter(
+                            (_, index) => index !== itemIndex,
+                          ),
+                        )
+                      }
+                      aria-label={`Quitar ítem ${itemIndex + 1}`}
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
+                  <InputError
+                    message={errors[`items.${itemIndex}.line_total`]}
+                  />
                 </div>
-                {totalCents !== null && totalCents <= 0 && (
-                  <Alert className="border-error-fg/30 bg-error-bg text-error-fg">
-                    <AlertTitle>El total debe ser mayor a cero</AlertTitle>
-                    <AlertDescription className="text-error-fg">
-                      Ingresá al menos un importe positivo.
-                    </AlertDescription>
-                  </Alert>
-                )}
-                <p className="text-xs text-muted-foreground">
-                  Las facturas nacen pendientes con saldo igual al total. Las
-                  notas nacen pendientes de imputar.
-                </p>
-                <Button
-                  type="submit"
-                  disabled={
-                    form.processing ||
-                    suppliers.length === 0 ||
-                    totalCents === null ||
-                    totalCents <= 0
-                  }
-                  className="w-full"
-                >
-                  {form.processing && (
-                    <Loader2 className="size-4 animate-spin" />
-                  )}
-                  Registrar comprobante
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="grid gap-4 pt-6 md:grid-cols-3">
+            <div>
+              <p className="text-sm text-muted-foreground">Suma de ítems</p>
+              <p className="text-xl font-semibold">
+                {formatCurrency(itemsTotal)}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">
+                Total del documento
+              </p>
+              <p className="text-xl font-semibold">
+                {formatCurrency(totalAmount)}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">
+                Diferencia informativa
+              </p>
+              <p className="text-xl font-semibold">
+                {formatCurrency(difference)}
+              </p>
+            </div>
+            <div className="flex justify-end md:col-span-3">
+              <Button
+                type="submit"
+                disabled={form.processing || suppliers.length === 0}
+              >
+                {form.processing && <Loader2 className="size-4 animate-spin" />}
+                Registrar comprobante
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </form>
     </>
+  );
+}
+
+function ArticleSearch({
+  selectedLabel,
+  onSelect,
+}: {
+  selectedLabel: string | null;
+  onSelect: (article: Article | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const [results, setResults] = useState<Article[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
+
+  useEffect(() => {
+    const term = search.trim();
+
+    if (term.length < 2) {
+      return;
+    }
+
+    const abortController = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setIsSearching(true);
+
+      try {
+        const response = await fetch(
+          searchArticles.url({ query: { search: term } }),
+          {
+            headers: { Accept: 'application/json' },
+            signal: abortController.signal,
+          },
+        );
+
+        if (!response.ok) {
+          setResults([]);
+
+          return;
+        }
+
+        setResults((await response.json()) as Article[]);
+      } catch (error) {
+        if (!(error instanceof DOMException && error.name === 'AbortError')) {
+          setResults([]);
+        }
+      } finally {
+        if (!abortController.signal.aborted) {
+          setIsSearching(false);
+          setHasSearched(true);
+        }
+      }
+    }, 300);
+
+    return () => {
+      window.clearTimeout(timer);
+      abortController.abort();
+    };
+  }, [search]);
+
+  const updateSearch = (value: string) => {
+    setSearch(value);
+
+    if (value.trim().length < 2) {
+      setResults([]);
+      setHasSearched(false);
+      setIsSearching(false);
+    }
+  };
+
+  const chooseArticle = (article: Article | null) => {
+    onSelect(article);
+    setOpen(false);
+    setSearch('');
+    setResults([]);
+    setHasSearched(false);
+  };
+
+  return (
+    <div className="space-y-1.5">
+      <Label>Artículo del catálogo</Label>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className="w-full justify-between font-normal"
+          >
+            <span className="truncate">
+              {selectedLabel ?? 'Concepto sin artículo'}
+            </span>
+            <ChevronsUpDown className="size-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent
+          className="w-[var(--radix-popover-trigger-width)] p-0"
+          align="start"
+        >
+          <Command shouldFilter={false}>
+            <CommandInput
+              value={search}
+              onValueChange={updateSearch}
+              placeholder="Buscar por código, descripción o barras"
+            />
+            <CommandList>
+              {isSearching && (
+                <div className="flex items-center gap-2 px-3 py-4 text-sm text-muted-foreground">
+                  <Loader2 className="size-4 animate-spin" />
+                  Buscando…
+                </div>
+              )}
+              {!isSearching && hasSearched && results.length === 0 && (
+                <p className="px-3 py-4 text-center text-sm text-muted-foreground">
+                  No se encontraron artículos activos.
+                </p>
+              )}
+              <CommandItem
+                value="__concepto_sin_articulo__"
+                onSelect={() => chooseArticle(null)}
+              >
+                Usar concepto sin artículo
+              </CommandItem>
+              {results.map((article) => (
+                <CommandItem
+                  key={article.id}
+                  value={String(article.id)}
+                  onSelect={() => chooseArticle(article)}
+                  className="flex-col items-start gap-0.5"
+                >
+                  <span className="font-mono text-xs font-semibold">
+                    {article.internal_code}
+                  </span>
+                  <span className="text-sm">{article.description}</span>
+                </CommandItem>
+              ))}
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    </div>
   );
 }
 
