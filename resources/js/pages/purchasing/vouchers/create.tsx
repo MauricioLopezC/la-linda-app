@@ -1,5 +1,5 @@
 import { Head, Link, useForm } from '@inertiajs/react';
-import { ArrowLeft, Loader2, Plus, Search, Trash2 } from 'lucide-react';
+import { ArrowLeft, ChevronsUpDown, Loader2, Plus, Trash2 } from 'lucide-react';
 import type { FormEvent } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -8,8 +8,19 @@ import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Command,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import {
   Select,
   SelectContent,
@@ -38,6 +49,7 @@ type VoucherItemForm = {
   unit_of_measure: string;
   unit_price: string;
   line_total: string;
+  line_total_touched: boolean;
 };
 
 type VoucherFormData = {
@@ -68,6 +80,7 @@ const emptyItem = (): VoucherItemForm => ({
   unit_of_measure: '',
   unit_price: '',
   line_total: '',
+  line_total_touched: false,
 });
 
 function formatDecimalInput(value: string, decimals: number): string {
@@ -172,8 +185,46 @@ export default function CreateSupplierVoucher({
   ) => {
     form.setData(
       'items',
+      form.data.items.map((item, index) => {
+        if (index !== indexToUpdate) {
+          return item;
+        }
+
+        const nextItem = { ...item, [field]: value };
+
+        if (
+          (field === 'quantity' || field === 'unit_price') &&
+          !nextItem.line_total_touched
+        ) {
+          const quantity = argentineMoneyValue(nextItem.quantity);
+          const unitPrice = argentineMoneyValue(nextItem.unit_price);
+
+          nextItem.line_total =
+            quantity > 0 && unitPrice > 0
+              ? formatArgentineMoneyInput(
+                  (Math.round(quantity * unitPrice * 100) / 100)
+                    .toFixed(2)
+                    .replace('.', ','),
+                )
+              : '';
+        }
+
+        return nextItem;
+      }),
+    );
+  };
+
+  const setLineTotal = (indexToUpdate: number, value: string) => {
+    form.setData(
+      'items',
       form.data.items.map((item, index) =>
-        index === indexToUpdate ? { ...item, [field]: value } : item,
+        index === indexToUpdate
+          ? {
+              ...item,
+              line_total: value,
+              line_total_touched: value.trim() !== '',
+            }
+          : item,
       ),
     );
   };
@@ -189,8 +240,14 @@ export default function CreateSupplierVoucher({
               article_label: article
                 ? `${article.internal_code} · ${article.description}`
                 : null,
-              description: article?.description ?? item.description,
-              unit_of_measure: article?.unit_of_measure ?? item.unit_of_measure,
+              description:
+                article && item.description.trim() === ''
+                  ? article.description
+                  : item.description,
+              unit_of_measure:
+                article && item.unit_of_measure.trim() === ''
+                  ? article.unit_of_measure
+                  : item.unit_of_measure,
             }
           : item,
       ),
@@ -203,7 +260,10 @@ export default function CreateSupplierVoucher({
       ...data,
       total_amount: canonicalMoney(data.total_amount),
       items: data.items.map((item) => ({
-        ...item,
+        article_id: item.article_id,
+        article_label: item.article_label,
+        description: item.description,
+        unit_of_measure: item.unit_of_measure,
         quantity: canonicalMoney(item.quantity),
         unit_price: canonicalMoney(item.unit_price),
         line_total: canonicalMoney(item.line_total),
@@ -533,16 +593,14 @@ export default function CreateSupplierVoucher({
                       placeholder="0,00"
                       value={item.line_total}
                       onChange={(event) =>
-                        updateItem(
+                        setLineTotal(
                           itemIndex,
-                          'line_total',
                           formatArgentineMoneyInput(event.target.value),
                         )
                       }
                       onBlur={() =>
-                        updateItem(
+                        setLineTotal(
                           itemIndex,
-                          'line_total',
                           completeArgentineMoney(item.line_total),
                         )
                       }
@@ -621,6 +679,7 @@ function ArticleSearch({
   selectedLabel: string | null;
   onSelect: (article: Article | null) => void;
 }) {
+  const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [results, setResults] = useState<Article[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -681,69 +740,77 @@ function ArticleSearch({
     }
   };
 
-  const chooseArticle = (article: Article) => {
+  const chooseArticle = (article: Article | null) => {
     onSelect(article);
+    setOpen(false);
     setSearch('');
     setResults([]);
     setHasSearched(false);
   };
 
   return (
-    <div className="space-y-2">
-      <div className="relative">
-        <Search className="pointer-events-none absolute top-2.5 left-3 size-4 text-muted-foreground" />
-        <Input
-          value={search}
-          onChange={(event) => updateSearch(event.target.value)}
-          placeholder="Buscar por código, descripción o barras"
-          className="pr-10 pl-9"
-          autoComplete="off"
-        />
-        {isSearching && (
-          <Loader2 className="absolute top-2.5 right-3 size-4 animate-spin text-muted-foreground" />
-        )}
-
-        {(results.length > 0 || (hasSearched && !isSearching)) && (
-          <div className="absolute z-50 mt-1 max-h-64 w-full overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-lg">
-            {results.length === 0 ? (
-              <p className="px-3 py-4 text-center text-sm text-muted-foreground">
-                No se encontraron artículos activos.
-              </p>
-            ) : (
-              results.map((article) => (
-                <Button
+    <div className="space-y-1.5">
+      <Label>Artículo del catálogo</Label>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className="w-full justify-between font-normal"
+          >
+            <span className="truncate">
+              {selectedLabel ?? 'Concepto sin artículo'}
+            </span>
+            <ChevronsUpDown className="size-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent
+          className="w-[var(--radix-popover-trigger-width)] p-0"
+          align="start"
+        >
+          <Command shouldFilter={false}>
+            <CommandInput
+              value={search}
+              onValueChange={updateSearch}
+              placeholder="Buscar por código, descripción o barras"
+            />
+            <CommandList>
+              {isSearching && (
+                <div className="flex items-center gap-2 px-3 py-4 text-sm text-muted-foreground">
+                  <Loader2 className="size-4 animate-spin" />
+                  Buscando…
+                </div>
+              )}
+              {!isSearching && hasSearched && results.length === 0 && (
+                <p className="px-3 py-4 text-center text-sm text-muted-foreground">
+                  No se encontraron artículos activos.
+                </p>
+              )}
+              <CommandItem
+                value="__concepto_sin_articulo__"
+                onSelect={() => chooseArticle(null)}
+              >
+                Usar concepto sin artículo
+              </CommandItem>
+              {results.map((article) => (
+                <CommandItem
                   key={article.id}
-                  type="button"
-                  variant="ghost"
-                  className="h-auto w-full justify-start px-3 py-2 text-left whitespace-normal"
-                  onClick={() => chooseArticle(article)}
+                  value={String(article.id)}
+                  onSelect={() => chooseArticle(article)}
+                  className="flex-col items-start gap-0.5"
                 >
                   <span className="font-mono text-xs font-semibold">
                     {article.internal_code}
                   </span>
                   <span className="text-sm">{article.description}</span>
-                </Button>
-              ))
-            )}
-          </div>
-        )}
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2">
-        <p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
-          {selectedLabel ?? 'Concepto sin artículo'}
-        </p>
-        {selectedLabel && (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => onSelect(null)}
-          >
-            Usar concepto
-          </Button>
-        )}
-      </div>
+                </CommandItem>
+              ))}
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
     </div>
   );
 }
