@@ -2,6 +2,7 @@ import { Head, Link, useForm } from '@inertiajs/react';
 import {
   ArrowLeft,
   CheckCircle2,
+  Loader2,
   Package,
   Plus,
   Save,
@@ -35,7 +36,13 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { formatCurrency } from '@/lib/utils';
 import { dashboard } from '@/routes';
-import { index, show, store, update } from '@/routes/purchasing/orders';
+import {
+  index,
+  searchArticles,
+  show,
+  store,
+  update,
+} from '@/routes/purchasing/orders';
 import type { BreadcrumbItem } from '@/types';
 
 type OrderData = App.Data.Purchasing.PurchaseOrderData;
@@ -68,9 +75,13 @@ export default function PurchaseOrderForm({
 
   // New item selector state
   const [selectedArticleId, setSelectedArticleId] = useState<string>('');
+  const [selectedArticleObject, setSelectedArticleObject] =
+    useState<ArticleOption | null>(null);
   const [articleSearchTerm, setArticleSearchTerm] = useState<string>('');
   const [isArticleSearchOpen, setIsArticleSearchOpen] =
     useState<boolean>(false);
+  const [searchResults, setSearchResults] = useState<ArticleOption[]>(articles);
+  const [isSearching, setIsSearching] = useState<boolean>(false);
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const articleSearchInputRef = useRef<HTMLInputElement>(null);
   const quantityInputRef = useRef<HTMLInputElement>(null);
@@ -129,39 +140,94 @@ export default function PurchaseOrderForm({
     items: initialItems,
   });
 
-  const selectedArticlesMap = useMemo(() => {
+  const [knownArticlesMap, setKnownArticlesMap] = useState<
+    Map<number, ArticleOption>
+  >(() => {
     const map = new Map<number, ArticleOption>();
 
-    for (const a of articles) {
-      map.set(a.id, a);
+    articles.forEach((a) => map.set(a.id, a));
+
+    if (order?.items) {
+      order.items.forEach((item) => {
+        if (!map.has(item.article_id)) {
+          map.set(item.article_id, {
+            id: item.article_id,
+            internal_code: item.article_internal_code,
+            description: item.article_description,
+            unit_of_measure: item.unit_of_measure,
+          });
+        }
+      });
     }
 
     return map;
-  }, [articles]);
+  });
+
+  const handleArticleSearchChange = (val: string) => {
+    setArticleSearchTerm(val);
+    setIsArticleSearchOpen(true);
+
+    if (!val.trim()) {
+      setSearchResults(articles);
+      setIsSearching(false);
+    } else {
+      setIsSearching(true);
+    }
+  };
+
+  const handleClearArticleSearch = () => {
+    setArticleSearchTerm('');
+    setSearchResults(articles);
+    setIsSearching(false);
+    articleSearchInputRef.current?.focus();
+  };
+
+  useEffect(() => {
+    const term = articleSearchTerm.trim();
+
+    if (!term) {
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setIsSearching(true);
+
+      try {
+        const response = await fetch(
+          searchArticles.url({ query: { search: term } }),
+        );
+
+        if (response.ok) {
+          const results: ArticleOption[] = await response.json();
+
+          setSearchResults(results);
+          setKnownArticlesMap((prev) => {
+            const next = new Map(prev);
+
+            results.forEach((r) => next.set(r.id, r));
+
+            return next;
+          });
+        }
+      } catch (err) {
+        console.error('Error searching articles', err);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [articleSearchTerm]);
 
   const selectedArticle = useMemo(() => {
     if (!selectedArticleId) {
       return null;
     }
 
-    return selectedArticlesMap.get(parseInt(selectedArticleId, 10)) ?? null;
-  }, [selectedArticleId, selectedArticlesMap]);
+    const id = parseInt(selectedArticleId, 10);
 
-  const filteredArticles = useMemo(() => {
-    const term = articleSearchTerm.trim().toLowerCase();
-
-    if (!term) {
-      return articles.slice(0, 50);
-    }
-
-    return articles
-      .filter(
-        (a) =>
-          a.internal_code.toLowerCase().includes(term) ||
-          a.description.toLowerCase().includes(term),
-      )
-      .slice(0, 50);
-  }, [articles, articleSearchTerm]);
+    return selectedArticleObject ?? knownArticlesMap.get(id) ?? null;
+  }, [selectedArticleId, selectedArticleObject, knownArticlesMap]);
 
   const totalCalculated = useMemo(() => {
     let sum = 0;
@@ -177,7 +243,10 @@ export default function PurchaseOrderForm({
 
   const handleSelectArticle = (art: ArticleOption) => {
     setSelectedArticleId(String(art.id));
+    setSelectedArticleObject(art);
     setArticleSearchTerm('');
+    setSearchResults(articles);
+    setIsSearching(false);
     setIsArticleSearchOpen(false);
     setTimeout(() => {
       quantityInputRef.current?.focus();
@@ -186,7 +255,10 @@ export default function PurchaseOrderForm({
 
   const handleClearSelectedArticle = () => {
     setSelectedArticleId('');
+    setSelectedArticleObject(null);
     setArticleSearchTerm('');
+    setSearchResults(articles);
+    setIsSearching(false);
     setTimeout(() => {
       articleSearchInputRef.current?.focus();
     }, 50);
@@ -233,6 +305,7 @@ export default function PurchaseOrderForm({
     ]);
 
     setSelectedArticleId('');
+    setSelectedArticleObject(null);
     setArticleSearchTerm('');
     setItemQuantity('1');
     setItemPrice('');
@@ -546,15 +619,18 @@ export default function PurchaseOrderForm({
                       </div>
                     ) : (
                       <div className="relative">
-                        <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                        {isSearching ? (
+                          <Loader2 className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+                        ) : (
+                          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                        )}
                         <Input
                           id="search_article"
                           ref={articleSearchInputRef}
                           value={articleSearchTerm}
-                          onChange={(e) => {
-                            setArticleSearchTerm(e.target.value);
-                            setIsArticleSearchOpen(true);
-                          }}
+                          onChange={(e) =>
+                            handleArticleSearchChange(e.target.value)
+                          }
                           onFocus={() => setIsArticleSearchOpen(true)}
                           placeholder="Escribí código interno o nombre..."
                           className="pr-8 pl-9"
@@ -562,10 +638,7 @@ export default function PurchaseOrderForm({
                         {articleSearchTerm && (
                           <button
                             type="button"
-                            onClick={() => {
-                              setArticleSearchTerm('');
-                              articleSearchInputRef.current?.focus();
-                            }}
+                            onClick={handleClearArticleSearch}
                             className="absolute top-1/2 right-2.5 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                           >
                             <X className="size-4" />
@@ -574,13 +647,18 @@ export default function PurchaseOrderForm({
 
                         {isArticleSearchOpen && (
                           <div className="absolute z-50 mt-1 max-h-60 w-full overflow-y-auto rounded-md border bg-popover p-1 shadow-lg">
-                            {filteredArticles.length === 0 ? (
+                            {isSearching ? (
+                              <div className="flex items-center justify-center gap-2 p-3 text-xs text-muted-foreground">
+                                <Loader2 className="size-3.5 animate-spin" />
+                                Buscando artículos...
+                              </div>
+                            ) : searchResults.length === 0 ? (
                               <div className="p-3 text-center text-xs text-muted-foreground">
                                 No se encontraron artículos que coincidan con
                                 &quot;{articleSearchTerm}&quot;.
                               </div>
                             ) : (
-                              filteredArticles.map((art) => {
+                              searchResults.map((art) => {
                                 const isAdded = data.items.some(
                                   (it) => it.article_id === art.id,
                                 );
@@ -711,9 +789,7 @@ export default function PurchaseOrderForm({
                       </TableRow>
                     ) : (
                       data.items.map((item, index) => {
-                        const article = selectedArticlesMap.get(
-                          item.article_id,
-                        );
+                        const article = knownArticlesMap.get(item.article_id);
                         const qty = parseFloat(item.quantity) || 0;
                         const price = parseFloat(item.unit_price) || 0;
                         const subtotal = Math.round(qty * price * 100) / 100;
