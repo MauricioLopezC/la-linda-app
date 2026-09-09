@@ -120,15 +120,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::prefix('purchasing/vouchers')->name('purchasing.vouchers.')->group(function () {
         Route::get('/', [SupplierVoucherController::class, 'index'])->name('index');
         Route::get('create', [SupplierVoucherController::class, 'create'])->name('create');
+        Route::get('articles', [SupplierVoucherController::class, 'searchArticles'])->name('articles');
         Route::post('/', [SupplierVoucherController::class, 'store'])->name('store');
-        Route::get('{supplier_voucher}/pdf', [SupplierVoucherController::class, 'pdf'])->name('pdf');
+        Route::get('{supplier_voucher}', [SupplierVoucherController::class, 'show'])->name('show');
+        Route::post('{supplier_voucher}/annul', [SupplierVoucherController::class, 'annul'])->name('annul');
     });
 
     Route::prefix('purchasing/orders')->name('purchasing.orders.')->group(function () {
         Route::get('/', [PurchaseOrderController::class, 'index'])->name('index');
         Route::get('create', [PurchaseOrderController::class, 'create'])->name('create');
         Route::post('/', [PurchaseOrderController::class, 'store'])->name('store');
-        Route::get('search-articles', [PurchaseOrderController::class, 'searchArticles'])->name('search-articles');
+        Route::get('search-articles', [PurchaseOrderController::class, 'searchArticles'])->name('search_articles');
         Route::get('{purchase_order}', [PurchaseOrderController::class, 'show'])->name('show');
         Route::get('{purchase_order}/edit', [PurchaseOrderController::class, 'edit'])->name('edit');
         Route::put('{purchase_order}', [PurchaseOrderController::class, 'update'])->name('update');
