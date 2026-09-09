@@ -36,7 +36,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { formatCurrency, formatStockQuantity } from '@/lib/utils';
 import { dashboard } from '@/routes';
-import { annul, index } from '@/routes/purchasing/vouchers';
+import { annul, index, show } from '@/routes/purchasing/vouchers';
 import type { BreadcrumbItem } from '@/types';
 
 type Voucher = App.Data.Purchasing.SupplierVoucherData;
@@ -267,6 +267,56 @@ export default function SupplierVoucherShow({ voucher }: { voucher: Voucher }) {
             </div>
           </div>
         </Card>
+
+        {voucher.applications.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                {voucher.type === 'nota_credito'
+                  ? 'Facturas a las que se aplicó'
+                  : 'Notas de crédito aplicadas'}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Comprobante</TableHead>
+                    <TableHead className="text-right">
+                      Importe aplicado
+                    </TableHead>
+                    <TableHead>Usuario</TableHead>
+                    <TableHead>Fecha</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {voucher.applications.map((application) => (
+                    <TableRow key={application.id}>
+                      <TableCell>
+                        <Link
+                          href={show({
+                            supplier_voucher: application.counterparty_id,
+                          })}
+                          className="font-medium text-primary hover:underline"
+                        >
+                          {application.counterparty_type_label}{' '}
+                          {application.counterparty_formatted_number}
+                        </Link>
+                      </TableCell>
+                      <TableCell className="text-right font-mono font-semibold">
+                        {formatCurrency(application.amount)}
+                      </TableCell>
+                      <TableCell>
+                        {application.user_name ?? 'Usuario del sistema'}
+                      </TableCell>
+                      <TableCell>{application.created_at_formatted}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       <Dialog open={annulDialogOpen} onOpenChange={setAnnulDialogOpen}>

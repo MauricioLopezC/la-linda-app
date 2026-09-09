@@ -32,6 +32,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { formatCurrency } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import {
+  associableInvoices as searchAssociableInvoices,
   articles as searchArticles,
   index,
 } from '@/routes/purchasing/vouchers';
@@ -40,6 +41,9 @@ import type { BreadcrumbItem } from '@/types';
 type Supplier = App.Data.Purchasing.SupplierOptionData;
 type Option = App.Data.Purchasing.SupplierVoucherOptionData;
 type Article = App.Data.Purchasing.PurchaseOrderArticleOptionData;
+type AssociableInvoice = App.Data.Purchasing.AssociableInvoiceOptionData;
+
+const CREDIT_NOTE_TYPE = 'nota_credito';
 
 type VoucherItemForm = {
   article_id: string | null;
@@ -62,6 +66,8 @@ type VoucherFormData = {
   due_date: string;
   total_amount: string;
   notes: string;
+  associated_invoice_id: string | null;
+  associated_amount: string;
   items: VoucherItemForm[];
 };
 
@@ -163,10 +169,32 @@ export default function CreateSupplierVoucher({
     due_date: '',
     total_amount: '',
     notes: '',
+    associated_invoice_id: null,
+    associated_amount: '',
     items: [emptyItem()],
   });
 
   const errors = form.errors as Record<string, string>;
+  const isCreditNote = form.data.type === CREDIT_NOTE_TYPE;
+
+  const changeType = (value: string) => {
+    form.setData((data) => ({
+      ...data,
+      type: value,
+      ...(value === CREDIT_NOTE_TYPE
+        ? {}
+        : { associated_invoice_id: null, associated_amount: '' }),
+    }));
+  };
+
+  const changeSupplier = (value: string) => {
+    form.setData((data) => ({
+      ...data,
+      supplier_id: value,
+      associated_invoice_id: null,
+      associated_amount: '',
+    }));
+  };
   const itemsTotal = useMemo(
     () =>
       form.data.items.reduce(
@@ -259,6 +287,12 @@ export default function CreateSupplierVoucher({
     form.transform((data) => ({
       ...data,
       total_amount: canonicalMoney(data.total_amount),
+      associated_invoice_id:
+        data.type === CREDIT_NOTE_TYPE ? data.associated_invoice_id : null,
+      associated_amount:
+        data.type === CREDIT_NOTE_TYPE && data.associated_invoice_id
+          ? canonicalMoney(data.associated_amount)
+          : '',
       items: data.items.map((item) => ({
         article_id: item.article_id,
         article_label: item.article_label,
@@ -306,7 +340,7 @@ export default function CreateSupplierVoucher({
               <Label htmlFor="supplier_id">Proveedor *</Label>
               <Select
                 value={form.data.supplier_id}
-                onValueChange={(value) => form.setData('supplier_id', value)}
+                onValueChange={changeSupplier}
               >
                 <SelectTrigger id="supplier_id" className="w-full">
                   <SelectValue placeholder="Seleccionar proveedor" />
@@ -324,10 +358,7 @@ export default function CreateSupplierVoucher({
 
             <div className="space-y-1.5">
               <Label htmlFor="type">Tipo *</Label>
-              <Select
-                value={form.data.type}
-                onValueChange={(value) => form.setData('type', value)}
-              >
+              <Select value={form.data.type} onValueChange={changeType}>
                 <SelectTrigger id="type" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
@@ -468,6 +499,24 @@ export default function CreateSupplierVoucher({
             </div>
           </CardContent>
         </Card>
+
+        {isCreditNote && (
+          <CreditNoteAssociation
+            supplierId={form.data.supplier_id}
+            creditNoteTotal={form.data.total_amount}
+            invoiceId={form.data.associated_invoice_id}
+            amount={form.data.associated_amount}
+            invoiceError={errors.associated_invoice_id}
+            amountError={errors.associated_amount}
+            onChange={(invoiceId, amount) =>
+              form.setData((data) => ({
+                ...data,
+                associated_invoice_id: invoiceId,
+                associated_amount: amount,
+              }))
+            }
+          />
+        )}
 
         <Card>
           <CardHeader className="flex-row items-center justify-between gap-4">
@@ -669,6 +718,191 @@ export default function CreateSupplierVoucher({
         </Card>
       </form>
     </>
+  );
+}
+
+function CreditNoteAssociation({
+  supplierId,
+  creditNoteTotal,
+  invoiceId,
+  amount,
+  invoiceError,
+  amountError,
+  onChange,
+}: {
+  supplierId: string;
+  creditNoteTotal: string;
+  invoiceId: string | null;
+  amount: string;
+  invoiceError?: string;
+  amountError?: string;
+  onChange: (invoiceId: string | null, amount: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [invoices, setInvoices] = useState<AssociableInvoice[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
+
+  useEffect(() => {
+    if (supplierId === '') {
+      return;
+    }
+
+    const abortController = new AbortController();
+    const timer = window.setTimeout(() => {
+      setIsLoading(true);
+
+      fetch(
+        searchAssociableInvoices.url({ query: { supplier_id: supplierId } }),
+        {
+          headers: { Accept: 'application/json' },
+          signal: abortController.signal,
+        },
+      )
+        .then((response) => (response.ok ? response.json() : []))
+        .then((data) => setInvoices(data as AssociableInvoice[]))
+        .catch((error) => {
+          if (!(error instanceof DOMException && error.name === 'AbortError')) {
+            setInvoices([]);
+          }
+        })
+        .finally(() => {
+          if (!abortController.signal.aborted) {
+            setIsLoading(false);
+            setHasLoaded(true);
+          }
+        });
+    }, 150);
+
+    return () => {
+      window.clearTimeout(timer);
+      abortController.abort();
+    };
+  }, [supplierId]);
+
+  const selectedInvoice = invoices.find(
+    (invoice) => String(invoice.id) === invoiceId,
+  );
+
+  const chooseInvoice = (invoice: AssociableInvoice | null) => {
+    setOpen(false);
+
+    if (invoice === null) {
+      onChange(null, '');
+
+      return;
+    }
+
+    const noteTotal = argentineMoneyValue(creditNoteTotal);
+    const invoiceOutstanding = Number(invoice.outstanding_amount) || 0;
+    const suggested =
+      noteTotal > 0
+        ? Math.min(noteTotal, invoiceOutstanding)
+        : invoiceOutstanding;
+
+    onChange(
+      String(invoice.id),
+      formatArgentineMoneyInput(suggested.toFixed(2).replace('.', ',')),
+    );
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Asociar a una factura (opcional)</CardTitle>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Si la nota de crédito responde a una factura puntual, vinculala acá y
+          se descontará de su saldo al registrarla. Si no, dejala libre para
+          compensarla en una orden de pago.
+        </p>
+      </CardHeader>
+      <CardContent className="grid gap-4 md:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label>Factura del proveedor</Label>
+          <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                role="combobox"
+                aria-expanded={open}
+                disabled={supplierId === ''}
+                className="w-full justify-between font-normal"
+              >
+                <span className="truncate">
+                  {selectedInvoice
+                    ? `${selectedInvoice.formatted_number} · saldo ${formatCurrency(selectedInvoice.outstanding_amount)}`
+                    : supplierId === ''
+                      ? 'Elegí primero un proveedor'
+                      : 'Sin factura asociada'}
+                </span>
+                <ChevronsUpDown className="size-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent
+              className="w-[var(--radix-popover-trigger-width)] p-0"
+              align="start"
+            >
+              <Command>
+                <CommandInput placeholder="Buscar factura" />
+                <CommandList>
+                  {isLoading && (
+                    <div className="flex items-center gap-2 px-3 py-4 text-sm text-muted-foreground">
+                      <Loader2 className="size-4 animate-spin" />
+                      Buscando facturas…
+                    </div>
+                  )}
+                  {!isLoading && hasLoaded && invoices.length === 0 && (
+                    <p className="px-3 py-4 text-center text-sm text-muted-foreground">
+                      El proveedor no tiene facturas con saldo pendiente.
+                    </p>
+                  )}
+                  <CommandItem
+                    value="__sin_factura__"
+                    onSelect={() => chooseInvoice(null)}
+                  >
+                    Sin factura asociada
+                  </CommandItem>
+                  {invoices.map((invoice) => (
+                    <CommandItem
+                      key={invoice.id}
+                      value={invoice.formatted_number}
+                      onSelect={() => chooseInvoice(invoice)}
+                      className="flex-col items-start gap-0.5"
+                    >
+                      <span className="text-sm font-semibold">
+                        {invoice.formatted_number}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {invoice.issue_date_formatted} · saldo{' '}
+                        {formatCurrency(invoice.outstanding_amount)}
+                      </span>
+                    </CommandItem>
+                  ))}
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+          <InputError message={invoiceError} />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="associated_amount">Importe a aplicar</Label>
+          <Input
+            id="associated_amount"
+            inputMode="decimal"
+            placeholder="0,00"
+            disabled={!invoiceId}
+            value={amount}
+            onChange={(event) =>
+              onChange(invoiceId, formatArgentineMoneyInput(event.target.value))
+            }
+            onBlur={() => onChange(invoiceId, completeArgentineMoney(amount))}
+          />
+          <InputError message={amountError} />
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

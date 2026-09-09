@@ -4,6 +4,7 @@ namespace App\Http\Requests\Purchasing;
 
 use App\Enums\Catalog\ArticleStatus;
 use App\Enums\Purchasing\SupplierVoucherLetter;
+use App\Enums\Purchasing\SupplierVoucherStatus;
 use App\Enums\Purchasing\SupplierVoucherType;
 use App\Models\Catalog\Article;
 use App\Models\Purchasing\Supplier;
@@ -47,6 +48,10 @@ class StoreSupplierVoucherRequest extends FormRequest
             'number' => $this->normalizeFiscalNumber($this->input('number'), 8),
             'total_amount' => $this->normalizeArgentineMoney($this->input('total_amount')),
             'notes' => $this->normalizeOptionalText($this->input('notes')),
+            'associated_invoice_id' => $this->input('associated_invoice_id') ?: null,
+            'associated_amount' => $this->filled('associated_amount')
+                ? $this->normalizeArgentineMoney($this->input('associated_amount'))
+                : null,
             'items' => $items,
         ]);
     }
@@ -55,6 +60,7 @@ class StoreSupplierVoucherRequest extends FormRequest
      * @return array{
      *     supplier_id: int, type: string, letter: string, point_of_sale: string, number: string,
      *     issue_date: string, due_date: ?string, total_amount: string, notes: ?string,
+     *     associated_invoice_id: ?int, associated_amount: ?string,
      *     items: array<int, array{article_id: ?int, description: string, quantity: string,
      *         unit_of_measure: string, unit_price: string, line_total: string}>
      * }
@@ -88,6 +94,8 @@ class StoreSupplierVoucherRequest extends FormRequest
 
         $dueDate = $validated['due_date'] ?? null;
         $notes = $validated['notes'] ?? null;
+        $associatedInvoiceId = $validated['associated_invoice_id'] ?? null;
+        $associatedAmount = $validated['associated_amount'] ?? null;
 
         return [
             'supplier_id' => (int) $validated['supplier_id'],
@@ -99,6 +107,8 @@ class StoreSupplierVoucherRequest extends FormRequest
             'due_date' => $dueDate === null ? null : (string) $dueDate,
             'total_amount' => (string) $validated['total_amount'],
             'notes' => $notes === null ? null : (string) $notes,
+            'associated_invoice_id' => $associatedInvoiceId === null ? null : (int) $associatedInvoiceId,
+            'associated_amount' => $associatedAmount === null ? null : (string) $associatedAmount,
             'items' => $items,
         ];
     }
@@ -138,6 +148,29 @@ class StoreSupplierVoucherRequest extends FormRequest
             'due_date' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:issue_date'],
             'total_amount' => ['required', 'numeric', 'decimal:0,2', 'min:0.01', 'max:9999999999.99'],
             'notes' => ['nullable', 'string', 'max:2000'],
+            // HU-054 "vinculación en la carga": only a credit note may reference a source invoice,
+            // of the same active supplier. The amount also has to fit the invoice's live pending
+            // balance, which needs a row lock, so that check lives in AssociateCreditNoteToInvoice.
+            'associated_invoice_id' => [
+                'prohibited_unless:type,'.SupplierVoucherType::CreditNote->value,
+                'nullable',
+                'integer',
+                Rule::exists($voucherTable, 'id')->where(
+                    fn (Builder $query): Builder => $query
+                        ->where('supplier_id', $this->input('supplier_id'))
+                        ->where('type', SupplierVoucherType::Invoice->value)
+                        ->where('status', '!=', SupplierVoucherStatus::Cancelled->value)
+                ),
+            ],
+            'associated_amount' => [
+                'prohibited_unless:type,'.SupplierVoucherType::CreditNote->value,
+                'nullable',
+                'required_with:associated_invoice_id',
+                'numeric',
+                'decimal:0,2',
+                'min:0.01',
+                'lte:total_amount',
+            ],
             'items' => ['required', 'array', 'min:1'],
             'items.*' => ['required', 'array:article_id,description,quantity,unit_of_measure,unit_price,line_total'],
             'items.*.article_id' => [
@@ -176,6 +209,8 @@ class StoreSupplierVoucherRequest extends FormRequest
             'due_date' => 'fecha de vencimiento',
             'total_amount' => 'importe total',
             'notes' => 'observaciones',
+            'associated_invoice_id' => 'factura asociada',
+            'associated_amount' => 'importe aplicado',
             'items' => 'ítems',
             'items.*.article_id' => 'artículo del ítem :position',
             'items.*.description' => 'descripción del ítem :position',
@@ -199,6 +234,11 @@ class StoreSupplierVoucherRequest extends FormRequest
             'items.required' => 'El comprobante debe contener al menos un ítem.',
             'items.min' => 'El comprobante debe contener al menos un ítem.',
             'items.*.article_id.exists' => 'El artículo del ítem :position no existe o está inactivo.',
+            'associated_invoice_id.prohibited_unless' => 'Solo una nota de crédito puede asociarse a una factura.',
+            'associated_amount.prohibited_unless' => 'Solo una nota de crédito puede aplicar un importe a una factura.',
+            'associated_invoice_id.exists' => 'La factura seleccionada no existe, está anulada o no pertenece al proveedor.',
+            'associated_amount.required_with' => 'Indicá el importe de la nota de crédito que se aplica a la factura.',
+            'associated_amount.lte' => 'El importe aplicado no puede superar el importe total de la nota de crédito.',
             '*.prohibited' => 'Este dato es derivado y no puede cargarse manualmente.',
         ];
     }
