@@ -18,6 +18,12 @@ use LogicException;
 
 class StoreSupplierVoucherRequest extends FormRequest
 {
+    /**
+     * Unit of measure stored for concept lines (no catalog article). Those rows transcribe a
+     * charge, discount or adjustment that only carries a description and an amount.
+     */
+    private const CONCEPT_UNIT_OF_MEASURE = '—';
+
     public function authorize(): bool
     {
         return true;
@@ -32,13 +38,31 @@ class StoreSupplierVoucherRequest extends FormRequest
                     return $item;
                 }
 
+                $articleId = Arr::get($item, 'article_id') ?: null;
+                $lineTotal = $this->normalizeArgentineMoney(Arr::get($item, 'line_total'));
+
+                // Concept lines (no catalog article) are transcribed with just a description and
+                // an amount. Quantity, unit and unit price are not asked for on screen: they are
+                // derived here so the stored row keeps the table's "> 0" invariants without the
+                // user inventing a fictional "1 unit @ $x".
+                if ($articleId === null) {
+                    return [
+                        'article_id' => null,
+                        'description' => $this->normalizeRequiredText(Arr::get($item, 'description')),
+                        'quantity' => '1',
+                        'unit_of_measure' => self::CONCEPT_UNIT_OF_MEASURE,
+                        'unit_price' => $lineTotal,
+                        'line_total' => $lineTotal,
+                    ];
+                }
+
                 return [
-                    'article_id' => Arr::get($item, 'article_id') ?: null,
+                    'article_id' => $articleId,
                     'description' => $this->normalizeRequiredText(Arr::get($item, 'description')),
                     'quantity' => $this->normalizeDecimal(Arr::get($item, 'quantity')),
                     'unit_of_measure' => $this->normalizeRequiredText(Arr::get($item, 'unit_of_measure')),
                     'unit_price' => $this->normalizeArgentineMoney(Arr::get($item, 'unit_price')),
-                    'line_total' => $this->normalizeArgentineMoney(Arr::get($item, 'line_total')),
+                    'line_total' => $lineTotal,
                 ];
             }, $submittedItems)
             : $submittedItems;

@@ -29,7 +29,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { formatCurrency } from '@/lib/utils';
+import { cn, formatCurrency } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import {
   associableInvoices as searchAssociableInvoices,
@@ -44,6 +44,9 @@ type Article = App.Data.Purchasing.PurchaseOrderArticleOptionData;
 type AssociableInvoice = App.Data.Purchasing.AssociableInvoiceOptionData;
 
 const CREDIT_NOTE_TYPE = 'nota_credito';
+
+/** Unit stored for concept lines (no catalog article): they only carry description + amount. */
+const CONCEPT_UNIT = '—';
 
 type VoucherItemForm = {
   article_id: string | null;
@@ -276,6 +279,11 @@ export default function CreateSupplierVoucher({
                 article && item.unit_of_measure.trim() === ''
                   ? article.unit_of_measure
                   : item.unit_of_measure,
+              // Coming from a concept line, re-enable the quantity × price autocalc.
+              line_total_touched:
+                article !== null && item.article_id === null
+                  ? false
+                  : item.line_total_touched,
             }
           : item,
       ),
@@ -293,15 +301,21 @@ export default function CreateSupplierVoucher({
         data.type === CREDIT_NOTE_TYPE && data.associated_invoice_id
           ? canonicalMoney(data.associated_amount)
           : '',
-      items: data.items.map((item) => ({
-        article_id: item.article_id,
-        article_label: item.article_label,
-        description: item.description,
-        unit_of_measure: item.unit_of_measure,
-        quantity: canonicalMoney(item.quantity),
-        unit_price: canonicalMoney(item.unit_price),
-        line_total: canonicalMoney(item.line_total),
-      })),
+      items: data.items.map((item) => {
+        const isConceptRow = item.article_id === null;
+
+        return {
+          article_id: item.article_id,
+          article_label: item.article_label,
+          description: item.description,
+          unit_of_measure: isConceptRow ? CONCEPT_UNIT : item.unit_of_measure,
+          quantity: isConceptRow ? '1' : canonicalMoney(item.quantity),
+          unit_price: isConceptRow
+            ? canonicalMoney(item.line_total)
+            : canonicalMoney(item.unit_price),
+          line_total: canonicalMoney(item.line_total),
+        };
+      }),
     }));
     form.submit(store(), {
       onSuccess: () => toast.success('Comprobante registrado correctamente.'),
@@ -523,7 +537,8 @@ export default function CreateSupplierVoucher({
             <div>
               <CardTitle>Ítems del documento</CardTitle>
               <p className="mt-1 text-sm text-muted-foreground">
-                Usá “Concepto sin artículo” para cargos, descuentos o ajustes.
+                Usá “Concepto sin artículo” para cargos, descuentos o ajustes:
+                ese tipo de renglón solo pide descripción e importe.
               </p>
             </div>
             <Button
@@ -538,146 +553,170 @@ export default function CreateSupplierVoucher({
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <InputError message={errors.items} />
-            {form.data.items.map((item, itemIndex) => (
-              <div
-                key={itemIndex}
-                className="grid gap-3 rounded-lg border bg-muted/20 p-4 md:grid-cols-2 xl:grid-cols-12"
-              >
-                <div className="space-y-1.5 md:col-span-2 xl:col-span-3">
-                  <ArticleSearch
-                    selectedLabel={item.article_label}
-                    onSelect={(article) => selectArticle(itemIndex, article)}
-                  />
-                  <InputError
-                    message={errors[`items.${itemIndex}.article_id`]}
-                  />
-                </div>
+            {form.data.items.map((item, itemIndex) => {
+              const isConcept = item.article_id === null;
 
-                <div className="space-y-1.5 md:col-span-2 xl:col-span-3">
-                  <Label>Descripción original *</Label>
-                  <Input
-                    value={item.description}
-                    maxLength={500}
-                    onChange={(event) =>
-                      updateItem(itemIndex, 'description', event.target.value)
-                    }
-                  />
-                  <InputError
-                    message={errors[`items.${itemIndex}.description`]}
-                  />
-                </div>
+              return (
+                <div
+                  key={itemIndex}
+                  className="grid gap-3 rounded-lg border bg-muted/20 p-4 md:grid-cols-2 xl:grid-cols-12"
+                >
+                  <div className="space-y-1.5 md:col-span-2 xl:col-span-3">
+                    <ArticleSearch
+                      selectedLabel={item.article_label}
+                      onSelect={(article) => selectArticle(itemIndex, article)}
+                    />
+                    <InputError
+                      message={errors[`items.${itemIndex}.article_id`]}
+                    />
+                  </div>
 
-                <div className="space-y-1.5 xl:col-span-1">
-                  <Label>Cantidad *</Label>
-                  <Input
-                    inputMode="decimal"
-                    value={item.quantity}
-                    onChange={(event) =>
-                      updateItem(
-                        itemIndex,
-                        'quantity',
-                        formatDecimalInput(event.target.value, 2),
-                      )
-                    }
-                    onBlur={() =>
-                      updateItem(
-                        itemIndex,
-                        'quantity',
-                        completeDecimalInput(item.quantity, 2),
-                      )
-                    }
-                  />
-                  <InputError message={errors[`items.${itemIndex}.quantity`]} />
-                </div>
-
-                <div className="space-y-1.5 xl:col-span-1">
-                  <Label>Unidad *</Label>
-                  <Input
-                    value={item.unit_of_measure}
-                    maxLength={50}
-                    onChange={(event) =>
-                      updateItem(
-                        itemIndex,
-                        'unit_of_measure',
-                        event.target.value,
-                      )
-                    }
-                  />
-                  <InputError
-                    message={errors[`items.${itemIndex}.unit_of_measure`]}
-                  />
-                </div>
-
-                <div className="space-y-1.5 xl:col-span-2">
-                  <Label>Precio unitario *</Label>
-                  <Input
-                    inputMode="decimal"
-                    placeholder="0,00"
-                    value={item.unit_price}
-                    onChange={(event) =>
-                      updateItem(
-                        itemIndex,
-                        'unit_price',
-                        formatArgentineMoneyInput(event.target.value),
-                      )
-                    }
-                    onBlur={() =>
-                      updateItem(
-                        itemIndex,
-                        'unit_price',
-                        completeArgentineMoney(item.unit_price),
-                      )
-                    }
-                  />
-                  <InputError
-                    message={errors[`items.${itemIndex}.unit_price`]}
-                  />
-                </div>
-
-                <div className="space-y-1.5 xl:col-span-2">
-                  <Label>Importe del ítem *</Label>
-                  <div className="flex gap-2">
+                  <div
+                    className={cn(
+                      'space-y-1.5 md:col-span-2',
+                      isConcept ? 'xl:col-span-6' : 'xl:col-span-3',
+                    )}
+                  >
+                    <Label>
+                      {isConcept ? 'Descripción *' : 'Descripción original *'}
+                    </Label>
                     <Input
-                      inputMode="decimal"
-                      placeholder="0,00"
-                      value={item.line_total}
+                      value={item.description}
+                      maxLength={500}
                       onChange={(event) =>
-                        setLineTotal(
-                          itemIndex,
-                          formatArgentineMoneyInput(event.target.value),
-                        )
-                      }
-                      onBlur={() =>
-                        setLineTotal(
-                          itemIndex,
-                          completeArgentineMoney(item.line_total),
-                        )
+                        updateItem(itemIndex, 'description', event.target.value)
                       }
                     />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      disabled={form.data.items.length === 1}
-                      onClick={() =>
-                        form.setData(
-                          'items',
-                          form.data.items.filter(
-                            (_, index) => index !== itemIndex,
-                          ),
-                        )
-                      }
-                      aria-label={`Quitar ítem ${itemIndex + 1}`}
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
+                    <InputError
+                      message={errors[`items.${itemIndex}.description`]}
+                    />
                   </div>
-                  <InputError
-                    message={errors[`items.${itemIndex}.line_total`]}
-                  />
+
+                  {!isConcept && (
+                    <div className="space-y-1.5 xl:col-span-1">
+                      <Label>Cantidad *</Label>
+                      <Input
+                        inputMode="decimal"
+                        value={item.quantity}
+                        onChange={(event) =>
+                          updateItem(
+                            itemIndex,
+                            'quantity',
+                            formatDecimalInput(event.target.value, 2),
+                          )
+                        }
+                        onBlur={() =>
+                          updateItem(
+                            itemIndex,
+                            'quantity',
+                            completeDecimalInput(item.quantity, 2),
+                          )
+                        }
+                      />
+                      <InputError
+                        message={errors[`items.${itemIndex}.quantity`]}
+                      />
+                    </div>
+                  )}
+
+                  {!isConcept && (
+                    <div className="space-y-1.5 xl:col-span-1">
+                      <Label>Unidad *</Label>
+                      <Input
+                        value={item.unit_of_measure}
+                        maxLength={50}
+                        onChange={(event) =>
+                          updateItem(
+                            itemIndex,
+                            'unit_of_measure',
+                            event.target.value,
+                          )
+                        }
+                      />
+                      <InputError
+                        message={errors[`items.${itemIndex}.unit_of_measure`]}
+                      />
+                    </div>
+                  )}
+
+                  {!isConcept && (
+                    <div className="space-y-1.5 xl:col-span-2">
+                      <Label>Precio unitario *</Label>
+                      <Input
+                        inputMode="decimal"
+                        placeholder="0,00"
+                        value={item.unit_price}
+                        onChange={(event) =>
+                          updateItem(
+                            itemIndex,
+                            'unit_price',
+                            formatArgentineMoneyInput(event.target.value),
+                          )
+                        }
+                        onBlur={() =>
+                          updateItem(
+                            itemIndex,
+                            'unit_price',
+                            completeArgentineMoney(item.unit_price),
+                          )
+                        }
+                      />
+                      <InputError
+                        message={errors[`items.${itemIndex}.unit_price`]}
+                      />
+                    </div>
+                  )}
+
+                  <div
+                    className={cn(
+                      'space-y-1.5',
+                      isConcept ? 'xl:col-span-3' : 'xl:col-span-2',
+                    )}
+                  >
+                    <Label>Importe del ítem *</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        inputMode="decimal"
+                        placeholder="0,00"
+                        value={item.line_total}
+                        onChange={(event) =>
+                          setLineTotal(
+                            itemIndex,
+                            formatArgentineMoneyInput(event.target.value),
+                          )
+                        }
+                        onBlur={() =>
+                          setLineTotal(
+                            itemIndex,
+                            completeArgentineMoney(item.line_total),
+                          )
+                        }
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        disabled={form.data.items.length === 1}
+                        onClick={() =>
+                          form.setData(
+                            'items',
+                            form.data.items.filter(
+                              (_, index) => index !== itemIndex,
+                            ),
+                          )
+                        }
+                        aria-label={`Quitar ítem ${itemIndex + 1}`}
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </div>
+                    <InputError
+                      message={errors[`items.${itemIndex}.line_total`]}
+                    />
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </CardContent>
         </Card>
 

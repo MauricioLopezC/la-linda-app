@@ -33,7 +33,9 @@ class SupplierVoucherItemFactory extends Factory
             'article_id' => null,
             'description' => 'Cargo administrativo',
             'quantity' => '1.000',
-            'unit_of_measure' => 'servicio',
+            'unit_of_measure' => '—',
+            'unit_price' => '2500.00',
+            'line_total' => '2500.00',
         ]);
     }
 }

@@ -41,9 +41,6 @@ function validSupplierVoucherData(Supplier $supplier, ?Article $article = null, 
             [
                 'article_id' => null,
                 'description' => 'Cargo financiero',
-                'quantity' => '1',
-                'unit_of_measure' => 'unidad',
-                'unit_price' => '200,00',
                 'line_total' => '200,00',
             ],
         ],
@@ -145,17 +142,24 @@ test('user registers the transcribed total and complete historical lines', funct
         ->and($voucher->items[0]->quantity)->toBe('1.050')
         ->and($voucher->items[0]->unit_price)->toBe('1000.00')
         ->and($voucher->items[0]->line_total)->toBe('1050.00')
-        ->and($voucher->items[1]->article_id)->toBeNull();
+        // Concept line: quantity, unit and unit price are derived, not transcribed.
+        ->and($voucher->items[1]->article_id)->toBeNull()
+        ->and($voucher->items[1]->description)->toBe('Cargo financiero')
+        ->and($voucher->items[1]->quantity)->toBe('1.000')
+        ->and($voucher->items[1]->unit_of_measure)->toBe('—')
+        ->and($voucher->items[1]->unit_price)->toBe('200.00')
+        ->and($voucher->items[1]->line_total)->toBe('200.00');
 });
 
-test('item quantity accepts no more than two decimal places', function () {
+test('article line quantity accepts no more than two decimal places', function () {
     $supplier = Supplier::factory()->create();
+    $article = Article::factory()->create();
 
     $this->actingAs(User::factory()->create())
         ->post(route('purchasing.vouchers.store'), validSupplierVoucherData($supplier, null, [
             'items' => [[
-                'article_id' => null,
-                'description' => 'Concepto fraccionado',
+                'article_id' => $article->id,
+                'description' => 'Artículo fraccionado',
                 'quantity' => '1,234',
                 'unit_of_measure' => 'kg',
                 'unit_price' => '1.000,00',
@@ -163,6 +167,46 @@ test('item quantity accepts no more than two decimal places', function () {
             ]],
         ]))
         ->assertSessionHasErrors(['items.0.quantity']);
+});
+
+test('a concept line only needs a description and an amount', function () {
+    $user = User::factory()->create();
+    $supplier = Supplier::factory()->create();
+
+    $this->actingAs($user)
+        ->post(route('purchasing.vouchers.store'), validSupplierVoucherData($supplier, null, [
+            'items' => [[
+                'article_id' => null,
+                'description' => 'Bonificación 10% s/factura',
+                'line_total' => '5.000,00',
+            ]],
+        ]))
+        ->assertSessionHasNoErrors();
+
+    $concept = SupplierVoucher::query()->sole()
+        ->items->firstWhere('description', 'Bonificación 10% s/factura');
+
+    expect($concept)->not->toBeNull()
+        ->and($concept->article_id)->toBeNull()
+        ->and($concept->quantity)->toBe('1.000')
+        ->and($concept->unit_of_measure)->toBe('—')
+        ->and($concept->unit_price)->toBe('5000.00')
+        ->and($concept->line_total)->toBe('5000.00');
+});
+
+test('a concept line still requires its amount but never its quantity or unit', function () {
+    $supplier = Supplier::factory()->create();
+
+    $this->actingAs(User::factory()->create())
+        ->post(route('purchasing.vouchers.store'), validSupplierVoucherData($supplier, null, [
+            'items' => [[
+                'article_id' => null,
+                'description' => 'Ajuste sin importe',
+                'line_total' => '',
+            ]],
+        ]))
+        ->assertSessionHasErrors(['items.0.line_total'])
+        ->assertSessionDoesntHaveErrors(['items.0.quantity', 'items.0.unit_of_measure']);
 });
 
 test('voucher types are born with their derived initial state', function (
@@ -205,6 +249,7 @@ test('inactive suppliers and articles are rejected', function () {
 
 test('dates fiscal numbers and positive amounts are validated', function () {
     $supplier = Supplier::factory()->create();
+    $article = Article::factory()->create();
 
     $this->actingAs(User::factory()->create())
         ->post(route('purchasing.vouchers.store'), validSupplierVoucherData($supplier, null, [
@@ -214,7 +259,7 @@ test('dates fiscal numbers and positive amounts are validated', function () {
             'due_date' => today()->subDay()->toDateString(),
             'total_amount' => '0',
             'items' => [[
-                'article_id' => null,
+                'article_id' => $article->id,
                 'description' => 'Ajuste',
                 'quantity' => '0',
                 'unit_of_measure' => 'unidad',

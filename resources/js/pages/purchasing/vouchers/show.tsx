@@ -210,32 +210,40 @@ export default function SupplierVoucherShow({ voucher }: { voucher: Voucher }) {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  voucher.items.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell className="text-center">
-                        {item.position}
-                      </TableCell>
-                      <TableCell className="font-mono text-xs">
-                        {item.article_internal_code ?? 'Concepto'}
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {item.description}
-                      </TableCell>
-                      <TableCell>{item.unit_of_measure}</TableCell>
-                      <TableCell className="text-right font-mono">
-                        {formatStockQuantity(
-                          Number(item.quantity),
-                          item.unit_of_measure,
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right font-mono">
-                        {formatCurrency(item.unit_price)}
-                      </TableCell>
-                      <TableCell className="text-right font-mono font-semibold">
-                        {formatCurrency(item.line_total)}
-                      </TableCell>
-                    </TableRow>
-                  ))
+                  voucher.items.map((item) => {
+                    const isConcept = item.article_id === null;
+
+                    return (
+                      <TableRow key={item.id}>
+                        <TableCell className="text-center">
+                          {item.position}
+                        </TableCell>
+                        <TableCell className="font-mono text-xs">
+                          {item.article_internal_code ?? 'Concepto'}
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {item.description}
+                        </TableCell>
+                        <TableCell>
+                          {isConcept ? '—' : item.unit_of_measure}
+                        </TableCell>
+                        <TableCell className="text-right font-mono">
+                          {isConcept
+                            ? '—'
+                            : formatStockQuantity(
+                                Number(item.quantity),
+                                item.unit_of_measure,
+                              )}
+                        </TableCell>
+                        <TableCell className="text-right font-mono">
+                          {isConcept ? '—' : formatCurrency(item.unit_price)}
+                        </TableCell>
+                        <TableCell className="text-right font-mono font-semibold">
+                          {formatCurrency(item.line_total)}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
