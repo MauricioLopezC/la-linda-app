@@ -29,9 +29,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { formatCurrency } from '@/lib/utils';
+import { cn, formatCurrency } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import {
+  associableInvoices as searchAssociableInvoices,
   articles as searchArticles,
   index,
 } from '@/routes/purchasing/vouchers';
@@ -40,6 +41,12 @@ import type { BreadcrumbItem } from '@/types';
 type Supplier = App.Data.Purchasing.SupplierOptionData;
 type Option = App.Data.Purchasing.SupplierVoucherOptionData;
 type Article = App.Data.Purchasing.PurchaseOrderArticleOptionData;
+type AssociableInvoice = App.Data.Purchasing.AssociableInvoiceOptionData;
+
+const CREDIT_NOTE_TYPE = 'nota_credito';
+
+/** Unit stored for concept lines (no catalog article): they only carry description + amount. */
+const CONCEPT_UNIT = '—';
 
 type VoucherItemForm = {
   article_id: string | null;
@@ -62,6 +69,8 @@ type VoucherFormData = {
   due_date: string;
   total_amount: string;
   notes: string;
+  associated_invoice_id: string | null;
+  associated_amount: string;
   items: VoucherItemForm[];
 };
 
@@ -163,10 +172,32 @@ export default function CreateSupplierVoucher({
     due_date: '',
     total_amount: '',
     notes: '',
+    associated_invoice_id: null,
+    associated_amount: '',
     items: [emptyItem()],
   });
 
   const errors = form.errors as Record<string, string>;
+  const isCreditNote = form.data.type === CREDIT_NOTE_TYPE;
+
+  const changeType = (value: string) => {
+    form.setData((data) => ({
+      ...data,
+      type: value,
+      ...(value === CREDIT_NOTE_TYPE
+        ? {}
+        : { associated_invoice_id: null, associated_amount: '' }),
+    }));
+  };
+
+  const changeSupplier = (value: string) => {
+    form.setData((data) => ({
+      ...data,
+      supplier_id: value,
+      associated_invoice_id: null,
+      associated_amount: '',
+    }));
+  };
   const itemsTotal = useMemo(
     () =>
       form.data.items.reduce(
@@ -248,6 +279,11 @@ export default function CreateSupplierVoucher({
                 article && item.unit_of_measure.trim() === ''
                   ? article.unit_of_measure
                   : item.unit_of_measure,
+              // Coming from a concept line, re-enable the quantity × price autocalc.
+              line_total_touched:
+                article !== null && item.article_id === null
+                  ? false
+                  : item.line_total_touched,
             }
           : item,
       ),
@@ -259,15 +295,27 @@ export default function CreateSupplierVoucher({
     form.transform((data) => ({
       ...data,
       total_amount: canonicalMoney(data.total_amount),
-      items: data.items.map((item) => ({
-        article_id: item.article_id,
-        article_label: item.article_label,
-        description: item.description,
-        unit_of_measure: item.unit_of_measure,
-        quantity: canonicalMoney(item.quantity),
-        unit_price: canonicalMoney(item.unit_price),
-        line_total: canonicalMoney(item.line_total),
-      })),
+      associated_invoice_id:
+        data.type === CREDIT_NOTE_TYPE ? data.associated_invoice_id : null,
+      associated_amount:
+        data.type === CREDIT_NOTE_TYPE && data.associated_invoice_id
+          ? canonicalMoney(data.associated_amount)
+          : '',
+      items: data.items.map((item) => {
+        const isConceptRow = item.article_id === null;
+
+        return {
+          article_id: item.article_id,
+          article_label: item.article_label,
+          description: item.description,
+          unit_of_measure: isConceptRow ? CONCEPT_UNIT : item.unit_of_measure,
+          quantity: isConceptRow ? '1' : canonicalMoney(item.quantity),
+          unit_price: isConceptRow
+            ? canonicalMoney(item.line_total)
+            : canonicalMoney(item.unit_price),
+          line_total: canonicalMoney(item.line_total),
+        };
+      }),
     }));
     form.submit(store(), {
       onSuccess: () => toast.success('Comprobante registrado correctamente.'),
@@ -306,7 +354,7 @@ export default function CreateSupplierVoucher({
               <Label htmlFor="supplier_id">Proveedor *</Label>
               <Select
                 value={form.data.supplier_id}
-                onValueChange={(value) => form.setData('supplier_id', value)}
+                onValueChange={changeSupplier}
               >
                 <SelectTrigger id="supplier_id" className="w-full">
                   <SelectValue placeholder="Seleccionar proveedor" />
@@ -324,10 +372,7 @@ export default function CreateSupplierVoucher({
 
             <div className="space-y-1.5">
               <Label htmlFor="type">Tipo *</Label>
-              <Select
-                value={form.data.type}
-                onValueChange={(value) => form.setData('type', value)}
-              >
+              <Select value={form.data.type} onValueChange={changeType}>
                 <SelectTrigger id="type" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
@@ -469,12 +514,31 @@ export default function CreateSupplierVoucher({
           </CardContent>
         </Card>
 
+        {isCreditNote && (
+          <CreditNoteAssociation
+            supplierId={form.data.supplier_id}
+            creditNoteTotal={form.data.total_amount}
+            invoiceId={form.data.associated_invoice_id}
+            amount={form.data.associated_amount}
+            invoiceError={errors.associated_invoice_id}
+            amountError={errors.associated_amount}
+            onChange={(invoiceId, amount) =>
+              form.setData((data) => ({
+                ...data,
+                associated_invoice_id: invoiceId,
+                associated_amount: amount,
+              }))
+            }
+          />
+        )}
+
         <Card>
           <CardHeader className="flex-row items-center justify-between gap-4">
             <div>
               <CardTitle>Ítems del documento</CardTitle>
               <p className="mt-1 text-sm text-muted-foreground">
-                Usá “Concepto sin artículo” para cargos, descuentos o ajustes.
+                Usá “Concepto sin artículo” para cargos, descuentos o ajustes:
+                ese tipo de renglón solo pide descripción e importe.
               </p>
             </div>
             <Button
@@ -489,146 +553,170 @@ export default function CreateSupplierVoucher({
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <InputError message={errors.items} />
-            {form.data.items.map((item, itemIndex) => (
-              <div
-                key={itemIndex}
-                className="grid gap-3 rounded-lg border bg-muted/20 p-4 md:grid-cols-2 xl:grid-cols-12"
-              >
-                <div className="space-y-1.5 md:col-span-2 xl:col-span-3">
-                  <ArticleSearch
-                    selectedLabel={item.article_label}
-                    onSelect={(article) => selectArticle(itemIndex, article)}
-                  />
-                  <InputError
-                    message={errors[`items.${itemIndex}.article_id`]}
-                  />
-                </div>
+            {form.data.items.map((item, itemIndex) => {
+              const isConcept = item.article_id === null;
 
-                <div className="space-y-1.5 md:col-span-2 xl:col-span-3">
-                  <Label>Descripción original *</Label>
-                  <Input
-                    value={item.description}
-                    maxLength={500}
-                    onChange={(event) =>
-                      updateItem(itemIndex, 'description', event.target.value)
-                    }
-                  />
-                  <InputError
-                    message={errors[`items.${itemIndex}.description`]}
-                  />
-                </div>
+              return (
+                <div
+                  key={itemIndex}
+                  className="grid gap-3 rounded-lg border bg-muted/20 p-4 md:grid-cols-2 xl:grid-cols-12"
+                >
+                  <div className="space-y-1.5 md:col-span-2 xl:col-span-3">
+                    <ArticleSearch
+                      selectedLabel={item.article_label}
+                      onSelect={(article) => selectArticle(itemIndex, article)}
+                    />
+                    <InputError
+                      message={errors[`items.${itemIndex}.article_id`]}
+                    />
+                  </div>
 
-                <div className="space-y-1.5 xl:col-span-1">
-                  <Label>Cantidad *</Label>
-                  <Input
-                    inputMode="decimal"
-                    value={item.quantity}
-                    onChange={(event) =>
-                      updateItem(
-                        itemIndex,
-                        'quantity',
-                        formatDecimalInput(event.target.value, 2),
-                      )
-                    }
-                    onBlur={() =>
-                      updateItem(
-                        itemIndex,
-                        'quantity',
-                        completeDecimalInput(item.quantity, 2),
-                      )
-                    }
-                  />
-                  <InputError message={errors[`items.${itemIndex}.quantity`]} />
-                </div>
-
-                <div className="space-y-1.5 xl:col-span-1">
-                  <Label>Unidad *</Label>
-                  <Input
-                    value={item.unit_of_measure}
-                    maxLength={50}
-                    onChange={(event) =>
-                      updateItem(
-                        itemIndex,
-                        'unit_of_measure',
-                        event.target.value,
-                      )
-                    }
-                  />
-                  <InputError
-                    message={errors[`items.${itemIndex}.unit_of_measure`]}
-                  />
-                </div>
-
-                <div className="space-y-1.5 xl:col-span-2">
-                  <Label>Precio unitario *</Label>
-                  <Input
-                    inputMode="decimal"
-                    placeholder="0,00"
-                    value={item.unit_price}
-                    onChange={(event) =>
-                      updateItem(
-                        itemIndex,
-                        'unit_price',
-                        formatArgentineMoneyInput(event.target.value),
-                      )
-                    }
-                    onBlur={() =>
-                      updateItem(
-                        itemIndex,
-                        'unit_price',
-                        completeArgentineMoney(item.unit_price),
-                      )
-                    }
-                  />
-                  <InputError
-                    message={errors[`items.${itemIndex}.unit_price`]}
-                  />
-                </div>
-
-                <div className="space-y-1.5 xl:col-span-2">
-                  <Label>Importe del ítem *</Label>
-                  <div className="flex gap-2">
+                  <div
+                    className={cn(
+                      'space-y-1.5 md:col-span-2',
+                      isConcept ? 'xl:col-span-6' : 'xl:col-span-3',
+                    )}
+                  >
+                    <Label>
+                      {isConcept ? 'Descripción *' : 'Descripción original *'}
+                    </Label>
                     <Input
-                      inputMode="decimal"
-                      placeholder="0,00"
-                      value={item.line_total}
+                      value={item.description}
+                      maxLength={500}
                       onChange={(event) =>
-                        setLineTotal(
-                          itemIndex,
-                          formatArgentineMoneyInput(event.target.value),
-                        )
-                      }
-                      onBlur={() =>
-                        setLineTotal(
-                          itemIndex,
-                          completeArgentineMoney(item.line_total),
-                        )
+                        updateItem(itemIndex, 'description', event.target.value)
                       }
                     />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      disabled={form.data.items.length === 1}
-                      onClick={() =>
-                        form.setData(
-                          'items',
-                          form.data.items.filter(
-                            (_, index) => index !== itemIndex,
-                          ),
-                        )
-                      }
-                      aria-label={`Quitar ítem ${itemIndex + 1}`}
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
+                    <InputError
+                      message={errors[`items.${itemIndex}.description`]}
+                    />
                   </div>
-                  <InputError
-                    message={errors[`items.${itemIndex}.line_total`]}
-                  />
+
+                  {!isConcept && (
+                    <div className="space-y-1.5 xl:col-span-1">
+                      <Label>Cantidad *</Label>
+                      <Input
+                        inputMode="decimal"
+                        value={item.quantity}
+                        onChange={(event) =>
+                          updateItem(
+                            itemIndex,
+                            'quantity',
+                            formatDecimalInput(event.target.value, 2),
+                          )
+                        }
+                        onBlur={() =>
+                          updateItem(
+                            itemIndex,
+                            'quantity',
+                            completeDecimalInput(item.quantity, 2),
+                          )
+                        }
+                      />
+                      <InputError
+                        message={errors[`items.${itemIndex}.quantity`]}
+                      />
+                    </div>
+                  )}
+
+                  {!isConcept && (
+                    <div className="space-y-1.5 xl:col-span-1">
+                      <Label>Unidad *</Label>
+                      <Input
+                        value={item.unit_of_measure}
+                        maxLength={50}
+                        onChange={(event) =>
+                          updateItem(
+                            itemIndex,
+                            'unit_of_measure',
+                            event.target.value,
+                          )
+                        }
+                      />
+                      <InputError
+                        message={errors[`items.${itemIndex}.unit_of_measure`]}
+                      />
+                    </div>
+                  )}
+
+                  {!isConcept && (
+                    <div className="space-y-1.5 xl:col-span-2">
+                      <Label>Precio unitario *</Label>
+                      <Input
+                        inputMode="decimal"
+                        placeholder="0,00"
+                        value={item.unit_price}
+                        onChange={(event) =>
+                          updateItem(
+                            itemIndex,
+                            'unit_price',
+                            formatArgentineMoneyInput(event.target.value),
+                          )
+                        }
+                        onBlur={() =>
+                          updateItem(
+                            itemIndex,
+                            'unit_price',
+                            completeArgentineMoney(item.unit_price),
+                          )
+                        }
+                      />
+                      <InputError
+                        message={errors[`items.${itemIndex}.unit_price`]}
+                      />
+                    </div>
+                  )}
+
+                  <div
+                    className={cn(
+                      'space-y-1.5',
+                      isConcept ? 'xl:col-span-3' : 'xl:col-span-2',
+                    )}
+                  >
+                    <Label>Importe del ítem *</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        inputMode="decimal"
+                        placeholder="0,00"
+                        value={item.line_total}
+                        onChange={(event) =>
+                          setLineTotal(
+                            itemIndex,
+                            formatArgentineMoneyInput(event.target.value),
+                          )
+                        }
+                        onBlur={() =>
+                          setLineTotal(
+                            itemIndex,
+                            completeArgentineMoney(item.line_total),
+                          )
+                        }
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        disabled={form.data.items.length === 1}
+                        onClick={() =>
+                          form.setData(
+                            'items',
+                            form.data.items.filter(
+                              (_, index) => index !== itemIndex,
+                            ),
+                          )
+                        }
+                        aria-label={`Quitar ítem ${itemIndex + 1}`}
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </div>
+                    <InputError
+                      message={errors[`items.${itemIndex}.line_total`]}
+                    />
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </CardContent>
         </Card>
 
@@ -669,6 +757,191 @@ export default function CreateSupplierVoucher({
         </Card>
       </form>
     </>
+  );
+}
+
+function CreditNoteAssociation({
+  supplierId,
+  creditNoteTotal,
+  invoiceId,
+  amount,
+  invoiceError,
+  amountError,
+  onChange,
+}: {
+  supplierId: string;
+  creditNoteTotal: string;
+  invoiceId: string | null;
+  amount: string;
+  invoiceError?: string;
+  amountError?: string;
+  onChange: (invoiceId: string | null, amount: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [invoices, setInvoices] = useState<AssociableInvoice[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
+
+  useEffect(() => {
+    if (supplierId === '') {
+      return;
+    }
+
+    const abortController = new AbortController();
+    const timer = window.setTimeout(() => {
+      setIsLoading(true);
+
+      fetch(
+        searchAssociableInvoices.url({ query: { supplier_id: supplierId } }),
+        {
+          headers: { Accept: 'application/json' },
+          signal: abortController.signal,
+        },
+      )
+        .then((response) => (response.ok ? response.json() : []))
+        .then((data) => setInvoices(data as AssociableInvoice[]))
+        .catch((error) => {
+          if (!(error instanceof DOMException && error.name === 'AbortError')) {
+            setInvoices([]);
+          }
+        })
+        .finally(() => {
+          if (!abortController.signal.aborted) {
+            setIsLoading(false);
+            setHasLoaded(true);
+          }
+        });
+    }, 150);
+
+    return () => {
+      window.clearTimeout(timer);
+      abortController.abort();
+    };
+  }, [supplierId]);
+
+  const selectedInvoice = invoices.find(
+    (invoice) => String(invoice.id) === invoiceId,
+  );
+
+  const chooseInvoice = (invoice: AssociableInvoice | null) => {
+    setOpen(false);
+
+    if (invoice === null) {
+      onChange(null, '');
+
+      return;
+    }
+
+    const noteTotal = argentineMoneyValue(creditNoteTotal);
+    const invoiceOutstanding = Number(invoice.outstanding_amount) || 0;
+    const suggested =
+      noteTotal > 0
+        ? Math.min(noteTotal, invoiceOutstanding)
+        : invoiceOutstanding;
+
+    onChange(
+      String(invoice.id),
+      formatArgentineMoneyInput(suggested.toFixed(2).replace('.', ',')),
+    );
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Asociar a una factura (opcional)</CardTitle>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Si la nota de crédito responde a una factura puntual, vinculala acá y
+          se descontará de su saldo al registrarla. Si no, dejala libre para
+          compensarla en una orden de pago.
+        </p>
+      </CardHeader>
+      <CardContent className="grid gap-4 md:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label>Factura del proveedor</Label>
+          <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                role="combobox"
+                aria-expanded={open}
+                disabled={supplierId === ''}
+                className="w-full justify-between font-normal"
+              >
+                <span className="truncate">
+                  {selectedInvoice
+                    ? `${selectedInvoice.formatted_number} · saldo ${formatCurrency(selectedInvoice.outstanding_amount)}`
+                    : supplierId === ''
+                      ? 'Elegí primero un proveedor'
+                      : 'Sin factura asociada'}
+                </span>
+                <ChevronsUpDown className="size-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent
+              className="w-[var(--radix-popover-trigger-width)] p-0"
+              align="start"
+            >
+              <Command>
+                <CommandInput placeholder="Buscar factura" />
+                <CommandList>
+                  {isLoading && (
+                    <div className="flex items-center gap-2 px-3 py-4 text-sm text-muted-foreground">
+                      <Loader2 className="size-4 animate-spin" />
+                      Buscando facturas…
+                    </div>
+                  )}
+                  {!isLoading && hasLoaded && invoices.length === 0 && (
+                    <p className="px-3 py-4 text-center text-sm text-muted-foreground">
+                      El proveedor no tiene facturas con saldo pendiente.
+                    </p>
+                  )}
+                  <CommandItem
+                    value="__sin_factura__"
+                    onSelect={() => chooseInvoice(null)}
+                  >
+                    Sin factura asociada
+                  </CommandItem>
+                  {invoices.map((invoice) => (
+                    <CommandItem
+                      key={invoice.id}
+                      value={invoice.formatted_number}
+                      onSelect={() => chooseInvoice(invoice)}
+                      className="flex-col items-start gap-0.5"
+                    >
+                      <span className="text-sm font-semibold">
+                        {invoice.formatted_number}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {invoice.issue_date_formatted} · saldo{' '}
+                        {formatCurrency(invoice.outstanding_amount)}
+                      </span>
+                    </CommandItem>
+                  ))}
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+          <InputError message={invoiceError} />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="associated_amount">Importe a aplicar</Label>
+          <Input
+            id="associated_amount"
+            inputMode="decimal"
+            placeholder="0,00"
+            disabled={!invoiceId}
+            value={amount}
+            onChange={(event) =>
+              onChange(invoiceId, formatArgentineMoneyInput(event.target.value))
+            }
+            onBlur={() => onChange(invoiceId, completeArgentineMoney(amount))}
+          />
+          <InputError message={amountError} />
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
