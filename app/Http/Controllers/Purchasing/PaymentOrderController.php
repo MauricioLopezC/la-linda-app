@@ -70,7 +70,8 @@ class PaymentOrderController extends Controller
         $orderData = $action->handle($data, auth()->id() !== null ? (int) auth()->id() : null);
 
         return to_route('purchasing.payment-orders.create')
-            ->with('success', "Orden de pago {$orderData->order_number} emitida correctamente.");
+            ->with('success', "Orden de pago {$orderData->order_number} emitida correctamente.")
+            ->with('issuedOrder', $orderData);
     }
 
     /**
