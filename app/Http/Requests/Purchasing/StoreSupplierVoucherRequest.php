@@ -2,14 +2,18 @@
 
 namespace App\Http\Requests\Purchasing;
 
+use App\Enums\Catalog\ArticleStatus;
 use App\Enums\Purchasing\SupplierVoucherLetter;
 use App\Enums\Purchasing\SupplierVoucherType;
+use App\Models\Catalog\Article;
 use App\Models\Purchasing\Supplier;
 use App\Models\Purchasing\SupplierVoucher;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use LogicException;
 
 class StoreSupplierVoucherRequest extends FormRequest
 {
@@ -20,22 +24,91 @@ class StoreSupplierVoucherRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        $submittedItems = $this->input('items', []);
+        $items = is_array($submittedItems)
+            ? array_map(function (mixed $item): mixed {
+                if (! is_array($item)) {
+                    return $item;
+                }
+
+                return [
+                    'article_id' => Arr::get($item, 'article_id') ?: null,
+                    'description' => $this->normalizeRequiredText(Arr::get($item, 'description')),
+                    'quantity' => $this->normalizeDecimal(Arr::get($item, 'quantity')),
+                    'unit_of_measure' => $this->normalizeRequiredText(Arr::get($item, 'unit_of_measure')),
+                    'unit_price' => $this->normalizeArgentineMoney(Arr::get($item, 'unit_price')),
+                    'line_total' => $this->normalizeArgentineMoney(Arr::get($item, 'line_total')),
+                ];
+            }, $submittedItems)
+            : $submittedItems;
+
         $this->merge([
             'point_of_sale' => $this->normalizeFiscalNumber($this->input('point_of_sale'), 4),
             'number' => $this->normalizeFiscalNumber($this->input('number'), 8),
-            'net_amount' => $this->normalizeOptionalMoney($this->input('net_amount')),
-            'other_taxes_amount' => $this->normalizeOptionalMoney($this->input('other_taxes_amount')),
+            'total_amount' => $this->normalizeArgentineMoney($this->input('total_amount')),
             'notes' => $this->normalizeOptionalText($this->input('notes')),
+            'items' => $items,
         ]);
     }
 
     /**
-     * @return array<string, array<int, mixed>>
+     * @return array{
+     *     supplier_id: int, type: string, letter: string, point_of_sale: string, number: string,
+     *     issue_date: string, due_date: ?string, total_amount: string, notes: ?string,
+     *     items: array<int, array{article_id: ?int, description: string, quantity: string,
+     *         unit_of_measure: string, unit_price: string, line_total: string}>
+     * }
      */
+    public function voucherData(): array
+    {
+        $validated = $this->validated();
+        $validatedItems = $validated['items'] ?? [];
+
+        if (! is_array($validatedItems)) {
+            throw new LogicException('Los ítems validados deben ser un arreglo.');
+        }
+
+        $items = [];
+
+        foreach ($validatedItems as $item) {
+            if (! is_array($item)) {
+                throw new LogicException('Cada ítem validado debe ser un arreglo.');
+            }
+
+            $articleId = $item['article_id'] ?? null;
+            $items[] = [
+                'article_id' => $articleId === null ? null : (int) $articleId,
+                'description' => (string) $item['description'],
+                'quantity' => (string) $item['quantity'],
+                'unit_of_measure' => (string) $item['unit_of_measure'],
+                'unit_price' => (string) $item['unit_price'],
+                'line_total' => (string) $item['line_total'],
+            ];
+        }
+
+        $dueDate = $validated['due_date'] ?? null;
+        $notes = $validated['notes'] ?? null;
+
+        return [
+            'supplier_id' => (int) $validated['supplier_id'],
+            'type' => (string) $validated['type'],
+            'letter' => (string) $validated['letter'],
+            'point_of_sale' => (string) $validated['point_of_sale'],
+            'number' => (string) $validated['number'],
+            'issue_date' => (string) $validated['issue_date'],
+            'due_date' => $dueDate === null ? null : (string) $dueDate,
+            'total_amount' => (string) $validated['total_amount'],
+            'notes' => $notes === null ? null : (string) $notes,
+            'items' => $items,
+        ];
+    }
+
+    /** @return array<string, array<int, mixed>> */
     public function rules(): array
     {
         $supplierTable = (new Supplier)->getTable();
         $voucherTable = (new SupplierVoucher)->getTable();
+        $articleTable = (new Article)->getTable();
 
         return [
             'supplier_id' => [
@@ -63,13 +136,30 @@ class StoreSupplierVoucherRequest extends FormRequest
             ],
             'issue_date' => ['required', 'date_format:Y-m-d', 'before_or_equal:today'],
             'due_date' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:issue_date'],
-            'net_amount' => ['required', 'numeric', 'decimal:0,2', 'min:0', 'max:9999999999.99'],
-            'other_taxes_amount' => ['required', 'numeric', 'decimal:0,2', 'min:0', 'max:9999999999.99'],
+            'total_amount' => ['required', 'numeric', 'decimal:0,2', 'min:0.01', 'max:9999999999.99'],
             'notes' => ['nullable', 'string', 'max:2000'],
+            'items' => ['required', 'array', 'min:1'],
+            'items.*' => ['required', 'array:article_id,description,quantity,unit_of_measure,unit_price,line_total'],
+            'items.*.article_id' => [
+                'nullable',
+                'integer',
+                Rule::exists($articleTable, 'id')->where(
+                    fn (Builder $query): Builder => $query->where('status', ArticleStatus::Active->value)
+                ),
+            ],
+            'items.*.description' => ['required', 'string', 'max:500'],
+            'items.*.quantity' => ['required', 'numeric', 'decimal:0,2', 'min:0.01', 'max:999999999.99'],
+            'items.*.unit_of_measure' => ['required', 'string', 'max:50'],
+            'items.*.unit_price' => ['required', 'numeric', 'decimal:0,2', 'min:0.01', 'max:9999999999.99'],
+            'items.*.line_total' => ['required', 'numeric', 'decimal:0,2', 'min:0.01', 'max:9999999999.99'],
+            'net_amount' => ['prohibited'],
             'vat_amount' => ['prohibited'],
-            'total_amount' => ['prohibited'],
+            'other_taxes_amount' => ['prohibited'],
             'status' => ['prohibited'],
-            'pending_balance' => ['prohibited'],
+            'outstanding_amount' => ['prohibited'],
+            'annulled_at' => ['prohibited'],
+            'annulled_by' => ['prohibited'],
+            'annulment_reason' => ['prohibited'],
         ];
     }
 
@@ -84,11 +174,15 @@ class StoreSupplierVoucherRequest extends FormRequest
             'number' => 'número de comprobante',
             'issue_date' => 'fecha de emisión',
             'due_date' => 'fecha de vencimiento',
-            'net_amount' => 'importe neto gravado',
-            'vat_amount' => 'IVA',
-            'other_taxes_amount' => 'otros tributos',
             'total_amount' => 'importe total',
             'notes' => 'observaciones',
+            'items' => 'ítems',
+            'items.*.article_id' => 'artículo del ítem :position',
+            'items.*.description' => 'descripción del ítem :position',
+            'items.*.quantity' => 'cantidad del ítem :position',
+            'items.*.unit_of_measure' => 'unidad del ítem :position',
+            'items.*.unit_price' => 'precio unitario del ítem :position',
+            'items.*.line_total' => 'importe del ítem :position',
         ];
     }
 
@@ -102,11 +196,10 @@ class StoreSupplierVoucherRequest extends FormRequest
             'number.unique' => 'Ya existe un comprobante del proveedor con el mismo tipo, letra, punto de venta y número.',
             'issue_date.before_or_equal' => 'La fecha de emisión no puede ser posterior a la fecha actual.',
             'due_date.after_or_equal' => 'La fecha de vencimiento no puede ser anterior a la fecha de emisión.',
-            '*.decimal' => 'Los importes admiten como máximo dos decimales.',
-            'vat_amount.prohibited' => 'El IVA se calcula automáticamente y no puede cargarse manualmente.',
-            'total_amount.prohibited' => 'El importe total se calcula automáticamente y no puede cargarse manualmente.',
-            'status.prohibited' => 'El estado se calcula automáticamente y no puede cargarse manualmente.',
-            'pending_balance.prohibited' => 'El saldo pendiente se calcula automáticamente y no puede cargarse manualmente.',
+            'items.required' => 'El comprobante debe contener al menos un ítem.',
+            'items.min' => 'El comprobante debe contener al menos un ítem.',
+            'items.*.article_id.exists' => 'El artículo del ítem :position no existe o está inactivo.',
+            '*.prohibited' => 'Este dato es derivado y no puede cargarse manualmente.',
         ];
     }
 
@@ -125,22 +218,31 @@ class StoreSupplierVoucherRequest extends FormRequest
         return Str::padLeft($number, $length, '0');
     }
 
-    private function normalizeOptionalMoney(mixed $value): mixed
-    {
-        if ($value === null || (is_string($value) && trim($value) === '')) {
-            return '0.00';
-        }
-
-        return $this->normalizeMoney($value);
-    }
-
-    private function normalizeMoney(mixed $value): mixed
+    private function normalizeDecimal(mixed $value): mixed
     {
         if (! is_scalar($value)) {
             return $value;
         }
 
         return Str::of((string) $value)->trim()->replace(',', '.')->toString();
+    }
+
+    private function normalizeArgentineMoney(mixed $value): mixed
+    {
+        if (! is_scalar($value)) {
+            return $value;
+        }
+
+        $amount = Str::of((string) $value)->trim();
+
+        return $amount->contains(',')
+            ? $amount->replace('.', '')->replace(',', '.')->toString()
+            : $amount->toString();
+    }
+
+    private function normalizeRequiredText(mixed $value): mixed
+    {
+        return is_scalar($value) ? Str::of((string) $value)->trim()->toString() : $value;
     }
 
     private function normalizeOptionalText(mixed $value): mixed
