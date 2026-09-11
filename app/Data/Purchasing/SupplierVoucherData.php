@@ -3,6 +3,7 @@
 namespace App\Data\Purchasing;
 
 use App\Models\Purchasing\SupplierVoucher;
+use App\Models\Purchasing\VoucherApplication;
 use App\Rules\Purchasing\ValidCuit;
 use Spatie\LaravelData\Data;
 
@@ -10,6 +11,7 @@ class SupplierVoucherData extends Data
 {
     /**
      * @param  array<int, SupplierVoucherItemData>  $items
+     * @param  array<int, VoucherApplicationData>  $applications
      */
     public function __construct(
         public int $id,
@@ -40,11 +42,28 @@ class SupplierVoucherData extends Data
         public bool $can_annul,
         public bool $is_legacy_without_items,
         public array $items,
+        public array $applications,
     ) {}
 
     public static function fromModel(SupplierVoucher $voucher): self
     {
-        $voucher->loadMissing(['supplier', 'items.article', 'annulledByUser']);
+        $voucher->loadMissing([
+            'supplier',
+            'items.article',
+            'annulledByUser',
+            'applicationsMade.targetVoucher',
+            'applicationsMade.user',
+            'applicationsReceived.sourceVoucher',
+            'applicationsReceived.user',
+        ]);
+
+        $applications = $voucher->type->isCreditNote()
+            ? $voucher->applicationsMade
+                ->map(fn (VoucherApplication $application): VoucherApplicationData => VoucherApplicationData::madeByCreditNote($application))
+                ->all()
+            : $voucher->applicationsReceived
+                ->map(fn (VoucherApplication $application): VoucherApplicationData => VoucherApplicationData::receivedByInvoice($application))
+                ->all();
 
         return new self(
             id: $voucher->id,
@@ -75,6 +94,7 @@ class SupplierVoucherData extends Data
             can_annul: $voucher->canBeAnnulled(),
             is_legacy_without_items: $voucher->items->isEmpty(),
             items: SupplierVoucherItemData::collect($voucher->items)->all(),
+            applications: $applications,
         );
     }
 }

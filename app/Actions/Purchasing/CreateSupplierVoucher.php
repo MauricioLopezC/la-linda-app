@@ -17,12 +17,16 @@ class CreateSupplierVoucher
 {
     use ConvertsMoneyToCents;
 
-    public function __construct(private ResolveSupplierVoucherStatus $resolveStatus) {}
+    public function __construct(
+        private ResolveSupplierVoucherStatus $resolveStatus,
+        private AssociateCreditNoteToInvoice $associateCreditNote,
+    ) {}
 
     /**
      * @param  array{
      *     supplier_id: int, type: string, letter: string, point_of_sale: string, number: string,
      *     issue_date: string, due_date: ?string, total_amount: string, notes: ?string,
+     *     associated_invoice_id?: ?int, associated_amount?: ?string,
      *     items: array<int, array{article_id: ?int, description: string, quantity: string,
      *         unit_of_measure: string, unit_price: string, line_total: string}>
      * }  $data
@@ -67,6 +71,14 @@ class CreateSupplierVoucher
                 'items_count' => count($data['items']),
                 'user_id' => auth()->id(),
             ]);
+
+            $associatedInvoiceId = $data['associated_invoice_id'] ?? null;
+            $associatedAmount = $data['associated_amount'] ?? null;
+
+            if ($type->isCreditNote() && $associatedInvoiceId !== null && $associatedAmount !== null) {
+                $this->associateCreditNote->handle($voucher, (int) $associatedInvoiceId, (string) $associatedAmount);
+                $voucher->refresh();
+            }
 
             return $voucher->load(['supplier', 'items.article']);
         });

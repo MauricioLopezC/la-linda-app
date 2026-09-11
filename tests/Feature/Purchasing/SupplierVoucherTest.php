@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\Purchasing\AssociateCreditNoteToInvoice;
 use App\Enums\Purchasing\SupplierVoucherLetter;
 use App\Enums\Purchasing\SupplierVoucherStatus;
 use App\Enums\Purchasing\SupplierVoucherType;
@@ -40,9 +41,6 @@ function validSupplierVoucherData(Supplier $supplier, ?Article $article = null, 
             [
                 'article_id' => null,
                 'description' => 'Cargo financiero',
-                'quantity' => '1',
-                'unit_of_measure' => 'unidad',
-                'unit_price' => '200,00',
                 'line_total' => '200,00',
             ],
         ],
@@ -55,6 +53,7 @@ test('guest cannot access supplier voucher pages', function () {
     $this->get(route('purchasing.vouchers.index'))->assertRedirect(route('login'));
     $this->get(route('purchasing.vouchers.create'))->assertRedirect(route('login'));
     $this->get(route('purchasing.vouchers.articles', ['search' => 'harina']))->assertRedirect(route('login'));
+    $this->get(route('purchasing.vouchers.associable-invoices', ['supplier_id' => $voucher->supplier_id]))->assertRedirect(route('login'));
     $this->post(route('purchasing.vouchers.store'))->assertRedirect(route('login'));
     $this->get(route('purchasing.vouchers.show', $voucher))->assertRedirect(route('login'));
     $this->post(route('purchasing.vouchers.annul', $voucher))->assertRedirect(route('login'));
@@ -143,17 +142,24 @@ test('user registers the transcribed total and complete historical lines', funct
         ->and($voucher->items[0]->quantity)->toBe('1.050')
         ->and($voucher->items[0]->unit_price)->toBe('1000.00')
         ->and($voucher->items[0]->line_total)->toBe('1050.00')
-        ->and($voucher->items[1]->article_id)->toBeNull();
+        // Concept line: quantity, unit and unit price are derived, not transcribed.
+        ->and($voucher->items[1]->article_id)->toBeNull()
+        ->and($voucher->items[1]->description)->toBe('Cargo financiero')
+        ->and($voucher->items[1]->quantity)->toBe('1.000')
+        ->and($voucher->items[1]->unit_of_measure)->toBe('—')
+        ->and($voucher->items[1]->unit_price)->toBe('200.00')
+        ->and($voucher->items[1]->line_total)->toBe('200.00');
 });
 
-test('item quantity accepts no more than two decimal places', function () {
+test('article line quantity accepts no more than two decimal places', function () {
     $supplier = Supplier::factory()->create();
+    $article = Article::factory()->create();
 
     $this->actingAs(User::factory()->create())
         ->post(route('purchasing.vouchers.store'), validSupplierVoucherData($supplier, null, [
             'items' => [[
-                'article_id' => null,
-                'description' => 'Concepto fraccionado',
+                'article_id' => $article->id,
+                'description' => 'Artículo fraccionado',
                 'quantity' => '1,234',
                 'unit_of_measure' => 'kg',
                 'unit_price' => '1.000,00',
@@ -161,6 +167,46 @@ test('item quantity accepts no more than two decimal places', function () {
             ]],
         ]))
         ->assertSessionHasErrors(['items.0.quantity']);
+});
+
+test('a concept line only needs a description and an amount', function () {
+    $user = User::factory()->create();
+    $supplier = Supplier::factory()->create();
+
+    $this->actingAs($user)
+        ->post(route('purchasing.vouchers.store'), validSupplierVoucherData($supplier, null, [
+            'items' => [[
+                'article_id' => null,
+                'description' => 'Bonificación 10% s/factura',
+                'line_total' => '5.000,00',
+            ]],
+        ]))
+        ->assertSessionHasNoErrors();
+
+    $concept = SupplierVoucher::query()->sole()
+        ->items->firstWhere('description', 'Bonificación 10% s/factura');
+
+    expect($concept)->not->toBeNull()
+        ->and($concept->article_id)->toBeNull()
+        ->and($concept->quantity)->toBe('1.000')
+        ->and($concept->unit_of_measure)->toBe('—')
+        ->and($concept->unit_price)->toBe('5000.00')
+        ->and($concept->line_total)->toBe('5000.00');
+});
+
+test('a concept line still requires its amount but never its quantity or unit', function () {
+    $supplier = Supplier::factory()->create();
+
+    $this->actingAs(User::factory()->create())
+        ->post(route('purchasing.vouchers.store'), validSupplierVoucherData($supplier, null, [
+            'items' => [[
+                'article_id' => null,
+                'description' => 'Ajuste sin importe',
+                'line_total' => '',
+            ]],
+        ]))
+        ->assertSessionHasErrors(['items.0.line_total'])
+        ->assertSessionDoesntHaveErrors(['items.0.quantity', 'items.0.unit_of_measure']);
 });
 
 test('voucher types are born with their derived initial state', function (
@@ -203,6 +249,7 @@ test('inactive suppliers and articles are rejected', function () {
 
 test('dates fiscal numbers and positive amounts are validated', function () {
     $supplier = Supplier::factory()->create();
+    $article = Article::factory()->create();
 
     $this->actingAs(User::factory()->create())
         ->post(route('purchasing.vouchers.store'), validSupplierVoucherData($supplier, null, [
@@ -212,7 +259,7 @@ test('dates fiscal numbers and positive amounts are validated', function () {
             'due_date' => today()->subDay()->toDateString(),
             'total_amount' => '0',
             'items' => [[
-                'article_id' => null,
+                'article_id' => $article->id,
                 'description' => 'Ajuste',
                 'quantity' => '0',
                 'unit_of_measure' => 'unidad',
@@ -394,4 +441,171 @@ test('supplier with vouchers cannot be physically deleted', function () {
         ->assertSessionHasErrors(['supplier']);
 
     $this->assertDatabaseHas('suppliers', ['id' => $supplier->id]);
+});
+
+test('registering a credit note associated to an invoice lowers that invoice balance right away', function () {
+    $user = User::factory()->create();
+    $supplier = Supplier::factory()->create();
+    $invoice = SupplierVoucher::factory()->invoice()->create([
+        'supplier_id' => $supplier->id,
+        'total_amount' => '1000.00',
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('purchasing.vouchers.store'), validSupplierVoucherData($supplier, null, [
+            'type' => SupplierVoucherType::CreditNote->value,
+            'number' => '999',
+            'due_date' => null,
+            'total_amount' => '400,00',
+            'associated_invoice_id' => $invoice->id,
+            'associated_amount' => '400,00',
+        ]))
+        ->assertSessionHasNoErrors();
+
+    $creditNote = SupplierVoucher::query()->where('type', SupplierVoucherType::CreditNote)->sole();
+
+    expect($invoice->fresh()->pendingBalance())->toBe('600.00')
+        ->and($invoice->fresh()->status)->toBe(SupplierVoucherStatus::PartiallyPaid)
+        ->and($creditNote->status)->toBe(SupplierVoucherStatus::Applied);
+
+    $this->assertDatabaseHas('voucher_applications', [
+        'source_voucher_id' => $creditNote->id,
+        'target_voucher_id' => $invoice->id,
+        'amount' => '400.00',
+        'user_id' => $user->id,
+    ]);
+});
+
+test('a credit note left free creates no application and stays available', function () {
+    $supplier = Supplier::factory()->create();
+
+    $this->actingAs(User::factory()->create())
+        ->post(route('purchasing.vouchers.store'), validSupplierVoucherData($supplier, null, [
+            'type' => SupplierVoucherType::CreditNote->value,
+            'due_date' => null,
+        ]))
+        ->assertSessionHasNoErrors();
+
+    expect(SupplierVoucher::query()->sole()->status)->toBe(SupplierVoucherStatus::PendingApplication);
+    $this->assertDatabaseCount('voucher_applications', 0);
+});
+
+test('the associated amount cannot exceed the credit note total', function () {
+    $supplier = Supplier::factory()->create();
+    $invoice = SupplierVoucher::factory()->invoice()->create([
+        'supplier_id' => $supplier->id,
+        'total_amount' => '1000.00',
+    ]);
+
+    $this->actingAs(User::factory()->create())
+        ->post(route('purchasing.vouchers.store'), validSupplierVoucherData($supplier, null, [
+            'type' => SupplierVoucherType::CreditNote->value,
+            'due_date' => null,
+            'total_amount' => '300,00',
+            'associated_invoice_id' => $invoice->id,
+            'associated_amount' => '400,00',
+        ]))
+        ->assertSessionHasErrors(['associated_amount']);
+});
+
+test('the associated amount cannot exceed the invoice pending balance', function () {
+    $supplier = Supplier::factory()->create();
+    $invoice = SupplierVoucher::factory()->invoice()->create([
+        'supplier_id' => $supplier->id,
+        'total_amount' => '250.00',
+    ]);
+
+    $this->actingAs(User::factory()->create())
+        ->post(route('purchasing.vouchers.store'), validSupplierVoucherData($supplier, null, [
+            'type' => SupplierVoucherType::CreditNote->value,
+            'due_date' => null,
+            'total_amount' => '400,00',
+            'associated_invoice_id' => $invoice->id,
+            'associated_amount' => '400,00',
+        ]))
+        ->assertSessionHasErrors(['associated_amount']);
+
+    $this->assertDatabaseCount('voucher_applications', 0);
+});
+
+test('only a credit note may carry association fields', function () {
+    $supplier = Supplier::factory()->create();
+    $invoice = SupplierVoucher::factory()->invoice()->create(['supplier_id' => $supplier->id]);
+
+    $this->actingAs(User::factory()->create())
+        ->post(route('purchasing.vouchers.store'), validSupplierVoucherData($supplier, null, [
+            'type' => SupplierVoucherType::Invoice->value,
+            'associated_invoice_id' => $invoice->id,
+            'associated_amount' => '10,00',
+        ]))
+        ->assertSessionHasErrors(['associated_invoice_id', 'associated_amount']);
+});
+
+test('picking an invoice without an amount is rejected', function () {
+    $supplier = Supplier::factory()->create();
+    $invoice = SupplierVoucher::factory()->invoice()->create(['supplier_id' => $supplier->id]);
+
+    $this->actingAs(User::factory()->create())
+        ->post(route('purchasing.vouchers.store'), validSupplierVoucherData($supplier, null, [
+            'type' => SupplierVoucherType::CreditNote->value,
+            'due_date' => null,
+            'associated_invoice_id' => $invoice->id,
+        ]))
+        ->assertSessionHasErrors(['associated_amount']);
+});
+
+test('associable invoices are the same supplier pending invoices only', function () {
+    $user = User::factory()->create();
+    $supplier = Supplier::factory()->create();
+    $otherSupplier = Supplier::factory()->create();
+
+    $pending = SupplierVoucher::factory()->invoice()->create([
+        'supplier_id' => $supplier->id,
+        'total_amount' => '1000.00',
+    ]);
+    $paid = SupplierVoucher::factory()->invoice()->create([
+        'supplier_id' => $supplier->id,
+        'total_amount' => '500.00',
+    ]);
+    PaymentOrderItem::factory()->forInvoice($paid, '500.00')->create();
+    SupplierVoucher::factory()->creditNote()->create(['supplier_id' => $supplier->id]);
+    SupplierVoucher::factory()->invoice()->create(['supplier_id' => $otherSupplier->id]);
+
+    $this->actingAs($user)
+        ->getJson(route('purchasing.vouchers.associable-invoices', ['supplier_id' => $supplier->id]))
+        ->assertOk()
+        ->assertJsonCount(1)
+        ->assertJsonPath('0.id', $pending->id)
+        ->assertJsonPath('0.outstanding_amount', '1000.00');
+});
+
+test('show exposes the applications on both the credit note and the invoice', function () {
+    $user = User::factory()->create();
+    $supplier = Supplier::factory()->create();
+    $invoice = SupplierVoucher::factory()->invoice()->create([
+        'supplier_id' => $supplier->id,
+        'total_amount' => '1000.00',
+    ]);
+    $creditNote = SupplierVoucher::factory()->creditNote()->create([
+        'supplier_id' => $supplier->id,
+        'total_amount' => '400.00',
+    ]);
+    app(AssociateCreditNoteToInvoice::class)
+        ->handle($creditNote, $invoice->id, '400.00', $user->id);
+
+    $this->actingAs($user)
+        ->get(route('purchasing.vouchers.show', $creditNote))
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('voucher.applications', 1)
+            ->where('voucher.applications.0.direction', 'made')
+            ->where('voucher.applications.0.counterparty_id', $invoice->id)
+            ->where('voucher.applications.0.amount', '400.00')
+            ->where('voucher.applications.0.user_name', $user->name));
+
+    $this->actingAs($user)
+        ->get(route('purchasing.vouchers.show', $invoice))
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('voucher.applications', 1)
+            ->where('voucher.applications.0.direction', 'received')
+            ->where('voucher.applications.0.counterparty_id', $creditNote->id));
 });

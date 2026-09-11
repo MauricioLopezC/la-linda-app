@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Purchasing;
 
 use App\Actions\Purchasing\AnnulSupplierVoucher;
 use App\Actions\Purchasing\CreateSupplierVoucher;
+use App\Data\Purchasing\AssociableInvoiceOptionData;
 use App\Data\Purchasing\PurchaseOrderArticleOptionData;
 use App\Data\Purchasing\SupplierOptionData;
 use App\Data\Purchasing\SupplierVoucherData;
@@ -14,6 +15,7 @@ use App\Enums\Purchasing\SupplierVoucherStatus;
 use App\Enums\Purchasing\SupplierVoucherType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Purchasing\AnnulSupplierVoucherRequest;
+use App\Http\Requests\Purchasing\AssociableInvoicesRequest;
 use App\Http\Requests\Purchasing\ListSupplierVouchersRequest;
 use App\Http\Requests\Purchasing\SearchSupplierVoucherArticlesRequest;
 use App\Http\Requests\Purchasing\StoreSupplierVoucherRequest;
@@ -112,6 +114,27 @@ class SupplierVoucherController extends Controller
             ->map(fn (Article $article): array => PurchaseOrderArticleOptionData::fromModel($article)->toArray());
 
         return response()->json($articles);
+    }
+
+    /**
+     * Invoices a credit note can still be imputed to during its registration (HU-054):
+     * same supplier, not annulled, with a pending balance greater than zero.
+     */
+    public function associableInvoices(AssociableInvoicesRequest $request): JsonResponse
+    {
+        $invoices = SupplierVoucher::query()
+            ->withBalanceAggregates()
+            ->where('supplier_id', $request->validated('supplier_id'))
+            ->where('type', SupplierVoucherType::Invoice)
+            ->where('status', '!=', SupplierVoucherStatus::Cancelled->value)
+            ->orderByDesc('issue_date')
+            ->orderByDesc('id')
+            ->get()
+            ->filter(fn (SupplierVoucher $invoice): bool => (float) $invoice->pendingBalance() > 0)
+            ->map(fn (SupplierVoucher $invoice): array => AssociableInvoiceOptionData::fromModel($invoice)->toArray())
+            ->values();
+
+        return response()->json($invoices);
     }
 
     public function store(StoreSupplierVoucherRequest $request, CreateSupplierVoucher $action): RedirectResponse
