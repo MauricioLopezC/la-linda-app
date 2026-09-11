@@ -18,10 +18,7 @@ declare module '@inertiajs/core' {
       name: string;
       auth: Auth;
       sidebarOpen: boolean;
-      flash: {
-        success?: string;
-        issuedOrder?: any;
-      };
+      flash: Record<string, unknown>;
       [key: string]: unknown;
     };
   }
