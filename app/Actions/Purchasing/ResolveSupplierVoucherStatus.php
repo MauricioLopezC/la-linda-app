@@ -23,7 +23,7 @@ class ResolveSupplierVoucherStatus
             throw new InvalidArgumentException('El importe total debe ser mayor a cero.');
         }
 
-        if ($type->isInvoice()) {
+        if ($type->createsPayableBalance()) {
             return match (true) {
                 $pendingCents <= 0 => SupplierVoucherStatus::Paid,
                 $pendingCents < $totalCents => SupplierVoucherStatus::PartiallyPaid,

@@ -18,7 +18,7 @@ enum SupplierVoucherStatus: string
             self::Pending => 'Pendiente',
             self::PartiallyPaid => 'Pagada parcialmente',
             self::Paid => 'Pagada',
-            self::PendingApplication => 'Pendiente de imputar',
+            self::PendingApplication => 'Disponible',
             self::PartiallyApplied => 'Imputada parcialmente',
             self::Applied => 'Imputada',
             self::Cancelled => 'Anulada',

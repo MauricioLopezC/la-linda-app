@@ -53,8 +53,8 @@ class DatabaseSeeder extends Seeder
             VatRateSeeder::class,
             PaymentMethodSeeder::class,
             SupplierSeeder::class,
-            SupplierVoucherSeeder::class,
             ArticleSeeder::class,
+            SupplierVoucherSeeder::class,
             PurchaseOrderSeeder::class,
             WarehouseStockSeeder::class,
         ]);

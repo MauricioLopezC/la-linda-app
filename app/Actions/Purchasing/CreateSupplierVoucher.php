@@ -3,8 +3,10 @@
 namespace App\Actions\Purchasing;
 
 use App\Concerns\ConvertsMoneyToCents;
+use App\Enums\Catalog\ArticleStatus;
 use App\Enums\Purchasing\SupplierVoucherLetter;
 use App\Enums\Purchasing\SupplierVoucherType;
+use App\Models\Catalog\Article;
 use App\Models\Purchasing\Supplier;
 use App\Models\Purchasing\SupplierVoucher;
 use Illuminate\Support\Facades\DB;
@@ -19,22 +21,16 @@ class CreateSupplierVoucher
 
     /**
      * @param  array{
-     *     supplier_id: int,
-     *     type: string,
-     *     letter: string,
-     *     point_of_sale: string,
-     *     number: string,
-     *     issue_date: string,
-     *     due_date: ?string,
-     *     net_amount: string,
-     *     other_taxes_amount: string,
-     *     notes: ?string
+     *     supplier_id: int, type: string, letter: string, point_of_sale: string, number: string,
+     *     issue_date: string, due_date: ?string, total_amount: string, notes: ?string,
+     *     items: array<int, array{article_id: ?int, description: string, quantity: string,
+     *         unit_of_measure: string, unit_price: string, line_total: string}>
      * }  $data
      */
     public function handle(array $data): SupplierVoucher
     {
         return DB::transaction(function () use ($data): SupplierVoucher {
-            $supplier = Supplier::query()->active()->find($data['supplier_id']);
+            $supplier = Supplier::query()->active()->lockForUpdate()->find($data['supplier_id']);
 
             if ($supplier === null) {
                 throw ValidationException::withMessages([
@@ -42,49 +38,72 @@ class CreateSupplierVoucher
                 ]);
             }
 
+            $this->ensureArticlesRemainActive($data['items']);
+
             $type = SupplierVoucherType::from($data['type']);
-            $letter = SupplierVoucherLetter::from($data['letter']);
-            $netCents = $this->moneyToCents($data['net_amount']);
-            $otherTaxesCents = $this->moneyToCents($data['other_taxes_amount']);
-            $vatCents = $letter->discriminatesVat()
-                ? intdiv(($netCents * 21) + 50, 100)
-                : 0;
-            $totalCents = $netCents + $vatCents + $otherTaxesCents;
-
-            if ($totalCents <= 0 || $totalCents > 999_999_999_999) {
-                throw ValidationException::withMessages([
-                    'net_amount' => 'El importe total calculado debe ser mayor a cero y no superar $ 9.999.999.999,99.',
-                ]);
-            }
-
-            $vatAmount = $this->centsToMoney($vatCents);
-            $totalAmount = $this->centsToMoney($totalCents);
-            $status = $this->resolveStatus->handle($type, $totalAmount, $totalAmount);
+            $totalAmount = $this->centsToMoney($this->moneyToCents($data['total_amount']));
 
             $voucher = SupplierVoucher::create([
                 'supplier_id' => $supplier->id,
                 'type' => $type,
-                'letter' => $letter,
+                'letter' => SupplierVoucherLetter::from($data['letter']),
                 'point_of_sale' => $data['point_of_sale'],
                 'number' => $data['number'],
                 'issue_date' => $data['issue_date'],
                 'due_date' => $data['due_date'],
-                'net_amount' => $data['net_amount'],
-                'vat_amount' => $vatAmount,
-                'other_taxes_amount' => $data['other_taxes_amount'],
                 'total_amount' => $totalAmount,
-                'status' => $status,
+                'status' => $this->resolveStatus->handle($type, $totalAmount, $totalAmount),
                 'notes' => $data['notes'],
             ]);
+
+            foreach ($data['items'] as $index => $item) {
+                $voucher->items()->create([...$item, 'position' => $index + 1]);
+            }
 
             Log::info('Supplier voucher created', [
                 'supplier_voucher_id' => $voucher->id,
                 'supplier_id' => $supplier->id,
                 'fiscal_number' => $voucher->letter->value.' '.$voucher->point_of_sale.'-'.$voucher->number,
+                'items_count' => count($data['items']),
                 'user_id' => auth()->id(),
             ]);
 
-            return $voucher->load('supplier');
+            return $voucher->load(['supplier', 'items.article']);
         });
+    }
+
+    /**
+     * @param  array<int, array{
+     *     article_id: ?int, description: string, quantity: string,
+     *     unit_of_measure: string, unit_price: string, line_total: string
+     * }>  $items
+     */
+    private function ensureArticlesRemainActive(array $items): void
+    {
+        $articleIds = collect($items)->pluck('article_id')->filter()->unique()->values();
+
+        if ($articleIds->isEmpty()) {
+            return;
+        }
+
+        $activeIds = Article::query()
+            ->whereIn('id', $articleIds)
+            ->where('status', ArticleStatus::Active)
+            ->lockForUpdate()
+            ->pluck('id');
+
+        $invalidIds = $articleIds->diff($activeIds);
+
+        if ($invalidIds->isEmpty()) {
+            return;
+        }
+
+        $invalidIndex = collect($items)->search(
+            fn (array $item): bool => $item['article_id'] !== null && $invalidIds->contains($item['article_id'])
+        );
+
+        throw ValidationException::withMessages([
+            'items.'.($invalidIndex === false ? 0 : $invalidIndex).'.article_id' => 'El artículo seleccionado no existe o está inactivo.',
+        ]);
     }
 }

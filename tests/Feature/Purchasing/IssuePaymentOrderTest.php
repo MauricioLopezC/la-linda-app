@@ -45,9 +45,6 @@ function invoiceFor(Supplier $supplier, string $total): SupplierVoucher
 {
     return SupplierVoucher::factory()->invoice()->create([
         'supplier_id' => $supplier->id,
-        'net_amount' => $total,
-        'vat_amount' => '0.00',
-        'other_taxes_amount' => '0.00',
         'total_amount' => $total,
     ]);
 }
@@ -187,9 +184,6 @@ test('caso E: pendingBalance accounts for prior credit note applications', funct
     // A credit note of $3,000 already applied to the invoice via HU-054
     $creditNote = SupplierVoucher::factory()->creditNote()->create([
         'supplier_id' => $supplier->id,
-        'net_amount' => '3000.00',
-        'vat_amount' => '0.00',
-        'other_taxes_amount' => '0.00',
         'total_amount' => '3000.00',
     ]);
     VoucherApplication::factory()->from($creditNote)->to($invoice)->amount('3000.00')->create();
