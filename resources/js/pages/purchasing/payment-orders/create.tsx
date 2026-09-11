@@ -29,6 +29,7 @@ import IssuedOrderPanel from './components/issued-order-panel';
 type SupplierOption = App.Data.Purchasing.SupplierOptionData;
 type PaymentMethod = App.Data.Sales.PaymentMethodData;
 type SupplierVoucher = App.Data.Purchasing.SupplierVoucherListData;
+type PaymentOrder = App.Data.Purchasing.PaymentOrderData;
 
 type ItemRow = {
   supplier_voucher_id: number;
@@ -87,7 +88,10 @@ export default function CreatePaymentOrder({
   today,
 }: Props) {
   const page = usePage();
-  const issuedOrder = page.props.flash?.issuedOrder ?? null;
+  // `flash` es Record<string, unknown> (genérico a propósito, ver global.d.ts) — el middleware
+  // no conoce la forma de `issuedOrder`, así que la pantalla asume esa responsabilidad acá.
+  const issuedOrder =
+    (page.props.flash.issuedOrder as PaymentOrder | undefined) ?? null;
 
   const [invoicesList, setInvoicesList] = useState<SupplierVoucher[]>([]);
   const [loadingInvoices, setLoadingInvoices] = useState(false);
