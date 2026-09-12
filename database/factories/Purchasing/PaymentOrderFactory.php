@@ -26,7 +26,6 @@ class PaymentOrderFactory extends Factory
     {
         return [
             'supplier_id' => Supplier::factory(),
-            'payment_method_id' => PaymentMethod::factory(),
             'order_number' => fake()->unique()->numerify('OP-########'),
             'date' => fake()->dateTimeBetween('-30 days', 'now'),
             'total_amount' => $this->centsToMoney(fake()->numberBetween(10_000, 5_000_000)),

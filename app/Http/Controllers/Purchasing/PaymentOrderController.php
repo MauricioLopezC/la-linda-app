@@ -58,9 +58,9 @@ class PaymentOrderController extends Controller
     {
         /** @var array{
          *     supplier_id: int,
-         *     payment_method_id: int,
          *     date: string,
          *     notes: ?string,
+         *     payment_methods: array<int, array{payment_method_id: int, amount: string, reference?: string, source_account?: string, transaction_number?: string, check_number?: string, check_due_date?: string}>,
          *     items: array<int, array{supplier_voucher_id: int, amount_applied: string}>
          * } $data
          */

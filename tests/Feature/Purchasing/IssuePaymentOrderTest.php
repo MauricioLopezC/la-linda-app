@@ -26,14 +26,14 @@ uses(RefreshDatabase::class);
  */
 function paymentPayload(
     Supplier $supplier,
-    PaymentMethod $paymentMethod,
+    array $paymentMethods,
     array $items,
 ): array {
     return [
         'supplier_id' => $supplier->id,
-        'payment_method_id' => $paymentMethod->id,
         'date' => today()->toDateString(),
         'notes' => null,
+        'payment_methods' => $paymentMethods,
         'items' => $items,
     ];
 }
@@ -66,7 +66,7 @@ test('caso A: pays one invoice fully and another partially', function () {
     $invoice1 = invoiceFor($supplier, '10000.00');
     $invoice2 = invoiceFor($supplier, '6000.00');
 
-    $payload = paymentPayload($supplier, $paymentMethod, [
+    $payload = paymentPayload($supplier, [['payment_method_id' => $paymentMethod->id, 'amount' => '12000.00']], [
         ['supplier_voucher_id' => $invoice1->id, 'amount_applied' => '10000.00'],
         ['supplier_voucher_id' => $invoice2->id, 'amount_applied' => '2000.00'],
     ]);
@@ -110,7 +110,7 @@ test('caso B: rejects when amount_applied exceeds pending balance', function () 
     $paymentMethod = PaymentMethod::factory()->create();
     $invoice = invoiceFor($supplier, '5000.00');
 
-    $payload = paymentPayload($supplier, $paymentMethod, [
+    $payload = paymentPayload($supplier, [['payment_method_id' => $paymentMethod->id, 'amount' => '8000.00']], [
         ['supplier_voucher_id' => $invoice->id, 'amount_applied' => '8000.00'],
     ]);
 
@@ -133,7 +133,7 @@ test('caso C: rejects when invoice belongs to a different supplier', function ()
 
     $invoice = invoiceFor($otherSupplier, '5000.00');
 
-    $payload = paymentPayload($supplier, $paymentMethod, [
+    $payload = paymentPayload($supplier, [['payment_method_id' => $paymentMethod->id, 'amount' => '1000.00']], [
         ['supplier_voucher_id' => $invoice->id, 'amount_applied' => '1000.00'],
     ]);
 
@@ -156,7 +156,7 @@ test('caso D: rejects duplicate supplier_voucher_id in items', function () {
     // The Form Request catches duplicates via Rule::distinct, but the Action has a second-level
     // check. Here we call the action directly (bypassing the request) to test its own guard.
     // We do this by sending two entries for the same invoice.
-    $payload = paymentPayload($supplier, $paymentMethod, [
+    $payload = paymentPayload($supplier, [['payment_method_id' => $paymentMethod->id, 'amount' => '6000.00']], [
         ['supplier_voucher_id' => $invoice->id, 'amount_applied' => '3000.00'],
         ['supplier_voucher_id' => $invoice->id, 'amount_applied' => '3000.00'],
     ]);
@@ -192,7 +192,7 @@ test('caso E: pendingBalance accounts for prior credit note applications', funct
     expect($invoice->fresh()->pendingBalance())->toBe('7000.00');
 
     // Pay the remaining $7,000
-    $payload = paymentPayload($supplier, $paymentMethod, [
+    $payload = paymentPayload($supplier, [['payment_method_id' => $paymentMethod->id, 'amount' => '7000.00']], [
         ['supplier_voucher_id' => $invoice->id, 'amount_applied' => '7000.00'],
     ]);
 
@@ -215,7 +215,7 @@ test('caso F: concurrent orders serialize via lockForUpdate — second fails if 
     // Invoice with $5,000 pending balance. Each order claims $4,000 — together they exceed the balance.
     $invoice = invoiceFor($supplier, '5000.00');
 
-    $payload = paymentPayload($supplier, $paymentMethod, [
+    $payload = paymentPayload($supplier, [['payment_method_id' => $paymentMethod->id, 'amount' => '4000.00']], [
         ['supplier_voucher_id' => $invoice->id, 'amount_applied' => '4000.00'],
     ]);
 
@@ -241,7 +241,7 @@ test('generated order numbers follow OP-XXXXXX format', function () {
     $paymentMethod = PaymentMethod::factory()->create();
 
     $invoice = invoiceFor($supplier, '1000.00');
-    $payload = paymentPayload($supplier, $paymentMethod, [
+    $payload = paymentPayload($supplier, [['payment_method_id' => $paymentMethod->id, 'amount' => '500.00']], [
         ['supplier_voucher_id' => $invoice->id, 'amount_applied' => '500.00'],
     ]);
 
@@ -263,8 +263,10 @@ test('POST purchasing/payment-orders creates order and redirects', function () {
     $this->actingAs($user)
         ->post(route('purchasing.payment-orders.store'), [
             'supplier_id' => $supplier->id,
-            'payment_method_id' => $paymentMethod->id,
             'date' => today()->toDateString(),
+            'payment_methods' => [
+                ['payment_method_id' => $paymentMethod->id, 'amount' => '5000.00'],
+            ],
             'items' => [
                 ['supplier_voucher_id' => $invoice->id, 'amount_applied' => '5000.00'],
             ],
@@ -294,10 +296,12 @@ test('GET suppliers/{supplier}/invoices returns only invoices with pending balan
     // Invoice already fully paid
     $paid = invoiceFor($supplier, '2000.00');
     PaymentOrderItem::factory()->forInvoice($paid, '2000.00')->create([
-        'payment_order_id' => PaymentOrder::factory()->create([
+        'payment_order_id' => clone (PaymentOrder::factory()->has(
+            \App\Models\Purchasing\PaymentOrderMethod::factory()->count(1), 'paymentMethods'
+        )->create([
             'supplier_id' => $supplier->id,
-            'payment_method_id' => $paymentMethod->id,
-        ])->id,
+            'total_amount' => '2000.00',
+        ]))->id,
     ]);
 
     $this->actingAs($user)
@@ -305,4 +309,90 @@ test('GET suppliers/{supplier}/invoices returns only invoices with pending balan
         ->assertOk()
         ->assertJsonFragment(['id' => $pending->id])
         ->assertJsonMissing(['id' => $paid->id]);
+});
+
+// ---------------------------------------------------------------------------
+// Caso G — OP con NC que baja el neto y se paga con un único medio
+// ---------------------------------------------------------------------------
+test('caso G: OP with credit note reduces net total', function () {
+    $user = User::factory()->create();
+    $supplier = Supplier::factory()->create();
+    $paymentMethod = PaymentMethod::factory()->create();
+
+    $invoice = invoiceFor($supplier, '10000.00');
+    $creditNote = SupplierVoucher::factory()->creditNote()->create([
+        'supplier_id' => $supplier->id,
+        'total_amount' => '3000.00',
+    ]);
+
+    // Net total should be 7000
+    $payload = paymentPayload($supplier, [['payment_method_id' => $paymentMethod->id, 'amount' => '7000.00']], [
+        ['supplier_voucher_id' => $invoice->id, 'amount_applied' => '10000.00'],
+        ['supplier_voucher_id' => $creditNote->id, 'amount_applied' => '3000.00'],
+    ]);
+
+    $result = issueAction()->handle($payload, $user->id);
+
+    expect($result->total_amount)->toBe('7000.00');
+    $this->assertDatabaseHas('payment_orders', [
+        'order_number' => $result->order_number,
+        'total_amount' => '7000.00',
+        'status' => 'emitida',
+    ]);
+});
+
+// ---------------------------------------------------------------------------
+// Caso H — OP con múltiples medios de pago
+// ---------------------------------------------------------------------------
+test('caso H: OP with multiple payment methods', function () {
+    $user = User::factory()->create();
+    $supplier = Supplier::factory()->create();
+    $cash = PaymentMethod::factory()->create();
+    $transfer = PaymentMethod::factory()->create();
+
+    $invoice = invoiceFor($supplier, '10000.00');
+
+    $payload = paymentPayload($supplier, [
+        ['payment_method_id' => $cash->id, 'amount' => '6000.00'],
+        ['payment_method_id' => $transfer->id, 'amount' => '4000.00'],
+    ], [
+        ['supplier_voucher_id' => $invoice->id, 'amount_applied' => '10000.00'],
+    ]);
+
+    $result = issueAction()->handle($payload, $user->id);
+
+    expect($result->total_amount)->toBe('10000.00');
+    $this->assertDatabaseCount('payment_order_methods', 2);
+    $this->assertDatabaseHas('payment_order_methods', [
+        'payment_order_id' => $result->id,
+        'payment_method_id' => $cash->id,
+        'amount' => '6000.00',
+    ]);
+    $this->assertDatabaseHas('payment_order_methods', [
+        'payment_order_id' => $result->id,
+        'payment_method_id' => $transfer->id,
+        'amount' => '4000.00',
+    ]);
+});
+
+// ---------------------------------------------------------------------------
+// Caso I — Rechazo si la suma de los medios difiere del neto
+// ---------------------------------------------------------------------------
+test('caso I: rejects when payment methods sum does not match net total', function () {
+    $user = User::factory()->create();
+    $supplier = Supplier::factory()->create();
+    $paymentMethod = PaymentMethod::factory()->create();
+
+    $invoice = invoiceFor($supplier, '10000.00');
+
+    $payload = paymentPayload($supplier, [
+        ['payment_method_id' => $paymentMethod->id, 'amount' => '8000.00'],
+    ], [
+        ['supplier_voucher_id' => $invoice->id, 'amount_applied' => '10000.00'],
+    ]);
+
+    expect(fn () => issueAction()->handle($payload, $user->id))
+        ->toThrow(ValidationException::class, 'La suma de los medios de pago debe coincidir exactamente con el importe neto a pagar.');
+
+    $this->assertDatabaseMissing('payment_orders', ['supplier_id' => $supplier->id]);
 });

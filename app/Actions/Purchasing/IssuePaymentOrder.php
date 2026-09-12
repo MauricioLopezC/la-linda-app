@@ -37,9 +37,9 @@ class IssuePaymentOrder
     /**
      * @param  array{
      *     supplier_id: int,
-     *     payment_method_id: int,
      *     date: string,
      *     notes: ?string,
+     *     payment_methods: array<int, array{payment_method_id: int, amount: string, reference?: string, source_account?: string, transaction_number?: string, check_number?: string, check_due_date?: string}>,
      *     items: array<int, array{supplier_voucher_id: int, amount_applied: string}>
      * }  $data
      */
@@ -52,8 +52,6 @@ class IssuePaymentOrder
                     'supplier_id' => 'El proveedor seleccionado no está activo.',
                 ]);
             }
-
-            PaymentMethod::findOrFail((int) $data['payment_method_id']);
 
             $itemsData = $data['items'];
 
@@ -85,12 +83,8 @@ class IssuePaymentOrder
                     ]);
                 }
 
-                // Only invoices can be targets of payment orders (Caso C type check).
-                if (! $voucher->type->isInvoice()) {
-                    throw ValidationException::withMessages([
-                        "items.{$index}.supplier_voucher_id" => 'Solo se pueden imputar facturas en una orden de pago. Las notas de crédito/débito no son válidas como destino.',
-                    ]);
-                }
+                // Any voucher can be applied: invoices/debit notes add up, credit notes subtract.
+                // We'll calculate the total net later.
 
                 // Invoice must belong to the selected supplier (Caso C).
                 if ($voucher->supplier_id !== $supplier->id) {
@@ -100,23 +94,45 @@ class IssuePaymentOrder
                 }
 
                 // Amount applied must not exceed the invoice's pending balance (Caso B / F).
-                $pendingCents = $this->moneyToCents($voucher->pendingBalance());
+                $pendingCents = $this->moneyToCents($voucher->outstandingAmount());
                 $appliedCents = $this->moneyToCents($amountApplied);
 
                 if ($appliedCents > $pendingCents) {
                     throw ValidationException::withMessages([
-                        "items.{$index}.amount_applied" => 'El importe imputado supera el saldo pendiente del comprobante.',
+                        "items.{$index}.amount_applied" => 'El importe imputado supera el saldo o importe disponible del comprobante.',
                     ]);
                 }
 
-                $totalCents += $appliedCents;
+                if ($voucher->type->isCreditNote()) {
+                    $totalCents -= $appliedCents;
+                } else {
+                    $totalCents += $appliedCents;
+                }
+            }
+
+            if ($totalCents <= 0) {
+                throw ValidationException::withMessages([
+                    'items' => 'El importe neto a pagar (Facturas + ND - NC) debe ser mayor a cero.',
+                ]);
+            }
+
+            $methodsData = $data['payment_methods'];
+            $methodsTotalCents = 0;
+
+            foreach ($methodsData as $methodData) {
+                $methodsTotalCents += $this->moneyToCents((string) $methodData['amount']);
+            }
+
+            if ($methodsTotalCents !== $totalCents) {
+                throw ValidationException::withMessages([
+                    'payment_methods' => 'La suma de los medios de pago debe coincidir exactamente con el importe neto a pagar.',
+                ]);
             }
 
             $orderNumber = $this->generateNextOrderNumber();
 
             $order = PaymentOrder::create([
                 'supplier_id' => $supplier->id,
-                'payment_method_id' => (int) $data['payment_method_id'],
                 'order_number' => $orderNumber,
                 'date' => $data['date'],
                 'total_amount' => $this->centsToMoney($totalCents),
@@ -124,6 +140,19 @@ class IssuePaymentOrder
                 'notes' => $data['notes'] ?? null,
                 'user_id' => $userId ?? auth()->id(),
             ]);
+
+            foreach ($methodsData as $methodData) {
+                \App\Models\Purchasing\PaymentOrderMethod::create([
+                    'payment_order_id' => $order->id,
+                    'payment_method_id' => (int) $methodData['payment_method_id'],
+                    'amount' => (string) $methodData['amount'],
+                    'reference' => $methodData['reference'] ?? null,
+                    'source_account' => $methodData['source_account'] ?? null,
+                    'transaction_number' => $methodData['transaction_number'] ?? null,
+                    'check_number' => $methodData['check_number'] ?? null,
+                    'check_due_date' => $methodData['check_due_date'] ?? null,
+                ]);
+            }
 
             // Collect items and updated vouchers to build the response after the loop.
             /** @var array<int, array{item: PaymentOrderItem, voucher: SupplierVoucher}> $createdItems */
@@ -148,7 +177,7 @@ class IssuePaymentOrder
                 $createdItems[] = ['item' => $item, 'voucher' => $updatedVoucher];
             }
 
-            $order->loadMissing(['supplier', 'paymentMethod']);
+            $order->loadMissing(['supplier', 'paymentMethods']);
 
             Log::info(sprintf(
                 'Payment order issued [ID: %d, Number: %s, Total: %s] by User ID: %s',

@@ -67,9 +67,9 @@ test('store issues the order and flashes the PaymentOrderData for the success pa
     $response = $this->actingAs(User::factory()->create())
         ->post(route('purchasing.payment-orders.store'), [
             'supplier_id' => $supplier->id,
-            'payment_method_id' => $paymentMethod->id,
             'date' => today()->toDateString(),
             'notes' => null,
+            'payment_methods' => [['payment_method_id' => $paymentMethod->id, 'amount' => '12000.00']],
             'items' => [
                 ['supplier_voucher_id' => $invoice1->id, 'amount_applied' => '10000.00'],
                 ['supplier_voucher_id' => $invoice2->id, 'amount_applied' => '2000.00'],
@@ -104,8 +104,8 @@ test('store rejects a duplicated invoice in items', function () {
     $this->actingAs(User::factory()->create())
         ->post(route('purchasing.payment-orders.store'), [
             'supplier_id' => $supplier->id,
-            'payment_method_id' => $paymentMethod->id,
             'date' => today()->toDateString(),
+            'payment_methods' => [['payment_method_id' => $paymentMethod->id, 'amount' => '3000.00']],
             'items' => [
                 ['supplier_voucher_id' => $invoice->id, 'amount_applied' => '1000.00'],
                 ['supplier_voucher_id' => $invoice->id, 'amount_applied' => '2000.00'],
@@ -124,8 +124,8 @@ test('store rejects a non-positive amount', function () {
     $this->actingAs(User::factory()->create())
         ->post(route('purchasing.payment-orders.store'), [
             'supplier_id' => $supplier->id,
-            'payment_method_id' => $paymentMethod->id,
             'date' => today()->toDateString(),
+            'payment_methods' => [['payment_method_id' => $paymentMethod->id, 'amount' => '0.00']],
             'items' => [
                 ['supplier_voucher_id' => $invoice->id, 'amount_applied' => '0'],
             ],
@@ -141,8 +141,8 @@ test('store rejects a client-sent total_amount', function () {
     $this->actingAs(User::factory()->create())
         ->post(route('purchasing.payment-orders.store'), [
             'supplier_id' => $supplier->id,
-            'payment_method_id' => $paymentMethod->id,
             'date' => today()->toDateString(),
+            'payment_methods' => [['payment_method_id' => $paymentMethod->id, 'amount' => '1000.00']],
             'total_amount' => '999.00',
             'items' => [
                 ['supplier_voucher_id' => $invoice->id, 'amount_applied' => '1000.00'],
