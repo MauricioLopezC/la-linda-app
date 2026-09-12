@@ -302,7 +302,7 @@ test('GET suppliers/{supplier}/invoices returns only invoices with pending balan
         'supplier_id' => $supplier->id,
         'total_amount' => '2000.00',
     ]);
-    
+
     PaymentOrderItem::factory()->forInvoice($paid, '2000.00')->create([
         'payment_order_id' => $order->id,
     ]);
