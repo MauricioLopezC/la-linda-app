@@ -6,7 +6,6 @@ use App\Concerns\ConvertsMoneyToCents;
 use App\Enums\Purchasing\PaymentOrderStatus;
 use App\Models\Purchasing\PaymentOrder;
 use App\Models\Purchasing\Supplier;
-use App\Models\Sales\PaymentMethod;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 

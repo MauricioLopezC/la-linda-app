@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
@@ -18,7 +19,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $source_account
  * @property string|null $transaction_number
  * @property string|null $check_number
- * @property \Illuminate\Support\Carbon|null $check_due_date
+ * @property Carbon|null $check_due_date
  * @property PaymentOrder $paymentOrder
  * @property PaymentMethod $paymentMethod
  */

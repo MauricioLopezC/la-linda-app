@@ -3,7 +3,6 @@
 namespace App\Models\Purchasing;
 
 use App\Enums\Purchasing\PaymentOrderStatus;
-use App\Models\Sales\PaymentMethod;
 use App\Models\User;
 use Database\Factories\Purchasing\PaymentOrderFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;

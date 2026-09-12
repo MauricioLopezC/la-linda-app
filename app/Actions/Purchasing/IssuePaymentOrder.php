@@ -8,9 +8,9 @@ use App\Data\Purchasing\PaymentOrderItemData;
 use App\Enums\Purchasing\PaymentOrderStatus;
 use App\Models\Purchasing\PaymentOrder;
 use App\Models\Purchasing\PaymentOrderItem;
+use App\Models\Purchasing\PaymentOrderMethod;
 use App\Models\Purchasing\Supplier;
 use App\Models\Purchasing\SupplierVoucher;
-use App\Models\Sales\PaymentMethod;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -142,7 +142,7 @@ class IssuePaymentOrder
             ]);
 
             foreach ($methodsData as $methodData) {
-                \App\Models\Purchasing\PaymentOrderMethod::create([
+                PaymentOrderMethod::create([
                     'payment_order_id' => $order->id,
                     'payment_method_id' => (int) $methodData['payment_method_id'],
                     'amount' => (string) $methodData['amount'],

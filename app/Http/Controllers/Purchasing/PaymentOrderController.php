@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Purchasing;
 
+use App\Actions\Purchasing\AnnulPaymentOrder;
 use App\Actions\Purchasing\IssuePaymentOrder;
 use App\Data\Purchasing\PaymentOrderData;
 use App\Data\Purchasing\SupplierOptionData;
@@ -10,11 +11,15 @@ use App\Data\Sales\PaymentMethodData;
 use App\Enums\Purchasing\SupplierVoucherType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Purchasing\StorePaymentOrderRequest;
+use App\Models\Purchasing\PaymentOrder;
 use App\Models\Purchasing\Supplier;
 use App\Models\Purchasing\SupplierVoucher;
 use App\Models\Sales\PaymentMethod;
+use App\Rules\Purchasing\ValidCuit;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\File;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -99,5 +104,40 @@ class PaymentOrderController extends Controller
             ->values();
 
         return response()->json(SupplierVoucherListData::collect($vouchers));
+    }
+
+    /**
+     * Annul a payment order.
+     */
+    public function destroy(PaymentOrder $order, AnnulPaymentOrder $action): RedirectResponse
+    {
+        $action->handle($order, auth()->id() !== null ? (int) auth()->id() : null);
+
+        return back()->with('success', "Orden de pago {$order->order_number} anulada correctamente.");
+    }
+
+    /**
+     * Download the payment order as PDF.
+     */
+    public function pdf(PaymentOrder $order): \Illuminate\Http\Response
+    {
+        $order->loadMissing([
+            'supplier',
+            'paymentMethods.paymentMethod',
+            'items.voucher',
+            'user',
+        ]);
+
+        $cssPath = resource_path('css/pdf/purchase-order.css');
+        $stylesheet = File::exists($cssPath) ? File::get($cssPath) : '';
+
+        $pdf = Pdf::loadView('pdf.purchasing.payment-order', [
+            'order' => $order,
+            'supplierTaxId' => ValidCuit::format($order->supplier->tax_id) ?? $order->supplier->tax_id,
+            'company' => config('company'),
+            'stylesheet' => $stylesheet,
+        ]);
+
+        return $pdf->stream("Orden_de_Pago_{$order->order_number}.pdf");
     }
 }

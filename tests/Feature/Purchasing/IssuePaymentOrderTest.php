@@ -5,6 +5,7 @@ use App\Data\Purchasing\PaymentOrderData;
 use App\Enums\Purchasing\SupplierVoucherStatus;
 use App\Models\Purchasing\PaymentOrder;
 use App\Models\Purchasing\PaymentOrderItem;
+use App\Models\Purchasing\PaymentOrderMethod;
 use App\Models\Purchasing\Supplier;
 use App\Models\Purchasing\SupplierVoucher;
 use App\Models\Purchasing\VoucherApplication;
@@ -297,7 +298,7 @@ test('GET suppliers/{supplier}/invoices returns only invoices with pending balan
     $paid = invoiceFor($supplier, '2000.00');
     PaymentOrderItem::factory()->forInvoice($paid, '2000.00')->create([
         'payment_order_id' => clone (PaymentOrder::factory()->has(
-            \App\Models\Purchasing\PaymentOrderMethod::factory()->count(1), 'paymentMethods'
+            PaymentOrderMethod::factory()->count(1), 'paymentMethods'
         )->create([
             'supplier_id' => $supplier->id,
             'total_amount' => '2000.00',
