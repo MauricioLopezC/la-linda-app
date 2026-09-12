@@ -10,6 +10,7 @@ class PaymentOrderMethodData extends Data
     public function __construct(
         public readonly int $id,
         public readonly int $payment_method_id,
+        public readonly string $payment_method_name,
         public readonly string $amount,
         public readonly ?string $reference = null,
         public readonly ?string $source_account = null,
@@ -23,6 +24,7 @@ class PaymentOrderMethodData extends Data
         return new self(
             id: $method->id,
             payment_method_id: $method->payment_method_id,
+            payment_method_name: $method->paymentMethod->name,
             amount: $method->amount,
             reference: $method->reference,
             source_account: $method->source_account,

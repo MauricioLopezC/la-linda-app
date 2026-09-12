@@ -44,7 +44,11 @@ export default function IssuedOrderPanel({ order, onDismiss }: Props) {
       <CardContent className="space-y-4 pt-4">
         <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
           <Field label="Proveedor">{order.supplier_name}</Field>
-          <Field label="Medio de pago">{order.payment_method_name}</Field>
+          <Field label="Medio de pago">
+            {order.methods.map((m) => {
+              return `${m.payment_method_name} ($${m.amount})`;
+            }).join(' + ')}
+          </Field>
           <Field label="Fecha">{order.date}</Field>
           <Field label="Estado">
             <Badge

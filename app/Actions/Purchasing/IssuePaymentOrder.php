@@ -177,7 +177,7 @@ class IssuePaymentOrder
                 $createdItems[] = ['item' => $item, 'voucher' => $updatedVoucher];
             }
 
-            $order->loadMissing(['supplier', 'paymentMethods']);
+            $order->loadMissing(['supplier', 'paymentMethods.paymentMethod']);
 
             Log::info(sprintf(
                 'Payment order issued [ID: %d, Number: %s, Total: %s] by User ID: %s',
