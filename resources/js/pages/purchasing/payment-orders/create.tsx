@@ -101,15 +101,15 @@ export default function CreatePaymentOrder({
   const { data, setData, post, processing, errors, clearErrors, transform } =
     useForm<{
       supplier_id: string;
-      payment_method_id: string;
       date: string;
       notes: string;
+      payment_methods: { payment_method_id: string; amount: string }[];
       items: ItemRow[];
     }>({
       supplier_id: '',
-      payment_method_id: '',
       date: today,
       notes: '',
+      payment_methods: [{ payment_method_id: '', amount: '' }],
       items: [],
     });
 
@@ -218,8 +218,11 @@ export default function CreatePaymentOrder({
 
   const canSubmit =
     data.supplier_id !== '' &&
-    data.payment_method_id !== '' &&
     data.date !== '' &&
+    data.payment_methods.length > 0 &&
+    data.payment_methods.every(
+      (m) => m.payment_method_id !== '' && toCents(m.amount) > 0,
+    ) &&
     data.items.length > 0 &&
     allAmountsPositive &&
     !hasRowErrors &&
@@ -232,12 +235,17 @@ export default function CreatePaymentOrder({
 
     transform((formData) => ({
       supplier_id: Number(formData.supplier_id),
-      payment_method_id: Number(formData.payment_method_id),
       date: formData.date,
       notes: formData.notes.trim() === '' ? null : formData.notes.trim(),
+      payment_methods: formData.payment_methods.map((m) => ({
+        payment_method_id: Number(m.payment_method_id),
+        amount: Number(m.amount.replace(',', '.')).toFixed(2),
+      })),
       items: formData.items.map((item) => ({
         supplier_voucher_id: item.supplier_voucher_id,
-        amount_applied: Number(item.amount_applied).toFixed(2),
+        amount_applied: Number(item.amount_applied.replace(',', '.')).toFixed(
+          2,
+        ),
       })),
     }));
 
@@ -250,9 +258,9 @@ export default function CreatePaymentOrder({
         setInvoicesList([]);
         setData({
           supplier_id: '',
-          payment_method_id: '',
           date: today,
           notes: '',
+          payment_methods: [{ payment_method_id: '', amount: '' }],
           items: [],
         });
       },
@@ -271,10 +279,6 @@ export default function CreatePaymentOrder({
       },
     });
   };
-
-  const selectedPaymentMethod = paymentMethods.find(
-    (method) => String(method.id) === data.payment_method_id,
-  );
 
   return (
     <>
@@ -346,28 +350,97 @@ export default function CreatePaymentOrder({
                   <InputError message={errors.supplier_id} />
                 </div>
 
-                <div className="min-w-0 space-y-1.5">
-                  <Label htmlFor="payment_method_id">
-                    Medio de pago <span className="text-destructive">*</span>
-                  </Label>
-                  <Select
-                    value={data.payment_method_id}
-                    onValueChange={(value) =>
-                      setData('payment_method_id', value)
-                    }
-                  >
-                    <SelectTrigger id="payment_method_id">
-                      <SelectValue placeholder="Seleccionar medio..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {paymentMethods.map((method) => (
-                        <SelectItem key={method.id} value={String(method.id)}>
-                          {method.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <InputError message={errors.payment_method_id} />
+                <div className="min-w-0 space-y-1.5 rounded-md border bg-muted/20 p-4 sm:col-span-2 lg:col-span-4">
+                  <div className="mb-2 flex items-center justify-between">
+                    <Label>
+                      Medios de pago <span className="text-destructive">*</span>
+                    </Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setData('payment_methods', [
+                          ...data.payment_methods,
+                          { payment_method_id: '', amount: '' },
+                        ])
+                      }
+                    >
+                      Agregar otro medio
+                    </Button>
+                  </div>
+                  <div className="space-y-3">
+                    {data.payment_methods.map((pm, index) => (
+                      <div key={index} className="flex items-start gap-2">
+                        <div className="flex-1 space-y-1.5">
+                          <Select
+                            value={pm.payment_method_id}
+                            onValueChange={(value) => {
+                              const newMethods = [...data.payment_methods];
+                              newMethods[index].payment_method_id = value;
+                              setData('payment_methods', newMethods);
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Seleccionar medio..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {paymentMethods.map((method) => (
+                                <SelectItem
+                                  key={method.id}
+                                  value={String(method.id)}
+                                >
+                                  {method.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <InputError
+                            message={
+                              errors[
+                                `payment_methods.${index}.payment_method_id` as keyof typeof errors
+                              ]
+                            }
+                          />
+                        </div>
+                        <div className="w-32 space-y-1.5">
+                          <Input
+                            placeholder="Monto"
+                            value={pm.amount}
+                            onChange={(e) => {
+                              const newMethods = [...data.payment_methods];
+                              newMethods[index].amount = sanitizeDecimal(
+                                e.target.value,
+                              );
+                              setData('payment_methods', newMethods);
+                            }}
+                          />
+                          <InputError
+                            message={
+                              errors[
+                                `payment_methods.${index}.amount` as keyof typeof errors
+                              ]
+                            }
+                          />
+                        </div>
+                        {data.payment_methods.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="text-muted-foreground hover:text-destructive"
+                            onClick={() => {
+                              const newMethods = [...data.payment_methods];
+                              newMethods.splice(index, 1);
+                              setData('payment_methods', newMethods);
+                            }}
+                          >
+                            &times;
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="min-w-0 space-y-1.5">
@@ -434,10 +507,12 @@ export default function CreatePaymentOrder({
               <div className="flex flex-col gap-3 rounded-lg border bg-muted/40 p-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="text-xs text-muted-foreground">
                   {data.items.length === 0
-                    ? 'Seleccioná al menos una factura para emitir la orden.'
-                    : `${data.items.length} factura${data.items.length === 1 ? '' : 's'} seleccionada${data.items.length === 1 ? '' : 's'}` +
-                      (selectedPaymentMethod
-                        ? ` · ${selectedPaymentMethod.name}`
+                    ? 'Seleccioná al menos un comprobante para emitir la orden.'
+                    : `${data.items.length} comprobante${data.items.length === 1 ? '' : 's'} seleccionado${data.items.length === 1 ? '' : 's'}` +
+                      (data.payment_methods.some(
+                        (m) => m.payment_method_id !== '',
+                      )
+                        ? ` · ${data.payment_methods.filter((m) => m.payment_method_id !== '').length} medio(s) de pago`
                         : '')}
                 </div>
                 <Button
