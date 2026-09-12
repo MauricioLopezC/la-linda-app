@@ -296,13 +296,15 @@ test('GET suppliers/{supplier}/invoices returns only invoices with pending balan
 
     // Invoice already fully paid
     $paid = invoiceFor($supplier, '2000.00');
+    $order = PaymentOrder::factory()->has(
+        PaymentOrderMethod::factory()->count(1), 'paymentMethods'
+    )->create([
+        'supplier_id' => $supplier->id,
+        'total_amount' => '2000.00',
+    ]);
+    
     PaymentOrderItem::factory()->forInvoice($paid, '2000.00')->create([
-        'payment_order_id' => clone (PaymentOrder::factory()->has(
-            PaymentOrderMethod::factory()->count(1), 'paymentMethods'
-        )->create([
-            'supplier_id' => $supplier->id,
-            'total_amount' => '2000.00',
-        ]))->id,
+        'payment_order_id' => $order->id,
     ]);
 
     $this->actingAs($user)
