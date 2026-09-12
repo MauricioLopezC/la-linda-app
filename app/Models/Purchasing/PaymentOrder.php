@@ -3,7 +3,6 @@
 namespace App\Models\Purchasing;
 
 use App\Enums\Purchasing\PaymentOrderStatus;
-use App\Models\Sales\PaymentMethod;
 use App\Models\User;
 use Database\Factories\Purchasing\PaymentOrderFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -22,7 +21,6 @@ use Illuminate\Support\Carbon;
  *
  * @property int $id
  * @property int $supplier_id
- * @property int $payment_method_id
  * @property string $order_number
  * @property Carbon $date
  * @property string $total_amount
@@ -31,13 +29,12 @@ use Illuminate\Support\Carbon;
  * @property int $user_id
  * @property Carbon|null $created_at
  * @property Supplier $supplier
- * @property PaymentMethod $paymentMethod
+ * @property Collection<int, PaymentOrderMethod> $paymentMethods
  * @property Collection<int, PaymentOrderItem> $items
  * @property User $user
  */
 #[Fillable([
     'supplier_id',
-    'payment_method_id',
     'order_number',
     'date',
     'total_amount',
@@ -72,10 +69,10 @@ class PaymentOrder extends Model
         return $this->belongsTo(Supplier::class);
     }
 
-    /** @return BelongsTo<PaymentMethod, $this> */
-    public function paymentMethod(): BelongsTo
+    /** @return HasMany<PaymentOrderMethod, $this> */
+    public function paymentMethods(): HasMany
     {
-        return $this->belongsTo(PaymentMethod::class);
+        return $this->hasMany(PaymentOrderMethod::class);
     }
 
     /** @return HasMany<PaymentOrderItem, $this> */

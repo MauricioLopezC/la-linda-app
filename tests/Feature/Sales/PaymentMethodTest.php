@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Purchasing\PaymentOrder;
+use App\Models\Purchasing\PaymentOrderMethod;
 use App\Models\Sales\PaymentMethod;
 use App\Models\User;
 use Illuminate\Database\QueryException;
@@ -73,7 +74,9 @@ test('payment method cannot be deactivated if it has been used in a payment orde
     $user = User::factory()->create();
     $paymentMethod = PaymentMethod::factory()->create(['is_active' => true]);
 
-    PaymentOrder::factory()->create([
+    $paymentOrder = PaymentOrder::factory()->create();
+    PaymentOrderMethod::factory()->create([
+        'payment_order_id' => $paymentOrder->id,
         'payment_method_id' => $paymentMethod->id,
     ]);
 
