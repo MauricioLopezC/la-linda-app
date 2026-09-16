@@ -13,9 +13,9 @@ class UnitOfMeasureSeeder extends Seeder
     public function run(): void
     {
         $unitsOfMeasure = [
-            ['name' => 'Unidad', 'abbreviation' => 'u'],
-            ['name' => 'Kilogramo', 'abbreviation' => 'kg'],
-            ['name' => 'Litro', 'abbreviation' => 'l'],
+            ['name' => 'Unidad', 'abbreviation' => 'u', 'allows_decimal_quantity' => false],
+            ['name' => 'Kilogramo', 'abbreviation' => 'kg', 'allows_decimal_quantity' => true],
+            ['name' => 'Litro', 'abbreviation' => 'l', 'allows_decimal_quantity' => true],
         ];
 
         UnitOfMeasure::unguarded(function () use ($unitsOfMeasure): void {

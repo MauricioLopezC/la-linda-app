@@ -14,6 +14,7 @@ class CreateUnitOfMeasure
         return UnitOfMeasure::create([
             'name' => (string) $data['name'],
             'abbreviation' => (string) $data['abbreviation'],
+            'allows_decimal_quantity' => (bool) $data['allows_decimal_quantity'],
             'is_active' => isset($data['is_active']) ? (bool) $data['is_active'] : true,
         ]);
     }

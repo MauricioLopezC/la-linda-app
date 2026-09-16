@@ -31,7 +31,7 @@ beforeEach(function () {
     ]);
 
     $this->category = Category::factory()->create(['name' => 'Lácteos']);
-    $this->unit = UnitOfMeasure::factory()->create(['name' => 'Unidad', 'abbreviation' => 'UN']);
+    $this->unit = UnitOfMeasure::factory()->create(['name' => 'Unidad', 'abbreviation' => 'UN', 'allows_decimal_quantity' => false]);
 
     $this->articleA = Article::factory()->create([
         'category_id' => $this->category->id,
@@ -256,7 +256,7 @@ it('rejects decimal quantities for articles measured in whole units', function (
 });
 
 it('accepts decimal quantities for articles measured in continuous units like kilogram', function () {
-    $kgUnit = UnitOfMeasure::factory()->create(['name' => 'Kilogramo', 'abbreviation' => 'kg']);
+    $kgUnit = UnitOfMeasure::factory()->create(['name' => 'Kilogramo', 'abbreviation' => 'kg', 'allows_decimal_quantity' => true]);
     $flour = Article::factory()->create([
         'category_id' => $this->category->id,
         'unit_of_measure_id' => $kgUnit->id,

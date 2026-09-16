@@ -27,6 +27,7 @@ class StoreUnitOfMeasureRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'min:2', 'max:100', new UniqueNormalizedValue(UnitOfMeasure::class, 'name_normalized')],
             'abbreviation' => ['required', 'string', 'min:1', 'max:20', new UniqueNormalizedValue(UnitOfMeasure::class, 'abbreviation_normalized')],
+            'allows_decimal_quantity' => ['required', 'boolean'],
             'is_active' => ['nullable', 'boolean'],
         ];
     }
@@ -34,7 +35,12 @@ class StoreUnitOfMeasureRequest extends FormRequest
     /** @return array<string, string> */
     public function attributes(): array
     {
-        return ['name' => 'nombre', 'abbreviation' => 'abreviatura', 'is_active' => 'estado'];
+        return [
+            'name' => 'nombre',
+            'abbreviation' => 'abreviatura',
+            'allows_decimal_quantity' => 'admite cantidades decimales',
+            'is_active' => 'estado',
+        ];
     }
 
     protected function prepareForValidation(): void

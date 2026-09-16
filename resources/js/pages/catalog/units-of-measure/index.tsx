@@ -36,7 +36,12 @@ import type { BreadcrumbItem } from '@/types';
 
 type UnitOfMeasure = App.Data.Catalog.UnitOfMeasureData;
 type Props = { unitsOfMeasure: UnitOfMeasure[] };
-type UnitFormData = { name: string; abbreviation: string; is_active: boolean };
+type UnitFormData = {
+  name: string;
+  abbreviation: string;
+  allows_decimal_quantity: boolean;
+  is_active: boolean;
+};
 
 export default function UnitsOfMeasureIndex({ unitsOfMeasure = [] }: Props) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -48,11 +53,13 @@ export default function UnitsOfMeasureIndex({ unitsOfMeasure = [] }: Props) {
   const createForm = useForm<UnitFormData>({
     name: '',
     abbreviation: '',
+    allows_decimal_quantity: false,
     is_active: true,
   });
   const editForm = useForm<UnitFormData>({
     name: '',
     abbreviation: '',
+    allows_decimal_quantity: false,
     is_active: true,
   });
 
@@ -80,6 +87,7 @@ export default function UnitsOfMeasureIndex({ unitsOfMeasure = [] }: Props) {
     editForm.setData({
       name: unit.name,
       abbreviation: unit.abbreviation,
+      allows_decimal_quantity: unit.allows_decimal_quantity,
       is_active: unit.is_active,
     });
     editForm.clearErrors();
@@ -156,6 +164,24 @@ export default function UnitsOfMeasureIndex({ unitsOfMeasure = [] }: Props) {
       </div>
       <div className="flex items-center gap-2">
         <Checkbox
+          id={`${prefix}-unit-decimals`}
+          checked={form.data.allows_decimal_quantity}
+          onCheckedChange={(checked) =>
+            form.setData('allows_decimal_quantity', checked === true)
+          }
+        />
+        <Label htmlFor={`${prefix}-unit-decimals`}>
+          Admite cantidades decimales
+        </Label>
+      </div>
+      <p className="-mt-2 text-sm text-muted-foreground">
+        Activalo solo para unidades que se pesan o miden al momento de la venta
+        (kg, L). Para paquetes, bultos o docenas cerradas dejalo desactivado:
+        los ajustes de stock solo admitirán números enteros.
+      </p>
+      <InputError message={form.errors.allows_decimal_quantity} />
+      <div className="flex items-center gap-2">
+        <Checkbox
           id={`${prefix}-unit-active`}
           checked={form.data.is_active}
           onCheckedChange={(checked) =>
@@ -200,6 +226,7 @@ export default function UnitsOfMeasureIndex({ unitsOfMeasure = [] }: Props) {
               <TableRow>
                 <TableHead>Nombre</TableHead>
                 <TableHead>Abreviatura</TableHead>
+                <TableHead>Decimales</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
@@ -208,7 +235,7 @@ export default function UnitsOfMeasureIndex({ unitsOfMeasure = [] }: Props) {
               {filteredUnits.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={4}
+                    colSpan={5}
                     className="py-12 text-center text-muted-foreground"
                   >
                     No se encontraron unidades de medida registradas.
@@ -222,6 +249,15 @@ export default function UnitsOfMeasureIndex({ unitsOfMeasure = [] }: Props) {
                       <span className="rounded bg-muted px-2 py-1 font-mono text-sm">
                         {unit.abbreviation}
                       </span>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={
+                          unit.allows_decimal_quantity ? 'default' : 'secondary'
+                        }
+                      >
+                        {unit.allows_decimal_quantity ? 'Sí' : 'No'}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       <Badge variant={unit.is_active ? 'default' : 'secondary'}>
