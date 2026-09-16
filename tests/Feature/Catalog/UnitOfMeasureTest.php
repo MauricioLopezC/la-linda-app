@@ -20,19 +20,23 @@ test('user can create and update a unit of measure', function () {
     $this->actingAs($user)->post(route('catalog.units-of-measure.store'), [
         'name' => '  Kilogramo ',
         'abbreviation' => ' kg ',
+        'allows_decimal_quantity' => true,
         'is_active' => true,
     ])->assertSessionHasNoErrors();
 
     $unit = UnitOfMeasure::firstOrFail();
-    expect($unit)->name->toBe('Kilogramo')->abbreviation->toBe('kg');
+    expect($unit)->name->toBe('Kilogramo')->abbreviation->toBe('kg')
+        ->allows_decimal_quantity->toBeTrue();
 
     $this->actingAs($user)->put(route('catalog.units-of-measure.update', $unit), [
         'name' => 'Kilo',
         'abbreviation' => 'k',
+        'allows_decimal_quantity' => false,
         'is_active' => true,
     ])->assertSessionHasNoErrors();
 
-    expect($unit->fresh())->name->toBe('Kilo')->abbreviation->toBe('k');
+    expect($unit->fresh())->name->toBe('Kilo')->abbreviation->toBe('k')
+        ->allows_decimal_quantity->toBeFalse();
 });
 
 test('unit name and abbreviation are unique ignoring case and outer spaces', function () {

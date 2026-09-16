@@ -60,6 +60,7 @@ interface MovementItemDraft {
   brand_name: string | null;
   category_name: string;
   unit_of_measure_name: string;
+  unit_of_measure_abbreviation: string;
   allows_decimals: boolean;
   quantity: number | '';
 }
@@ -181,6 +182,7 @@ export default function CreateStockAdjustment({
           brand_name: article.brand_name,
           category_name: article.category_name,
           unit_of_measure_name: article.unit_of_measure_name,
+          unit_of_measure_abbreviation: article.unit_of_measure_abbreviation,
           allows_decimals: article.allows_decimals ?? true,
           quantity: '',
         },
@@ -224,14 +226,27 @@ export default function CreateStockAdjustment({
     setItemsDraft((prev) => prev.filter((it) => it.article_id !== articleId));
   };
 
-  const totalUnits = useMemo(
-    () =>
-      itemsDraft.reduce(
-        (acc, it) => acc + (it.quantity === '' ? 0 : Number(it.quantity)),
-        0,
-      ),
-    [itemsDraft],
-  );
+  // Quantities aren't fungible across units of measure (kg, L, u, ...), so they can't be summed
+  // into a single "total units" figure — group and show a subtotal per unit instead.
+  const totalsByUnit = useMemo(() => {
+    const totals = new Map<string, number>();
+
+    itemsDraft.forEach((it) => {
+      const qty = it.quantity === '' ? 0 : Number(it.quantity);
+      totals.set(
+        it.unit_of_measure_abbreviation,
+        Math.round(
+          ((totals.get(it.unit_of_measure_abbreviation) ?? 0) + qty) * 1000,
+        ) / 1000,
+      );
+    });
+
+    return Array.from(totals.entries());
+  }, [itemsDraft]);
+
+  const totalsByUnitLabel = totalsByUnit
+    .map(([abbreviation, qty]) => `${qty} ${abbreviation}`)
+    .join(' + ');
 
   const allQuantitiesValid = itemsDraft.every(
     (it) => it.quantity !== '' && Number(it.quantity) > 0,
@@ -407,7 +422,7 @@ export default function CreateStockAdjustment({
                 </div>
                 {itemsDraft.length > 0 && (
                   <Badge variant="outline" className="text-xs">
-                    {itemsDraft.length} artículo(s) · {totalUnits} u.{' '}
+                    {itemsDraft.length} artículo(s) · {totalsByUnitLabel}{' '}
                     {isDeduction ? 'a restar' : 'a sumar'}
                   </Badge>
                 )}
@@ -643,7 +658,7 @@ export default function CreateStockAdjustment({
                     </div>
                     <div>
                       <span className="font-semibold">Artículos:</span>{' '}
-                      {itemsDraft.length} · {totalUnits} unidades en total
+                      {itemsDraft.length} · {totalsByUnitLabel}
                     </div>
                   </div>
                   <p className="text-xs font-medium text-amber-600 dark:text-amber-400">

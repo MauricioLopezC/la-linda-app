@@ -56,6 +56,9 @@ class SupplierVoucherSeeder extends Seeder
                 }
 
                 $quantity = ($voucherIndex + 1) + (($itemIndex + 1) / 4);
+                if (! $article->allowsDecimalQuantity()) {
+                    $quantity = ceil($quantity);
+                }
                 $unitPrice = 750 + ($voucherIndex * 125) + ($itemIndex * 80);
 
                 return [

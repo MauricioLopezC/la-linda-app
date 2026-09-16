@@ -11,6 +11,7 @@ class UnitOfMeasureData extends Data
         public int $id,
         public string $name,
         public string $abbreviation,
+        public bool $allows_decimal_quantity,
         public bool $is_active,
     ) {}
 
@@ -20,6 +21,7 @@ class UnitOfMeasureData extends Data
             id: $unitOfMeasure->id,
             name: $unitOfMeasure->name,
             abbreviation: $unitOfMeasure->abbreviation,
+            allows_decimal_quantity: $unitOfMeasure->allows_decimal_quantity,
             is_active: $unitOfMeasure->is_active,
         );
     }

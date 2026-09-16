@@ -18,12 +18,13 @@ test('catalog demonstration seeders create the expected data and are idempotent'
         }
     });
 
-    expect(Category::count())->toBe(34)
+    expect(Category::count())->toBe(37)
         ->and(Brand::count())->toBe(14)
         ->and(UnitOfMeasure::count())->toBe(3);
 
     $warehouse = Category::where('name', 'Almacén')->firstOrFail();
     $this->assertDatabaseHas('categories', ['name' => 'Conservas', 'parent_id' => $warehouse->id]);
     $this->assertDatabaseHas('brands', ['name' => 'La Serenísima']);
-    $this->assertDatabaseHas('units_of_measure', ['name' => 'Kilogramo', 'abbreviation' => 'kg']);
+    $this->assertDatabaseHas('units_of_measure', ['name' => 'Kilogramo', 'abbreviation' => 'kg', 'allows_decimal_quantity' => true]);
+    $this->assertDatabaseHas('units_of_measure', ['name' => 'Unidad', 'abbreviation' => 'u', 'allows_decimal_quantity' => false]);
 });
