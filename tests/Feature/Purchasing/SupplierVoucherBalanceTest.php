@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\Purchasing\SupplierVoucherType;
+use App\Models\Purchasing\PaymentOrder;
 use App\Models\Purchasing\PaymentOrderItem;
 use App\Models\Purchasing\SupplierVoucher;
 use App\Models\Purchasing\VoucherApplication;
@@ -12,9 +13,6 @@ use Illuminate\Support\Facades\DB;
 function balanceVoucher(string $state, string $total): SupplierVoucher
 {
     return SupplierVoucher::factory()->{$state}()->create([
-        'net_amount' => $total,
-        'vat_amount' => '0.00',
-        'other_taxes_amount' => '0.00',
         'total_amount' => $total,
     ]);
 }
@@ -45,21 +43,30 @@ test('a credit note application lowers the invoice pending balance', function ()
     expect($invoice->fresh()->pendingBalance())->toBe('600.00');
 });
 
-test('a debit note application raises the invoice pending balance', function () {
-    $invoice = balanceVoucher('invoice', '1000.00');
-    imputeNote(balanceVoucher('debitNote', '150.00'), $invoice, '150.00');
-
-    expect($invoice->fresh()->pendingBalance())->toBe('1150.00');
-});
-
-test('credit notes debit notes and payments combine on the same invoice', function () {
-    // HU-054 verification at the calculation level: original − NC + ND − payments.
+test('credit notes and payments combine on the same invoice', function () {
     $invoice = balanceVoucher('invoice', '1000.00');
     imputeNote(balanceVoucher('creditNote', '300.00'), $invoice, '300.00');
-    imputeNote(balanceVoucher('debitNote', '120.00'), $invoice, '120.00');
     PaymentOrderItem::factory()->forInvoice($invoice, '200.00')->create();
 
-    expect($invoice->fresh()->pendingBalance())->toBe('620.00');
+    expect($invoice->fresh()->pendingBalance())->toBe('500.00');
+});
+
+test('a debit note has its own payable balance', function () {
+    $debitNote = balanceVoucher('debitNote', '150.00');
+    PaymentOrderItem::factory()->forInvoice($debitNote, '50.00')->create();
+
+    expect($debitNote->fresh()->pendingBalance())->toBe('100.00')
+        ->and($debitNote->fresh()->outstandingAmount())->toBe('100.00');
+});
+
+test('a cancelled payment order does not lower the payable balance', function () {
+    $invoice = balanceVoucher('invoice', '1000.00');
+    $cancelledOrder = PaymentOrder::factory()->cancelled()->create();
+    PaymentOrderItem::factory()->forInvoice($invoice, '250.00')->create([
+        'payment_order_id' => $cancelledOrder->id,
+    ]);
+
+    expect($invoice->fresh()->pendingBalance())->toBe('1000.00');
 });
 
 test('a note reports how much of its amount is still unapplied', function () {
@@ -86,7 +93,6 @@ test('the balance aggregate scope resolves every balance in a single query', fun
 
     $adjusted = balanceVoucher('invoice', '2000.00');
     imputeNote(balanceVoucher('creditNote', '500.00'), $adjusted, '500.00');
-    imputeNote(balanceVoucher('debitNote', '100.00'), $adjusted, '100.00');
 
     balanceVoucher('invoice', '300.00');
 
@@ -102,7 +108,7 @@ test('the balance aggregate scope resolves every balance in a single query', fun
     $balances = $invoices->map->pendingBalance()->all();
 
     expect(DB::getQueryLog())->toHaveCount(1)
-        ->and($balances)->toBe(['600.00', '1600.00', '300.00']);
+        ->and($balances)->toBe(['600.00', '1500.00', '300.00']);
 
     DB::disableQueryLog();
 });

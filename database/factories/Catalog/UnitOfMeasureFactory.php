@@ -20,6 +20,7 @@ class UnitOfMeasureFactory extends Factory
         return [
             'name' => ucfirst(fake()->unique()->word()),
             'abbreviation' => fake()->unique()->lexify('???'),
+            'allows_decimal_quantity' => false,
             'is_active' => true,
         ];
     }

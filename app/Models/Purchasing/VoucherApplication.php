@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 
 /**
- * One imputation of a credit/debit note onto an invoice (HU-054).
+ * One imputation of a credit note onto an invoice (HU-054).
  *
  * Immutable: there is no update or delete route and the table has no updated_at column, so a
  * correction is a counter-entry, never an edit.

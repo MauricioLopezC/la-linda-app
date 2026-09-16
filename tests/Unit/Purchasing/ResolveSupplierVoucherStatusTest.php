@@ -20,7 +20,7 @@ test('status is resolved from type and derived pending balance', function (
     'credit note pending application' => [SupplierVoucherType::CreditNote, '100.00', '100.00', SupplierVoucherStatus::PendingApplication],
     'credit note partially applied' => [SupplierVoucherType::CreditNote, '100.00', '40.00', SupplierVoucherStatus::PartiallyApplied],
     'credit note applied' => [SupplierVoucherType::CreditNote, '100.00', '0.00', SupplierVoucherStatus::Applied],
-    'debit note pending application' => [SupplierVoucherType::DebitNote, '100,00', '100,00', SupplierVoucherStatus::PendingApplication],
+    'debit note pending payment' => [SupplierVoucherType::DebitNote, '100,00', '100,00', SupplierVoucherStatus::Pending],
 ]);
 
 test('status resolver rejects invalid or non-positive totals', function (string $total) {

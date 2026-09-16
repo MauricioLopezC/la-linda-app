@@ -562,7 +562,7 @@ test('user can search active articles via search-articles endpoint', function ()
         'status' => ArticleStatus::Inactive,
     ]);
 
-    $response = $this->actingAs($user)->getJson(route('purchasing.orders.search-articles', ['search' => 'yerba']));
+    $response = $this->actingAs($user)->getJson(route('purchasing.orders.search_articles', ['search' => 'yerba']));
 
     $response->assertOk();
     $data = $response->json();

@@ -12,9 +12,6 @@ use App\Models\Purchasing\VoucherApplication;
 function statusVoucher(string $state, string $total, SupplierVoucherStatus $status): SupplierVoucher
 {
     return SupplierVoucher::factory()->{$state}()->create([
-        'net_amount' => $total,
-        'vat_amount' => '0.00',
-        'other_taxes_amount' => '0.00',
         'total_amount' => $total,
         'status' => $status,
     ]);
@@ -44,16 +41,11 @@ test('an invoice paid to zero becomes paid', function () {
     expect(recalculate($invoice)->status)->toBe(SupplierVoucherStatus::Paid);
 });
 
-test('a paid invoice reopened by a debit note is no longer paid', function () {
-    $invoice = statusVoucher('invoice', '1000.00', SupplierVoucherStatus::Pending);
-    PaymentOrderItem::factory()->forInvoice($invoice, '1000.00')->create();
-    recalculate($invoice);
-    expect($invoice->fresh()->status)->toBe(SupplierVoucherStatus::Paid);
+test('a debit note becomes partially paid from its own payment applications', function () {
+    $debitNote = statusVoucher('debitNote', '300.00', SupplierVoucherStatus::Pending);
+    PaymentOrderItem::factory()->forInvoice($debitNote, '100.00')->create();
 
-    $debitNote = statusVoucher('debitNote', '300.00', SupplierVoucherStatus::PendingApplication);
-    VoucherApplication::factory()->from($debitNote)->to($invoice)->amount('300.00')->create();
-
-    expect(recalculate($invoice->fresh())->status)->toBe(SupplierVoucherStatus::PartiallyPaid);
+    expect(recalculate($debitNote)->status)->toBe(SupplierVoucherStatus::PartiallyPaid);
 });
 
 test('a credit note becomes partially applied then applied as it is imputed', function () {

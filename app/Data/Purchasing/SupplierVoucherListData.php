@@ -45,9 +45,7 @@ class SupplierVoucherListData extends Data
             due_date: $voucher->due_date?->toDateString(),
             due_date_formatted: $voucher->due_date?->format('d/m/Y'),
             total_amount: $voucher->total_amount,
-            // Dispatches by type: pending balance for an invoice, unapplied amount for a note —
-            // a note is never a payment/application target, so pendingBalance() alone would
-            // always report its full total even after it has been partially imputed.
+            // Facturas y ND exponen deuda; una NC expone el crédito aún disponible.
             outstanding_amount: $voucher->outstandingAmount(),
             status: $voucher->status->value,
             status_label: $voucher->status->label(),

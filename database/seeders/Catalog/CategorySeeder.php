@@ -55,6 +55,10 @@ class CategorySeeder extends Seeder
                 'Panificados',
                 'Repostería',
             ],
+            'Frutas y Verduras' => [
+                'Frutas',
+                'Verduras',
+            ],
         ];
 
         Category::unguarded(function () use ($categories): void {

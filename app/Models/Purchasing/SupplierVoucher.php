@@ -3,9 +3,11 @@
 namespace App\Models\Purchasing;
 
 use App\Concerns\ConvertsMoneyToCents;
+use App\Enums\Purchasing\PaymentOrderStatus;
 use App\Enums\Purchasing\SupplierVoucherLetter;
 use App\Enums\Purchasing\SupplierVoucherStatus;
 use App\Enums\Purchasing\SupplierVoucherType;
+use App\Models\User;
 use Closure;
 use Database\Factories\Purchasing\SupplierVoucherFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -26,15 +28,17 @@ use Illuminate\Support\Carbon;
  * @property string $number
  * @property Carbon $issue_date
  * @property Carbon|null $due_date
- * @property string $net_amount
- * @property string $vat_amount
- * @property string $other_taxes_amount
  * @property string $total_amount
  * @property SupplierVoucherStatus $status
  * @property string|null $notes
+ * @property Carbon|null $annulled_at
+ * @property int|null $annulled_by
+ * @property string|null $annulment_reason
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property Supplier $supplier
+ * @property Collection<int, SupplierVoucherItem> $items
+ * @property User|null $annulledByUser
  * @property Collection<int, PaymentOrderItem> $paymentOrderItems
  * @property Collection<int, VoucherApplication> $applicationsMade
  * @property Collection<int, VoucherApplication> $applicationsReceived
@@ -47,12 +51,12 @@ use Illuminate\Support\Carbon;
     'number',
     'issue_date',
     'due_date',
-    'net_amount',
-    'vat_amount',
-    'other_taxes_amount',
     'total_amount',
     'status',
     'notes',
+    'annulled_at',
+    'annulled_by',
+    'annulment_reason',
 ])]
 class SupplierVoucher extends Model
 {
@@ -62,10 +66,7 @@ class SupplierVoucher extends Model
     use HasFactory;
 
     /** @var array<string, mixed> */
-    protected $attributes = [
-        'letter' => SupplierVoucherLetter::A->value,
-        'other_taxes_amount' => '0.00',
-    ];
+    protected $attributes = ['letter' => SupplierVoucherLetter::A->value];
 
     /** @return array<string, string> */
     protected function casts(): array
@@ -75,11 +76,9 @@ class SupplierVoucher extends Model
             'letter' => SupplierVoucherLetter::class,
             'issue_date' => 'date',
             'due_date' => 'date',
-            'net_amount' => 'decimal:2',
-            'vat_amount' => 'decimal:2',
-            'other_taxes_amount' => 'decimal:2',
             'total_amount' => 'decimal:2',
             'status' => SupplierVoucherStatus::class,
+            'annulled_at' => 'datetime',
         ];
     }
 
@@ -87,6 +86,18 @@ class SupplierVoucher extends Model
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);
+    }
+
+    /** @return HasMany<SupplierVoucherItem, $this> */
+    public function items(): HasMany
+    {
+        return $this->hasMany(SupplierVoucherItem::class)->orderBy('position');
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function annulledByUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'annulled_by');
     }
 
     /**
@@ -100,7 +111,7 @@ class SupplierVoucher extends Model
     }
 
     /**
-     * Imputations where this voucher is the credit/debit note being applied.
+     * Imputations where this voucher is the credit note being applied.
      *
      * @return HasMany<VoucherApplication, $this>
      */
@@ -131,17 +142,14 @@ class SupplierVoucher extends Model
         $query->select('supplier_vouchers.*')->addSelect([
             'payments_applied_sum' => PaymentOrderItem::query()
                 ->selectRaw('coalesce(sum(amount_applied), 0)')
+                ->join('payment_orders', 'payment_orders.id', '=', 'payment_order_items.payment_order_id')
+                ->where('payment_orders.status', '!=', PaymentOrderStatus::Cancelled->value)
                 ->whereColumn('payment_order_items.supplier_voucher_id', 'supplier_vouchers.id'),
             'credit_notes_applied_sum' => VoucherApplication::query()
                 ->selectRaw('coalesce(sum(voucher_applications.amount), 0)')
                 ->join('supplier_vouchers as source_voucher', 'source_voucher.id', '=', 'voucher_applications.source_voucher_id')
                 ->whereColumn('voucher_applications.target_voucher_id', 'supplier_vouchers.id')
                 ->where('source_voucher.type', SupplierVoucherType::CreditNote->value),
-            'debit_notes_applied_sum' => VoucherApplication::query()
-                ->selectRaw('coalesce(sum(voucher_applications.amount), 0)')
-                ->join('supplier_vouchers as source_voucher', 'source_voucher.id', '=', 'voucher_applications.source_voucher_id')
-                ->whereColumn('voucher_applications.target_voucher_id', 'supplier_vouchers.id')
-                ->where('source_voucher.type', SupplierVoucherType::DebitNote->value),
             'note_applied_sum' => VoucherApplication::query()
                 ->selectRaw('coalesce(sum(amount), 0)')
                 ->whereColumn('voucher_applications.source_voucher_id', 'supplier_vouchers.id'),
@@ -149,28 +157,25 @@ class SupplierVoucher extends Model
     }
 
     /**
-     * Pending balance of this invoice, derived and never stored:
-     * total_amount − Σ payments imputed − Σ credit notes applied + Σ debit notes applied.
+     * Pending balance of this invoice or debit note, derived and never stored:
+     * total_amount − Σ payments imputed − Σ credit notes applied.
      *
-     * Meaningful for invoices; for a credit/debit note use {@see unappliedAmount()}.
+     * Meaningful for invoices and debit notes; for a credit note use {@see unappliedAmount()}.
      */
     public function pendingBalance(): string
     {
         $cents = $this->moneyToCents($this->total_amount)
             - $this->balanceAggregateCents(
                 'payments_applied_sum',
-                fn () => $this->paymentOrderItems()->sum('amount_applied'),
+                fn () => $this->paymentOrderItems()
+                    ->whereHas('paymentOrder', fn (Builder $query): Builder => $query
+                        ->where('status', '!=', PaymentOrderStatus::Cancelled->value))
+                    ->sum('amount_applied'),
             )
             - $this->balanceAggregateCents(
                 'credit_notes_applied_sum',
                 fn () => $this->applicationsReceived()
                     ->whereRelation('sourceVoucher', 'type', SupplierVoucherType::CreditNote->value)
-                    ->sum('amount'),
-            )
-            + $this->balanceAggregateCents(
-                'debit_notes_applied_sum',
-                fn () => $this->applicationsReceived()
-                    ->whereRelation('sourceVoucher', 'type', SupplierVoucherType::DebitNote->value)
                     ->sum('amount'),
             );
 
@@ -178,7 +183,7 @@ class SupplierVoucher extends Model
     }
 
     /**
-     * Portion of this credit/debit note that has not yet been imputed to any invoice:
+     * Portion of this credit note that has not yet been imputed to any invoice:
      * total_amount − Σ voucher_applications.amount whose source is this note.
      */
     public function unappliedAmount(): string
@@ -194,12 +199,33 @@ class SupplierVoucher extends Model
 
     /**
      * Amount that still has to move for this voucher to be settled: the pending balance for an
-     * invoice, the unapplied amount for a credit/debit note. Both HU-054 and HU-027 validate
+     * invoice or debit note, the unapplied amount for a credit note. Both HU-054 and HU-027 validate
      * their imputations against this figure.
      */
     public function outstandingAmount(): string
     {
-        return $this->type->isInvoice() ? $this->pendingBalance() : $this->unappliedAmount();
+        if ($this->status === SupplierVoucherStatus::Cancelled) {
+            return '0.00';
+        }
+
+        return $this->type->isCreditNote() ? $this->unappliedAmount() : $this->pendingBalance();
+    }
+
+    public function itemsTotal(): string
+    {
+        $this->loadMissing('items');
+        $cents = $this->items->sum(
+            fn (SupplierVoucherItem $item): int => $this->moneyToCents((string) $item->line_total)
+        );
+
+        return $this->centsToMoney($cents);
+    }
+
+    public function differenceAmount(): string
+    {
+        return $this->centsToMoney(
+            $this->moneyToCents((string) $this->total_amount) - $this->moneyToCents($this->itemsTotal())
+        );
     }
 
     /**
@@ -221,6 +247,23 @@ class SupplierVoucher extends Model
     {
         return $this->due_date !== null
             && $this->due_date->isBefore($referenceDate ?? today())
-            && (float) $this->pendingBalance() > 0;
+            && $this->status !== SupplierVoucherStatus::Cancelled
+            && (float) $this->outstandingAmount() > 0;
+    }
+
+    public function canBeAnnulled(): bool
+    {
+        if ($this->status === SupplierVoucherStatus::Cancelled) {
+            return false;
+        }
+
+        $hasActivePaymentOrders = $this->paymentOrderItems()
+            ->whereHas('paymentOrder', fn (Builder $query): Builder => $query
+                ->where('status', '!=', PaymentOrderStatus::Cancelled->value))
+            ->exists();
+
+        return ! $hasActivePaymentOrders
+            && ! $this->applicationsMade()->exists()
+            && ! $this->applicationsReceived()->exists();
     }
 }

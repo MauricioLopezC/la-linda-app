@@ -8,7 +8,7 @@ use App\Models\Purchasing\SupplierVoucher;
 /**
  * Re-derive a voucher's status from its live imputations and persist it.
  *
- * Shared by HU-054 (credit/debit note applications) and HU-027 (payment orders): each calls this
+ * Shared by HU-054 (credit note applications) and HU-027 (payment orders): each calls this
  * for every voucher it touched, inside its own transaction, after inserting the imputation rows.
  * The status is never set by hand.
  */
