@@ -34,7 +34,7 @@ class AppServiceProvider extends ServiceProvider
         Date::use(CarbonImmutable::class);
 
         DB::prohibitDestructiveCommands(
-            app()->isProduction(),
+            $this->shouldProhibitDestructiveCommands(),
         );
 
         Password::defaults(fn (): ?Password => app()->isProduction()
@@ -46,5 +46,16 @@ class AppServiceProvider extends ServiceProvider
                 ->uncompromised()
             : null,
         );
+    }
+
+    /**
+     * Destructive schema commands (migrate:fresh, migrate:refresh, db:wipe, ...)
+     * stay blocked in production unless a one-off rebuild has been explicitly
+     * authorized via the DB_ALLOW_DESTRUCTIVE_COMMANDS env flag.
+     */
+    protected function shouldProhibitDestructiveCommands(): bool
+    {
+        return app()->isProduction()
+            && ! config('database.allow_destructive_commands');
     }
 }
