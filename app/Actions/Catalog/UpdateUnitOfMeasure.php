@@ -23,6 +23,7 @@ class UpdateUnitOfMeasure
         $unitOfMeasure->update([
             'name' => (string) $data['name'],
             'abbreviation' => (string) $data['abbreviation'],
+            'allows_decimal_quantity' => (bool) $data['allows_decimal_quantity'],
             'is_active' => $isActive,
         ]);
 

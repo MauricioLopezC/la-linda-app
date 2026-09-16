@@ -134,6 +134,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Allow Destructive Commands
+    |--------------------------------------------------------------------------
+    |
+    | Destructive schema commands (migrate:fresh, migrate:refresh, db:wipe, ...)
+    | are prohibited in production. Set this flag to true only for a controlled,
+    | one-off schema rebuild and turn it back off immediately afterwards.
+    |
+    */
+
+    'allow_destructive_commands' => (bool) env('DB_ALLOW_DESTRUCTIVE_COMMANDS', false),
+
+    /*
+    |--------------------------------------------------------------------------
     | Redis Databases
     |--------------------------------------------------------------------------
     |

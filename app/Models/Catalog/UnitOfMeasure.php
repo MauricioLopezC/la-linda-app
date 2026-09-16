@@ -17,11 +17,12 @@ use Illuminate\Support\Carbon;
  * @property string $name_normalized
  * @property string $abbreviation
  * @property string $abbreviation_normalized
+ * @property bool $allows_decimal_quantity
  * @property bool $is_active
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['name', 'abbreviation', 'is_active'])]
+#[Fillable(['name', 'abbreviation', 'allows_decimal_quantity', 'is_active'])]
 class UnitOfMeasure extends Model
 {
     /** @use HasFactory<UnitOfMeasureFactory> */
@@ -40,6 +41,7 @@ class UnitOfMeasure extends Model
     protected function casts(): array
     {
         return [
+            'allows_decimal_quantity' => 'boolean',
             'is_active' => 'boolean',
         ];
     }
@@ -66,10 +68,7 @@ class UnitOfMeasure extends Model
 
     public function allowsDecimals(): bool
     {
-        $discreteAbbreviations = ['u', 'un', 'und', 'pk', 'bto', 'doc'];
-
-        return ! in_array(mb_strtolower($this->abbreviation_normalized), $discreteAbbreviations, true)
-            && ! in_array(mb_strtolower($this->name_normalized), ['unidad', 'pack', 'bulto', 'docena'], true);
+        return $this->allows_decimal_quantity;
     }
 
     /** @return array<string, string> */
