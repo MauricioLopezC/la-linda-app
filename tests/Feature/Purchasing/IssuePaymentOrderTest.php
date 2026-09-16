@@ -399,3 +399,85 @@ test('caso I: rejects when payment methods sum does not match net total', functi
 
     $this->assertDatabaseMissing('payment_orders', ['supplier_id' => $supplier->id]);
 });
+
+// ---------------------------------------------------------------------------
+// Caso J — NC libre reduce el neto y queda en estado Applied tras la OP
+// ---------------------------------------------------------------------------
+test('caso J: free credit note reduces net total and is marked Applied after payment order', function () {
+    $user = User::factory()->create();
+    $supplier = Supplier::factory()->create();
+    $paymentMethod = PaymentMethod::factory()->create();
+
+    // Factura de $10,000 — suma al neto
+    $invoice = invoiceFor($supplier, '10000.00');
+
+    // NC libre de $3,000 — resta al neto; no está imputada a ninguna factura previa
+    $creditNote = SupplierVoucher::factory()->creditNote()->create([
+        'supplier_id' => $supplier->id,
+        'total_amount' => '3000.00',
+    ]);
+
+    // outstandingAmount() de la NC antes de la OP: debe ser $3,000
+    expect($creditNote->fresh()->outstandingAmount())->toBe('3000.00');
+
+    // Neto esperado: $10,000 − $3,000 = $7,000
+    $payload = paymentPayload($supplier, [['payment_method_id' => $paymentMethod->id, 'amount' => '7000.00']], [
+        ['supplier_voucher_id' => $invoice->id, 'amount_applied' => '10000.00'],
+        ['supplier_voucher_id' => $creditNote->id, 'amount_applied' => '3000.00'],
+    ]);
+
+    $result = issueAction()->handle($payload, $user->id);
+
+    // El total neto de la OP es $7,000
+    expect($result->total_amount)->toBe('7000.00');
+
+    // La factura quedó totalmente pagada
+    $invoiceItem = collect($result->items)->firstWhere('supplier_voucher_id', $invoice->id);
+    expect($invoiceItem->voucher_remaining_balance)->toBe('0.00');
+    expect($invoiceItem->voucher_status)->toBe(SupplierVoucherStatus::Paid->value);
+
+    // La NC quedó totalmente aplicada — outstandingAmount() = 0, status = Applied ('imputada')
+    $cnItem = collect($result->items)->firstWhere('supplier_voucher_id', $creditNote->id);
+    expect($cnItem->voucher_remaining_balance)->toBe('0.00');
+    expect($cnItem->voucher_status)->toBe(SupplierVoucherStatus::Applied->value);
+
+    // Confirmación en base de datos
+    $this->assertDatabaseHas('payment_orders', [
+        'order_number' => $result->order_number,
+        'total_amount' => '7000.00',
+        'status' => 'emitida',
+    ]);
+});
+
+// ---------------------------------------------------------------------------
+// Caso K — el endpoint devuelve NC libres y ND además de facturas
+// ---------------------------------------------------------------------------
+test('caso K: invoices endpoint returns credit notes and debit notes alongside invoices', function () {
+    $user = User::factory()->create();
+    $supplier = Supplier::factory()->create();
+
+    // Factura con saldo pendiente — debe aparecer
+    $invoice = invoiceFor($supplier, '5000.00');
+
+    // NC libre (sin imputar a ninguna factura) — debe aparecer
+    $freeCreditNote = SupplierVoucher::factory()->creditNote()->create([
+        'supplier_id' => $supplier->id,
+        'total_amount' => '2000.00',
+    ]);
+
+    // NC totalmente imputada a una factura vía VoucherApplication — NO debe aparecer:
+    // outstandingAmount() = unappliedAmount() = total - Σ applications = 0
+    $targetInvoice = invoiceFor($supplier, '1000.00');
+    $appliedCreditNote = SupplierVoucher::factory()->creditNote()->create([
+        'supplier_id' => $supplier->id,
+        'total_amount' => '1000.00',
+    ]);
+    VoucherApplication::factory()->from($appliedCreditNote)->to($targetInvoice)->amount('1000.00')->create();
+
+    $this->actingAs($user)
+        ->getJson(route('purchasing.payment-orders.suppliers.invoices', $supplier))
+        ->assertOk()
+        ->assertJsonFragment(['id' => $invoice->id])
+        ->assertJsonFragment(['id' => $freeCreditNote->id])
+        ->assertJsonMissing(['id' => $appliedCreditNote->id]);
+});

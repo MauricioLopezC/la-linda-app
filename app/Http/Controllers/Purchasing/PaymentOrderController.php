@@ -8,7 +8,7 @@ use App\Data\Purchasing\PaymentOrderData;
 use App\Data\Purchasing\SupplierOptionData;
 use App\Data\Purchasing\SupplierVoucherListData;
 use App\Data\Sales\PaymentMethodData;
-use App\Enums\Purchasing\SupplierVoucherType;
+use App\Enums\Purchasing\SupplierVoucherStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Purchasing\StorePaymentOrderRequest;
 use App\Models\Purchasing\PaymentOrder;
@@ -87,8 +87,11 @@ class PaymentOrderController extends Controller
      * - with outstanding_amount > 0 (i.e. not fully paid)
      *
      * The withBalanceAggregates() scope avoids N+1 by loading all four balance components
-     * as sub-selects in a single query. PHP-level filter via pendingBalance() is then applied
-     * to exclude fully-settled invoices — the same pattern used elsewhere in the module.
+     * as sub-selects in a single query. PHP-level filter via outstandingAmount() is then applied
+     * to exclude fully-settled vouchers — the same pattern used elsewhere in the module.
+     *
+     * Returns invoices, debit notes, and free credit notes (those with remaining unapplied
+     * credit) — all three types can participate in a payment order.
      */
     public function invoices(Supplier $supplier): JsonResponse
     {
@@ -96,11 +99,11 @@ class PaymentOrderController extends Controller
             ->withBalanceAggregates()
             ->with('supplier:id,business_name')
             ->where('supplier_id', $supplier->id)
-            ->where('type', SupplierVoucherType::Invoice->value)
+            ->where('status', '!=', SupplierVoucherStatus::Cancelled->value)
             ->orderByDesc('issue_date')
             ->orderByDesc('supplier_vouchers.id')
             ->get()
-            ->filter(fn (SupplierVoucher $v): bool => (float) $v->pendingBalance() > 0)
+            ->filter(fn (SupplierVoucher $v): bool => (float) $v->outstandingAmount() > 0)
             ->values();
 
         return response()->json(SupplierVoucherListData::collect($vouchers));

@@ -50,12 +50,18 @@ test('the invoices endpoint returns only that supplier invoices with a pending b
     $pending = invoiceWithBalance($supplier, '10000.00');
     invoiceWithBalance($other, '5000.00');
 
+    // NC libre del mismo proveedor — debe aparecer en el endpoint (tiene importe disponible)
+    $freeCreditNote = SupplierVoucher::factory()->creditNote()->create([
+        'supplier_id' => $supplier->id,
+        'total_amount' => '2000.00',
+    ]);
+
     $this->actingAs(User::factory()->create())
         ->getJson(route('purchasing.payment-orders.suppliers.invoices', $supplier))
         ->assertOk()
-        ->assertJsonCount(1)
-        ->assertJsonPath('0.id', $pending->id)
-        ->assertJsonPath('0.outstanding_amount', '10000.00');
+        ->assertJsonCount(2)
+        ->assertJsonFragment(['id' => $pending->id, 'outstanding_amount' => '10000.00'])
+        ->assertJsonFragment(['id' => $freeCreditNote->id, 'outstanding_amount' => '2000.00']);
 });
 
 test('store issues the order and flashes the PaymentOrderData for the success panel', function () {

@@ -207,7 +207,13 @@ export default function CreatePaymentOrder({
   );
 
   const totalCents = data.items.reduce(
-    (accumulator, item) => accumulator + toCents(item.amount_applied),
+    (acc, item) =>
+      acc +
+      (rows.find((r) => r.voucher.id === item.supplier_voucher_id)?.voucher
+        .type === 'nota_credito'
+        ? -1
+        : 1) *
+        toCents(item.amount_applied),
     0,
   );
 
@@ -476,11 +482,11 @@ export default function CreatePaymentOrder({
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <CardTitle className="text-base font-semibold">
-                    Facturas a pagar
+                    Comprobantes a pagar
                   </CardTitle>
                   <p className="mt-0.5 text-xs text-muted-foreground">
-                    Tildá las facturas e ingresá el importe a imputar a cada
-                    una. No se puede imputar más que el saldo pendiente.
+                    Facturas y notas de débito suman al total; notas de crédito
+                    lo reducen. Ingresá el importe a imputar en cada fila.
                   </p>
                 </div>
                 <div className="text-right">

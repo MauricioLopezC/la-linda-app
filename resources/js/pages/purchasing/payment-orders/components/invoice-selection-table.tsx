@@ -48,7 +48,7 @@ export default function InvoiceSelectionTable({
             <TableHead>Comprobante</TableHead>
             <TableHead>Emisión</TableHead>
             <TableHead>Vencimiento</TableHead>
-            <TableHead className="text-right">Saldo pendiente</TableHead>
+            <TableHead className="text-right">Saldo disponible</TableHead>
             <TableHead className="w-48 text-right">Importe a imputar</TableHead>
           </TableRow>
         </TableHeader>
@@ -60,7 +60,8 @@ export default function InvoiceSelectionTable({
                 className="py-8 text-center text-muted-foreground"
               >
                 <ReceiptText className="mx-auto mb-1 size-6 opacity-40" />
-                Elegí un proveedor para ver sus facturas con saldo pendiente.
+                Elegí un proveedor para ver sus comprobantes con importe
+                disponible.
               </TableCell>
             </TableRow>
           )}
@@ -72,7 +73,7 @@ export default function InvoiceSelectionTable({
                 className="py-8 text-center text-muted-foreground"
               >
                 <Loader2 className="mx-auto mb-1 size-5 animate-spin" />
-                Cargando facturas del proveedor...
+                Cargando comprobantes del proveedor...
               </TableCell>
             </TableRow>
           )}
@@ -83,7 +84,7 @@ export default function InvoiceSelectionTable({
                 colSpan={6}
                 className="py-8 text-center text-muted-foreground"
               >
-                Este proveedor no tiene facturas con saldo pendiente.
+                Este proveedor no tiene comprobantes con importe disponible.
               </TableCell>
             </TableRow>
           )}
@@ -129,7 +130,16 @@ export default function InvoiceSelectionTable({
                   </span>
                 </TableCell>
                 <TableCell className="text-right font-mono">
-                  {formatCurrency(voucher.outstanding_amount)}
+                  <span
+                    className={
+                      voucher.type === 'nota_credito'
+                        ? 'text-rose-600 dark:text-rose-400'
+                        : 'text-emerald-700 dark:text-emerald-400'
+                    }
+                  >
+                    {voucher.type === 'nota_credito' ? '−' : '+'}
+                    {formatCurrency(voucher.outstanding_amount)}
+                  </span>
                 </TableCell>
                 <TableCell className="text-right">
                   <Input

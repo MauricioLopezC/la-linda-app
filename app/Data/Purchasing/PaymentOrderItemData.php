@@ -14,7 +14,7 @@ class PaymentOrderItemData extends Data
     public function __construct(
         public int $supplier_voucher_id,
         public string $amount_applied,
-        /** Balance remaining on this invoice after the imputation. */
+        /** Balance remaining on this voucher after the imputation — outstandingAmount() dispatches correctly for invoices, debit notes, and credit notes. */
         public string $voucher_remaining_balance,
         /** SupplierVoucherStatus value after RecalculateVoucherBalanceStatus ran. */
         public string $voucher_status,
@@ -26,7 +26,7 @@ class PaymentOrderItemData extends Data
         return new self(
             supplier_voucher_id: $item->supplier_voucher_id,
             amount_applied: (string) $item->amount_applied,
-            voucher_remaining_balance: $voucher->pendingBalance(),
+            voucher_remaining_balance: $voucher->outstandingAmount(),
             voucher_status: $voucher->status->value,
             voucher_status_label: $voucher->status->label(),
         );
