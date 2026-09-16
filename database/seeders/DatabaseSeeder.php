@@ -31,16 +31,14 @@ class DatabaseSeeder extends Seeder
     {
         // User::factory(10)->create();
 
-        if (! app()->isProduction()) {
-            User::firstOrCreate(
-                ['email' => 'test@example.com'],
-                [
-                    'name' => 'Test User',
-                    'password' => 'password',
-                    'email_verified_at' => now(),
-                ]
-            );
-        }
+        User::firstOrCreate(
+            ['email' => config('demo.admin_email')],
+            [
+                'name' => config('demo.admin_name'),
+                'password' => config('demo.admin_password'),
+                'email_verified_at' => now(),
+            ]
+        );
 
         $this->call([
             CategorySeeder::class,
