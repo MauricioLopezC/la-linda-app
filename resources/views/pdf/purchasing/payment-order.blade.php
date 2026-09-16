@@ -96,7 +96,23 @@
             <tbody>
                 @forelse($order->paymentMethods as $pm)
                     <tr>
-                        <td class="desc-col">{{ $pm->paymentMethod->name }}</td>
+                        <td class="desc-col">
+                            {{ $pm->paymentMethod->name }}
+                            @if ($pm->source_account || $pm->transaction_number)
+                                <div style="font-size: 0.85em; color: #475569; margin-top: 4px;">
+                                    @if ($pm->source_account) Cta: {{ $pm->source_account }} @endif
+                                    @if ($pm->source_account && $pm->transaction_number) - @endif
+                                    @if ($pm->transaction_number) Op: {{ $pm->transaction_number }} @endif
+                                </div>
+                            @endif
+                            @if ($pm->check_number || $pm->check_due_date)
+                                <div style="font-size: 0.85em; color: #475569; margin-top: 4px;">
+                                    @if ($pm->check_number) Cheque Nro: {{ $pm->check_number }} @endif
+                                    @if ($pm->check_number && $pm->check_due_date) - @endif
+                                    @if ($pm->check_due_date) Vto: {{ \Carbon\Carbon::parse($pm->check_due_date)->format('d/m/Y') }} @endif
+                                </div>
+                            @endif
+                        </td>
                         <td class="code-col">{{ $pm->reference ?? '-' }}</td>
                         <td class="total-col amount">$ {{ number_format((float) $pm->amount, 2, ',', '.') }}</td>
                     </tr>

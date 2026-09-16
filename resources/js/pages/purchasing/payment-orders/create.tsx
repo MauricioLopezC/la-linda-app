@@ -103,13 +103,31 @@ export default function CreatePaymentOrder({
       supplier_id: string;
       date: string;
       notes: string;
-      payment_methods: { payment_method_id: string; amount: string }[];
+      payment_methods: {
+        payment_method_id: string;
+        amount: string;
+        reference?: string;
+        source_account?: string;
+        transaction_number?: string;
+        check_number?: string;
+        check_due_date?: string;
+      }[];
       items: ItemRow[];
     }>({
       supplier_id: '',
       date: today,
       notes: '',
-      payment_methods: [{ payment_method_id: '', amount: '' }],
+      payment_methods: [
+        {
+          payment_method_id: '',
+          amount: '',
+          reference: '',
+          source_account: '',
+          transaction_number: '',
+          check_number: '',
+          check_due_date: '',
+        },
+      ],
       items: [],
     });
 
@@ -243,10 +261,37 @@ export default function CreatePaymentOrder({
       supplier_id: Number(formData.supplier_id),
       date: formData.date,
       notes: formData.notes.trim() === '' ? null : formData.notes.trim(),
-      payment_methods: formData.payment_methods.map((m) => ({
-        payment_method_id: Number(m.payment_method_id),
-        amount: Number(m.amount.replace(',', '.')).toFixed(2),
-      })),
+      payment_methods: formData.payment_methods.map((m) => {
+        const method = paymentMethods.find(
+          (pm) => String(pm.id) === m.payment_method_id,
+        );
+        const name = method?.name.toLowerCase() || '';
+        const isTransfer =
+          name.includes('transferencia') ||
+          name.includes('banco') ||
+          name.includes('bancaria');
+        const isCheck = name.includes('cheque') || name.includes('e-cheq');
+
+        return {
+          payment_method_id: Number(m.payment_method_id),
+          amount: Number(m.amount.replace(',', '.')).toFixed(2),
+          reference: m.reference?.trim() || null,
+          source_account:
+            isTransfer && m.source_account?.trim()
+              ? m.source_account.trim()
+              : null,
+          transaction_number:
+            isTransfer && m.transaction_number?.trim()
+              ? m.transaction_number.trim()
+              : null,
+          check_number:
+            isCheck && m.check_number?.trim() ? m.check_number.trim() : null,
+          check_due_date:
+            isCheck && m.check_due_date?.trim()
+              ? m.check_due_date.trim()
+              : null,
+        };
+      }),
       items: formData.items.map((item) => ({
         supplier_voucher_id: item.supplier_voucher_id,
         amount_applied: Number(item.amount_applied.replace(',', '.')).toFixed(
@@ -368,7 +413,15 @@ export default function CreatePaymentOrder({
                       onClick={() =>
                         setData('payment_methods', [
                           ...data.payment_methods,
-                          { payment_method_id: '', amount: '' },
+                          {
+                            payment_method_id: '',
+                            amount: '',
+                            reference: '',
+                            source_account: '',
+                            transaction_number: '',
+                            check_number: '',
+                            check_due_date: '',
+                          },
                         ])
                       }
                     >
@@ -376,76 +429,234 @@ export default function CreatePaymentOrder({
                     </Button>
                   </div>
                   <div className="space-y-3">
-                    {data.payment_methods.map((pm, index) => (
-                      <div key={index} className="flex items-start gap-2">
-                        <div className="flex-1 space-y-1.5">
-                          <Select
-                            value={pm.payment_method_id}
-                            onValueChange={(value) => {
-                              const newMethods = [...data.payment_methods];
-                              newMethods[index].payment_method_id = value;
-                              setData('payment_methods', newMethods);
-                            }}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Seleccionar medio..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {paymentMethods.map((method) => (
-                                <SelectItem
-                                  key={method.id}
-                                  value={String(method.id)}
-                                >
-                                  {method.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <InputError
-                            message={
-                              errors[
-                                `payment_methods.${index}.payment_method_id` as keyof typeof errors
-                              ]
-                            }
-                          />
+                    {data.payment_methods.map((pm, index) => {
+                      const method = paymentMethods.find(
+                        (m) => String(m.id) === pm.payment_method_id,
+                      );
+                      const name = method?.name.toLowerCase() || '';
+                      const isTransfer =
+                        name.includes('transferencia') ||
+                        name.includes('banco') ||
+                        name.includes('bancaria');
+                      const isCheck =
+                        name.includes('cheque') || name.includes('e-cheq');
+
+                      return (
+                        <div
+                          key={index}
+                          className="space-y-4 rounded-md border bg-card p-4 shadow-sm"
+                        >
+                          <div className="flex items-start gap-2">
+                            <div className="flex-1 space-y-1.5">
+                              <Select
+                                value={pm.payment_method_id}
+                                onValueChange={(value) => {
+                                  const newMethods = [...data.payment_methods];
+                                  newMethods[index].payment_method_id = value;
+                                  setData('payment_methods', newMethods);
+                                }}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Seleccionar medio..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {paymentMethods.map((m) => (
+                                    <SelectItem key={m.id} value={String(m.id)}>
+                                      {m.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <InputError
+                                message={
+                                  errors[
+                                    `payment_methods.${index}.payment_method_id` as keyof typeof errors
+                                  ]
+                                }
+                              />
+                            </div>
+                            <div className="w-32 space-y-1.5">
+                              <Input
+                                placeholder="Monto"
+                                value={pm.amount}
+                                onChange={(e) => {
+                                  const newMethods = [...data.payment_methods];
+                                  newMethods[index].amount = sanitizeDecimal(
+                                    e.target.value,
+                                  );
+                                  setData('payment_methods', newMethods);
+                                }}
+                              />
+                              <InputError
+                                message={
+                                  errors[
+                                    `payment_methods.${index}.amount` as keyof typeof errors
+                                  ]
+                                }
+                              />
+                            </div>
+                            {data.payment_methods.length > 1 && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="text-muted-foreground hover:text-destructive"
+                                onClick={() => {
+                                  const newMethods = [...data.payment_methods];
+                                  newMethods.splice(index, 1);
+                                  setData('payment_methods', newMethods);
+                                }}
+                              >
+                                &times;
+                              </Button>
+                            )}
+                          </div>
+
+                          {pm.payment_method_id && (
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                              {isTransfer && (
+                                <>
+                                  <div className="space-y-1.5">
+                                    <Label className="text-xs text-muted-foreground">
+                                      Cuenta Origen
+                                    </Label>
+                                    <Input
+                                      placeholder="CBU / Alias / Banco"
+                                      value={pm.source_account || ''}
+                                      onChange={(e) => {
+                                        const newMethods = [
+                                          ...data.payment_methods,
+                                        ];
+                                        newMethods[index].source_account =
+                                          e.target.value;
+                                        setData('payment_methods', newMethods);
+                                      }}
+                                    />
+                                    <InputError
+                                      message={
+                                        errors[
+                                          `payment_methods.${index}.source_account` as keyof typeof errors
+                                        ]
+                                      }
+                                    />
+                                  </div>
+                                  <div className="space-y-1.5">
+                                    <Label className="text-xs text-muted-foreground">
+                                      Nro. Operación
+                                    </Label>
+                                    <Input
+                                      placeholder="12345678"
+                                      value={pm.transaction_number || ''}
+                                      onChange={(e) => {
+                                        const newMethods = [
+                                          ...data.payment_methods,
+                                        ];
+                                        newMethods[index].transaction_number =
+                                          e.target.value;
+                                        setData('payment_methods', newMethods);
+                                      }}
+                                    />
+                                    <InputError
+                                      message={
+                                        errors[
+                                          `payment_methods.${index}.transaction_number` as keyof typeof errors
+                                        ]
+                                      }
+                                    />
+                                  </div>
+                                </>
+                              )}
+
+                              {isCheck && (
+                                <>
+                                  <div className="space-y-1.5">
+                                    <Label className="text-xs text-muted-foreground">
+                                      Nro. Cheque
+                                    </Label>
+                                    <Input
+                                      placeholder="00000000"
+                                      value={pm.check_number || ''}
+                                      onChange={(e) => {
+                                        const newMethods = [
+                                          ...data.payment_methods,
+                                        ];
+                                        newMethods[index].check_number =
+                                          e.target.value;
+                                        setData('payment_methods', newMethods);
+                                      }}
+                                    />
+                                    <InputError
+                                      message={
+                                        errors[
+                                          `payment_methods.${index}.check_number` as keyof typeof errors
+                                        ]
+                                      }
+                                    />
+                                  </div>
+                                  <div className="space-y-1.5">
+                                    <Label className="text-xs text-muted-foreground">
+                                      Vencimiento Cheque
+                                    </Label>
+                                    <Input
+                                      type="date"
+                                      value={pm.check_due_date || ''}
+                                      onChange={(e) => {
+                                        const newMethods = [
+                                          ...data.payment_methods,
+                                        ];
+                                        newMethods[index].check_due_date =
+                                          e.target.value;
+                                        setData('payment_methods', newMethods);
+                                      }}
+                                    />
+                                    <InputError
+                                      message={
+                                        errors[
+                                          `payment_methods.${index}.check_due_date` as keyof typeof errors
+                                        ]
+                                      }
+                                    />
+                                  </div>
+                                </>
+                              )}
+
+                              <div
+                                className={
+                                  !isTransfer && !isCheck
+                                    ? 'sm:col-span-2'
+                                    : 'sm:col-span-2'
+                                }
+                              >
+                                <div className="space-y-1.5">
+                                  <Label className="text-xs text-muted-foreground">
+                                    Referencia (opcional)
+                                  </Label>
+                                  <Input
+                                    placeholder="Ref. / Nro. de comprobante interno"
+                                    value={pm.reference || ''}
+                                    onChange={(e) => {
+                                      const newMethods = [
+                                        ...data.payment_methods,
+                                      ];
+                                      newMethods[index].reference =
+                                        e.target.value;
+                                      setData('payment_methods', newMethods);
+                                    }}
+                                  />
+                                  <InputError
+                                    message={
+                                      errors[
+                                        `payment_methods.${index}.reference` as keyof typeof errors
+                                      ]
+                                    }
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </div>
-                        <div className="w-32 space-y-1.5">
-                          <Input
-                            placeholder="Monto"
-                            value={pm.amount}
-                            onChange={(e) => {
-                              const newMethods = [...data.payment_methods];
-                              newMethods[index].amount = sanitizeDecimal(
-                                e.target.value,
-                              );
-                              setData('payment_methods', newMethods);
-                            }}
-                          />
-                          <InputError
-                            message={
-                              errors[
-                                `payment_methods.${index}.amount` as keyof typeof errors
-                              ]
-                            }
-                          />
-                        </div>
-                        {data.payment_methods.length > 1 && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="text-muted-foreground hover:text-destructive"
-                            onClick={() => {
-                              const newMethods = [...data.payment_methods];
-                              newMethods.splice(index, 1);
-                              setData('payment_methods', newMethods);
-                            }}
-                          >
-                            &times;
-                          </Button>
-                        )}
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
 
