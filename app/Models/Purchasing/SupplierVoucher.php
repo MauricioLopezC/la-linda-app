@@ -153,6 +153,11 @@ class SupplierVoucher extends Model
             'note_applied_sum' => VoucherApplication::query()
                 ->selectRaw('coalesce(sum(amount), 0)')
                 ->whereColumn('voucher_applications.source_voucher_id', 'supplier_vouchers.id'),
+            'note_paid_sum' => PaymentOrderItem::query()
+                ->selectRaw('coalesce(sum(amount_applied), 0)')
+                ->join('payment_orders', 'payment_orders.id', '=', 'payment_order_items.payment_order_id')
+                ->where('payment_orders.status', '!=', PaymentOrderStatus::Cancelled->value)
+                ->whereColumn('payment_order_items.supplier_voucher_id', 'supplier_vouchers.id'),
         ]);
     }
 
@@ -184,7 +189,7 @@ class SupplierVoucher extends Model
 
     /**
      * Portion of this credit note that has not yet been imputed to any invoice:
-     * total_amount − Σ voucher_applications.amount whose source is this note.
+     * total_amount − Σ voucher_applications.amount whose source is this note - Σ payment_order_items.amount_applied.
      */
     public function unappliedAmount(): string
     {
@@ -192,6 +197,13 @@ class SupplierVoucher extends Model
             - $this->balanceAggregateCents(
                 'note_applied_sum',
                 fn () => $this->applicationsMade()->sum('amount'),
+            )
+            - $this->balanceAggregateCents(
+                'note_paid_sum',
+                fn () => $this->paymentOrderItems()
+                    ->whereHas('paymentOrder', fn (Builder $query): Builder => $query
+                        ->where('status', '!=', PaymentOrderStatus::Cancelled->value))
+                    ->sum('amount_applied'),
             );
 
         return $this->centsToMoney($cents);

@@ -15,6 +15,7 @@ import {
   LayoutGrid,
   Sliders,
   Truck,
+  Wallet,
   Warehouse,
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
@@ -134,6 +135,12 @@ const navGroups: NavGroup[] = [
         title: 'Comprobantes',
         href: supplierVouchers(),
         icon: ReceiptText,
+      },
+      {
+        // TODO(HU-055): repuntar al index del listado de pagos cuando exista.
+        title: 'Órdenes de Pago',
+        href: '/purchasing/payment-orders/create',
+        icon: Wallet,
       },
     ],
   },

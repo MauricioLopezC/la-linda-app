@@ -41,6 +41,14 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
+            'flash' => function () use ($request) {
+                /** @var array<int, string> $keys */
+                $keys = $request->session()->get('_flash.old', []);
+
+                return collect($keys)
+                    ->mapWithKeys(fn (string $key) => [$key => $request->session()->get($key)])
+                    ->toArray();
+            },
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
     }

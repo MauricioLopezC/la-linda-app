@@ -11,6 +11,7 @@ use App\Http\Controllers\Inventory\StockParameterController;
 use App\Http\Controllers\Inventory\WarehouseController;
 use App\Http\Controllers\Organization\BranchController;
 use App\Http\Controllers\Pricing\VatRateController;
+use App\Http\Controllers\Purchasing\PaymentOrderController;
 use App\Http\Controllers\Purchasing\PurchaseOrderController;
 use App\Http\Controllers\Purchasing\SupplierController;
 use App\Http\Controllers\Purchasing\SupplierVoucherController;
@@ -137,6 +138,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('{purchase_order}/issue', [PurchaseOrderController::class, 'issue'])->name('issue');
         Route::post('{purchase_order}/cancel', [PurchaseOrderController::class, 'cancel'])->name('cancel');
         Route::get('{purchase_order}/pdf', [PurchaseOrderController::class, 'pdf'])->name('pdf');
+    });
+
+    Route::prefix('purchasing/payment-orders')->name('purchasing.payment-orders.')->group(function () {
+        Route::get('create', [PaymentOrderController::class, 'create'])->name('create');
+        Route::post('/', [PaymentOrderController::class, 'store'])->name('store');
+        Route::get('{order}/pdf', [PaymentOrderController::class, 'pdf'])->name('pdf');
+        Route::delete('{order}', [PaymentOrderController::class, 'destroy'])->name('destroy');
+        Route::get('suppliers/{supplier}/invoices', [PaymentOrderController::class, 'invoices'])
+            ->name('suppliers.invoices');
     });
 });
 

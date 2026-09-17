@@ -62,6 +62,7 @@ Aplicá solo las categorías relevantes a los archivos tocados:
   pares como `existencias`), nullable/default sensatos, `down()` reversible.
 - **Form Requests (validación):** reglas coinciden exactamente con los límites del criterio
   (únicos, obligatorios, rangos), `authorize()` correcto.
+- **Custom Rules (`app/Rules/{Modulo}/`):** reglas de validación personalizadas deben tener lógica enfocada en una única validación de negocio y deben testearse explícitamente.
 - **Actions (`app/Actions/{Modulo}/`):** ¿la lógica de negocio está ahí y no en el controller? Un
   controller con reglas de negocio, un `where` trivial envuelto innecesariamente en una Action, o
   lógica duplicada que ya existe en otro Action del módulo son todos hallazgos válidos (ver
