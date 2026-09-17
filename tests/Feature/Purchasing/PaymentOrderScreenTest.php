@@ -156,3 +156,12 @@ test('store rejects a client-sent total_amount', function () {
         ])
         ->assertSessionHasErrors('total_amount');
 });
+
+test('the pdf endpoint returns the payment order document', function () {
+    $order = PaymentOrder::factory()->create();
+
+    $this->actingAs(User::factory()->create())
+        ->get(route('purchasing.payment-orders.pdf', $order))
+        ->assertOk()
+        ->assertHeader('Content-Type', 'application/pdf');
+});

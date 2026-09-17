@@ -1,4 +1,4 @@
-import { CheckCircle2, Plus } from 'lucide-react';
+import { CheckCircle2, Plus, FileDown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,6 +11,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { formatCurrency } from '@/lib/utils';
+import { pdf } from '@/routes/purchasing/payment-orders';
 
 type PaymentOrder = App.Data.Purchasing.PaymentOrderData;
 
@@ -28,16 +29,29 @@ export default function IssuedOrderPanel({ order, onDismiss }: Props) {
             <CheckCircle2 className="size-5" />
             Orden de pago {order.order_number} emitida
           </CardTitle>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={onDismiss}
-            className="gap-1"
-          >
-            <Plus className="size-4" />
-            Emitir otra orden
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              asChild
+              variant="default"
+              size="sm"
+              className="gap-1 bg-emerald-600 text-white hover:bg-emerald-700"
+            >
+              <a href={pdf.url(order.id)} target="_blank" rel="noreferrer">
+                <FileDown className="size-4" />
+                Descargar PDF
+              </a>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onDismiss}
+              className="gap-1"
+            >
+              <Plus className="size-4" />
+              Emitir otra orden
+            </Button>
+          </div>
         </div>
       </CardHeader>
 
