@@ -884,7 +884,16 @@ reimputación innecesarios.
 
 **Criterios de aceptación**
 
-- A desglosar: la regla de precedencia es lista asignada al cliente, luego lista vigente del canal, luego lista general vigente. Debe ser idéntica para mostrador y para e-commerce
+- **Datos:** para cada línea de venta se recibe artículo, cliente (o Consumidor Final) y canal (`mostrador` u `online`); el resultado es el precio unitario a cobrar junto con la lista de precios de origen
+- **Validaciones:**
+    - la resolución sigue una precedencia estricta: 1) lista particular asignada al cliente, si está activa y vigente; 2) lista vigente del canal de la operación (`mostrador` u `online`); 3) lista `general` vigente
+    - solo se consideran listas activas y vigentes a la fecha de la operación; una lista futura o vencida se descarta como si no existiera
+    - si el artículo no tiene precio en ninguna lista aplicable según la cascada, la operación se rechaza con un error explícito; nunca se cobra a precio cero o estimado
+- **Comportamiento:**
+    - la resolución vive en un único Action interno (`ResolveArticlePrice`) invocado tanto desde la venta de mostrador como desde el circuito de e-commerce, de modo que ambos canales aplican siempre la misma regla
+    - el resultado deja registrada la lista de origen del precio aplicado, para que la línea de venta quede trazable
+    - un cliente sin lista particular asignada usa la lista vigente de su canal, y solo cae a la lista general si el canal no tiene una lista propia vigente
+- **Verificación:** se simula una venta con un cliente con lista propia, otra de mostrador con un cliente sin lista propia, y otra por canal online sin lista propia, y se comprueba que cada una toma el precio de la lista que corresponde según la cascada
 
 ## HU-051 - Administrar puntos de venta
 
