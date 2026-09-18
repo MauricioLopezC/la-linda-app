@@ -157,6 +157,87 @@ definidos como constantes al principio de `trello_lib.py`
 alcanza con editarlos ahí una sola vez.
 
 
+## Modo `--agente` (protocolo para agentes de IA)
+
+Cualquier comando del modo directo acepta el flag `--agente` al final.
+Cuando está presente, el script sabe que quien lo invoca es un agente
+(como Antigravity), no una persona en una terminal interactiva.
+
+```
+python trello_cli.py asignar HU-037 --agente
+python trello_cli.py mover HU-037 --agente
+python trello_cli.py revisar HU-037 --agente
+```
+
+### Qué hace cuando falta un dato
+
+En vez de llamar a `input()` o mostrar un menú, el script:
+
+1. Imprime en stdout un bloque con marcadores de texto plano:
+
+```
+##NEEDS_INPUT##
+{
+  "pregunta": "¿A quién le asignamos HU-037?",
+  "opciones": ["Azael", "Chiara", "Clara", "Mauro", "Facundo", "Pablo"],
+  "comando_pendiente": "asignar",
+  "argumento_faltante": "integrante"
+}
+##END_NEEDS_INPUT##
+```
+
+2. Termina con **exit code 2** (dato faltante), sin haber modificado nada
+   en Trello.
+
+### Códigos de salida
+
+| Código | Significado |
+|--------|-------------|
+| `0`    | Éxito — el comando se completó sin problemas |
+| `1`    | Error real (tarjeta duplicada, credenciales inválidas, etc.) |
+| `2`    | Dato faltante — el agente debe preguntar al usuario y reintentar |
+
+### Flujo de ida y vuelta (ejemplo)
+
+**Primera llamada** — falta el integrante:
+```
+python trello_cli.py asignar HU-037 --agente
+# → exit 2 + bloque NEEDS_INPUT con opciones de integrante
+```
+
+El agente lee el bloque, le muestra la pregunta al usuario en el chat,
+y cuando el usuario elige "Chiara", vuelve a llamar con el dato completo:
+
+**Segunda llamada** — datos completos, se ejecuta sin preguntar:
+```
+python trello_cli.py asignar HU-037 Chiara --agente
+# → exit 0, HU-037 asignada a Chiara en Trello
+```
+
+### Qué comandos soportan `--agente`
+
+Todos los comandos del modo directo. Los que hoy no tienen ningún input()
+(como `iniciar`, `finalizar`, `listar-tableros`) simplemente ignoran el
+flag si ya tienen todos los datos. Los que sí preguntan datos faltantes:
+
+- `subir` — pregunta columna destino y opcionalmente responsables
+- `mover` — pregunta `hu_id` y/o columna destino si faltan
+- `asignar` — pregunta `hu_id` y/o `integrante` si faltan
+- `crear-columna` — pregunta el nombre si falta
+- `revisar` — pregunta `hu_id` y/o `resultado` si faltan
+- `asignar-lote` — cada dato faltante es un NEEDS_INPUT separado (una
+  pregunta por vuelta)
+- `iniciar` / `finalizar` — preguntan `hu_id` si falta
+
+### Lo que NO cambia con `--agente`
+
+- El menú interactivo (`python trello_cli.py` sin argumentos) sigue usando
+  `input()` tal cual — ese modo es para un humano en su terminal.
+- La lógica de negocio y las llamadas a la API no cambian.
+- El manejo de tarjetas duplicadas (`TarjetaAmbiguaError`) sigue operando
+  igual en ambos modos (sale con exit 1 y mensaje `⛔`).
+
+
 ## Notas
 
 - Los diccionarios de integrantes (`MEMBER_IDS`) y etiquetas de módulo

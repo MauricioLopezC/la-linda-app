@@ -61,8 +61,8 @@ LABEL_IDS = {
 
 # Nombres de columna estándar del flujo de trabajo del equipo. Si en algún
 # momento cambian los nombres reales en Trello, alcanza con editar acá.
-COLUMNA_EN_PROGRESO = "En progreso"
-COLUMNA_EN_REVISION = "En Revisión"
+COLUMNA_EN_PROGRESO = "En Progreso"
+COLUMNA_EN_REVISION = "En revisión"
 COLUMNA_FINALIZADO = "Finalizado"
 
 # Archivo donde se guardan las asignaciones responsable-por-HU entre
@@ -322,15 +322,33 @@ def get_cards_en_tablero(board_id):
     return _get(f"https://api.trello.com/1/boards/{board_id}/cards", fields="id,name,idList")
 
 
+class TarjetaAmbiguaError(Exception):
+    """Se lanza cuando hay más de una tarjeta con el mismo prefijo [HU-XXX]
+    en el tablero — hay que resolverlo a mano en Trello antes de que
+    cualquier comando de mover/asignar/revisar pueda actuar con seguridad."""
+
+    def __init__(self, hu_id, cards):
+        self.hu_id = hu_id
+        self.cards = cards
+        nombres = "; ".join(f"{c['name']} (id: {c['id']})" for c in cards)
+        super().__init__(
+            f"Hay {len(cards)} tarjetas con el prefijo [{hu_id}] en el tablero: {nombres}. "
+            "Resolvé el duplicado en Trello (fusioná, archivá o renombrá la que sobra) "
+            "antes de repetir esta operación."
+        )
+
+
 def find_card_by_hu_id(cards, hu_id):
     """Busca, en una lista de tarjetas ya traídas, la que corresponde a un
     HU-ID (matchea por el prefijo '[HU-037]' del nombre, tal como este
-    sistema nombra sus tarjetas). Devuelve el id de tarjeta o None."""
+    sistema nombra sus tarjetas). Devuelve el id de tarjeta o None.
+    Lanza TarjetaAmbiguaError si hay más de una coincidencia — no elige
+    silenciosamente la primera."""
     prefijo = f"[{hu_id}]"
-    for c in cards:
-        if c["name"].startswith(prefijo):
-            return c["id"]
-    return None
+    encontradas = [c for c in cards if c["name"].startswith(prefijo)]
+    if len(encontradas) > 1:
+        raise TarjetaAmbiguaError(hu_id, encontradas)
+    return encontradas[0]["id"] if encontradas else None
 
 
 def borrar_checklists_de_tarjeta(card_id):
@@ -422,13 +440,17 @@ def asignar_miembro(card_id, member_name):
 def find_card_by_hu_id_en_tablero(board_id, hu_id):
     """Busca una tarjeta por su HU-ID en TODO el tablero (todas las columnas),
     útil para mover/editar sin tener que saber de antemano en qué columna está.
-    Devuelve (card_id, list_id) o (None, None)."""
+    Devuelve (card_id, list_id) o (None, None) si no existe ninguna.
+    Lanza TarjetaAmbiguaError si hay más de una coincidencia — no elige
+    silenciosamente la primera."""
     cards = get_cards_en_tablero(board_id)
     prefijo = f"[{hu_id}]"
-    for c in cards:
-        if c["name"].startswith(prefijo):
-            return c["id"], c["idList"]
-    return None, None
+    encontradas = [c for c in cards if c["name"].startswith(prefijo)]
+    if len(encontradas) > 1:
+        raise TarjetaAmbiguaError(hu_id, encontradas)
+    if not encontradas:
+        return None, None
+    return encontradas[0]["id"], encontradas[0]["idList"]
 
 
 # ── Flujo de trabajo por columnas (En progreso / En Revisión / Finalizado) ──

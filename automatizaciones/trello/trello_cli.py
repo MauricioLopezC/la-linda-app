@@ -33,10 +33,24 @@ MODO DIRECTO (para uso desde un agente, o para no repetir el menú a mano):
 
     Cualquier comando sin argumentos suficientes cae al modo interactivo
     para completar lo que falte, así que también sirven a medias.
+
+MODO AGENTE (flag --agente):
+    Agregar --agente a cualquier comando de modo directo activa el protocolo
+    de datos faltantes: en vez de llamar a input() o mostrar un menú, el
+    script imprime un bloque ##NEEDS_INPUT## con JSON y termina con exit
+    code 2, sin haber modificado nada en Trello. Ver README para detalles.
 """
 
+import json
 import os
 import sys
+
+# Windows usa cp1252 por defecto; forzamos UTF-8 para que los emojis y
+# caracteres especiales (✓ ✗ Revisión, etc.) se impriman sin error.
+if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
+    sys.stdout = open(sys.stdout.fileno(), mode="w", encoding="utf-8", buffering=1)
+if sys.stderr.encoding and sys.stderr.encoding.lower() != "utf-8":
+    sys.stderr = open(sys.stderr.fileno(), mode="w", encoding="utf-8", buffering=1)
 
 try:
     from dotenv import load_dotenv
@@ -46,11 +60,47 @@ except ImportError:
 
 import trello_lib as t
 
+# ── Modo agente ───────────────────────────────────────────────────────────────
+# Se activa con el flag --agente en cualquier comando de modo directo.
+# Se extrae aquí (antes del routing) y se elimina de sys.argv para que
+# los comandos no lo vean como un argumento posicional inesperado.
+
+AGENTE_MODE = "--agente" in sys.argv
+if AGENTE_MODE:
+    sys.argv = [a for a in sys.argv if a != "--agente"]
+
+# El nombre del comando actual, para incluirlo en el bloque NEEDS_INPUT.
+_COMANDO_ACTUAL = sys.argv[1] if len(sys.argv) >= 2 else ""
+
+
+def necesita_input(pregunta, opciones, argumento_faltante):
+    """Emite el bloque ##NEEDS_INPUT## en stdout y termina con exit code 2.
+
+    Solo se llama cuando AGENTE_MODE es True. El agente detecta este bloque,
+    le muestra la pregunta al usuario, y vuelve a llamar al mismo comando
+    con la respuesta como argumento adicional.
+
+    Exit code 2 distingue "dato faltante" de error real (exit 1) y de
+    éxito normal (exit 0).
+    """
+    payload = {
+        "pregunta": pregunta,
+        "opciones": opciones,
+        "comando_pendiente": _COMANDO_ACTUAL,
+        "argumento_faltante": argumento_faltante,
+    }
+    print("##NEEDS_INPUT##")
+    print(json.dumps(payload, ensure_ascii=False, indent=2))
+    print("##END_NEEDS_INPUT##")
+    sys.exit(2)
+
 
 # ── Utilidades de menú interactivo ─────────────────────────────────────────
 
 def elegir_de_lista(opciones, etiqueta="opción", mostrar=lambda o: o):
-    """Muestra una lista numerada y devuelve el elemento elegido."""
+    """Muestra una lista numerada y devuelve el elemento elegido.
+    En modo agente nunca se llama directamente: cada cmd_* usa
+    necesita_input() antes de llegar acá si falta el dato."""
     for i, op in enumerate(opciones, 1):
         print(f"  {i}. {mostrar(op)}")
     while True:
@@ -65,6 +115,13 @@ def resolver_board_id(board_id_arg=None):
         return board_id_arg
     if t.BOARD_ID:
         return t.BOARD_ID
+    if AGENTE_MODE:
+        tableros = t.listar_tableros()
+        necesita_input(
+            "¿En qué tablero de Trello trabajamos?",
+            [f"{b['name']} ({b['id']})" for b in tableros],
+            "board_id",
+        )
     print("\nNo hay TRELLO_BOARD_ID configurado. Elegí un tablero:")
     tableros = t.listar_tableros()
     elegido = elegir_de_lista(tableros, "tablero", lambda b: b["name"])
@@ -87,6 +144,12 @@ def resolver_owner_interactivo(hu_id, asignaciones):
     próxima vez que se use cualquier comando con esta historia."""
     if hu_id in asignaciones:
         return asignaciones[hu_id]
+    if AGENTE_MODE:
+        necesita_input(
+            f"¿Quién es el responsable de {hu_id}?",
+            list(t.MEMBER_IDS.keys()),
+            "integrante",
+        )
     print(f"\nTodavía no hay responsable asignado para {hu_id}.")
     nombres = list(t.MEMBER_IDS.keys())
     integrante = elegir_de_lista(nombres, "integrante")
@@ -112,6 +175,12 @@ def cmd_listar_columnas(board_id=None):
 def cmd_crear_columna(nombre=None, board_id=None):
     board_id = resolver_board_id(board_id)
     if not nombre:
+        if AGENTE_MODE:
+            necesita_input(
+                "¿Cuál es el nombre de la nueva columna?",
+                [],
+                "nombre",
+            )
         nombre = input("Nombre de la nueva columna: ").strip()
     list_id = t.crear_columna(board_id, nombre)
     print(f"✓ Columna '{nombre}' creada. ID: {list_id}")
@@ -120,14 +189,26 @@ def cmd_crear_columna(nombre=None, board_id=None):
 
 def cmd_subir(archivo_md=None, list_id=None, product_backlog=None, board_id=None):
     if not archivo_md:
+        if AGENTE_MODE:
+            necesita_input(
+                "¿Qué archivo .md querés subir a Trello?",
+                [],
+                "archivo_md",
+            )
         archivo_md = input("Ruta del archivo .md a subir: ").strip()
     if not os.path.isfile(archivo_md):
         sys.exit(f"No se encontró el archivo '{archivo_md}'.")
 
     board_id = resolver_board_id(board_id)
     if not list_id:
-        print("\n¿A qué columna subimos las tarjetas?")
         columnas = t.listar_columnas(board_id)
+        if AGENTE_MODE:
+            necesita_input(
+                "¿A qué columna subimos las tarjetas?",
+                [c["name"] for c in columnas],
+                "list_id",
+            )
+        print("\n¿A qué columna subimos las tarjetas?")
         elegida = elegir_de_lista(columnas, "columna", lambda c: c["name"])
         list_id = elegida["id"]
     else:
@@ -147,20 +228,36 @@ def cmd_subir(archivo_md=None, list_id=None, product_backlog=None, board_id=None
     # (una sola vez por HU) y queda guardado en asignaciones.json.
     faltantes = [h for h in historias if not h["owner"]]
     if faltantes:
-        print(f"\n{len(faltantes)} historia(s) sin responsable asignado todavía.")
-        if input("¿Querés asignarlas ahora? [s/N]: ").strip().lower() == "s":
-            for h in faltantes:
-                h["owner"] = resolver_owner_interactivo(h["id"], asignaciones)
+        if AGENTE_MODE:
+            # En modo agente solo avisamos, no pedimos — el agente no puede
+            # asignar en masa de forma útil sin más contexto del usuario.
+            print(f"\n⚠ {len(faltantes)} historia(s) sin responsable asignado: "
+                  f"{', '.join(h['id'] for h in faltantes)}. "
+                  "Usá 'asignar HU-XXX Nombre --agente' para asignarlas antes o después.")
+        else:
+            print(f"\n{len(faltantes)} historia(s) sin responsable asignado todavía.")
+            if input("¿Querés asignarlas ahora? [s/N]: ").strip().lower() == "s":
+                for h in faltantes:
+                    h["owner"] = resolver_owner_interactivo(h["id"], asignaciones)
 
     cards_existentes = t.get_cards_en_lista(list_id)
 
-    a_crear, a_actualizar = [], []
+    a_crear, a_actualizar, ambiguas = [], [], []
     for h in historias:
-        existing_id = t.find_card_by_hu_id(cards_existentes, h["id"])
+        try:
+            existing_id = t.find_card_by_hu_id(cards_existentes, h["id"])
+        except t.TarjetaAmbiguaError as e:
+            ambiguas.append(str(e))
+            continue
         if existing_id:
             a_actualizar.append((h, existing_id))
         else:
             a_crear.append(h)
+
+    if ambiguas:
+        print(f"\n⚠  {len(ambiguas)} historia(s) con tarjeta duplicada en Trello (se saltean):")
+        for msg in ambiguas:
+            print(f"  ⛔ {msg}")
 
     print(f"\n{len(a_crear)} tarjetas nuevas a crear, {len(a_actualizar)} ya existentes a actualizar:\n")
     for h in a_crear:
@@ -168,7 +265,11 @@ def cmd_subir(archivo_md=None, list_id=None, product_backlog=None, board_id=None
     for h, _ in a_actualizar:
         print(f"  [actualizar] {h['id']} ({h['estimacion']} SP, {h['owner'] or 'sin asignar'}) → {h['title']}")
 
-    if input("\n¿Confirmar en Trello? [s/N]: ").strip().lower() != "s":
+    if AGENTE_MODE:
+        # En modo agente confirmamos automáticamente (el agente ya tiene todos
+        # los datos y no hay nadie para contestar un input).
+        print("\n[modo agente] Confirmando automáticamente...")
+    elif input("\n¿Confirmar en Trello? [s/N]: ").strip().lower() != "s":
         print("Cancelado. No se modificó nada.")
         return
 
@@ -183,6 +284,12 @@ def cmd_subir(archivo_md=None, list_id=None, product_backlog=None, board_id=None
 def cmd_mover(hu_id=None, destino=None, board_id=None):
     board_id = resolver_board_id(board_id)
     if not hu_id:
+        if AGENTE_MODE:
+            necesita_input(
+                "¿Qué historia querés mover? (ej. HU-037)",
+                [],
+                "hu_id",
+            )
         hu_id = input("ID de la historia a mover (ej. HU-037): ").strip().upper()
 
     card_id, list_id_actual = t.find_card_by_hu_id_en_tablero(board_id, hu_id)
@@ -190,8 +297,14 @@ def cmd_mover(hu_id=None, destino=None, board_id=None):
         sys.exit(f"No se encontró ninguna tarjeta '[{hu_id}]' en el tablero.")
 
     if not destino:
-        print("\n¿A qué columna la movemos?")
         columnas = t.listar_columnas(board_id)
+        if AGENTE_MODE:
+            necesita_input(
+                f"¿A qué columna movemos {hu_id}?",
+                [c["name"] for c in columnas],
+                "destino",
+            )
+        print("\n¿A qué columna la movemos?")
         elegida = elegir_de_lista(columnas, "columna", lambda c: c["name"])
         destino_id = elegida["id"]
     else:
@@ -208,6 +321,12 @@ def cmd_mover(hu_id=None, destino=None, board_id=None):
 def cmd_asignar(hu_id=None, integrante=None, board_id=None):
     board_id = resolver_board_id(board_id)
     if not hu_id:
+        if AGENTE_MODE:
+            necesita_input(
+                "¿Qué historia querés asignar? (ej. HU-037)",
+                [],
+                "hu_id",
+            )
         hu_id = input("ID de la historia (ej. HU-037): ").strip().upper()
 
     card_id, _ = t.find_card_by_hu_id_en_tablero(board_id, hu_id)
@@ -215,6 +334,12 @@ def cmd_asignar(hu_id=None, integrante=None, board_id=None):
         sys.exit(f"No se encontró ninguna tarjeta '[{hu_id}]' en el tablero.")
 
     if not integrante:
+        if AGENTE_MODE:
+            necesita_input(
+                f"¿A quién le asignamos {hu_id}?",
+                list(t.MEMBER_IDS.keys()),
+                "integrante",
+            )
         print("\n¿A quién se lo asignamos?")
         nombres = list(t.MEMBER_IDS.keys())
         integrante = elegir_de_lista(nombres, "integrante")
@@ -228,12 +353,25 @@ def cmd_asignar(hu_id=None, integrante=None, board_id=None):
         print(f"✗ No se pudo asignar {hu_id}.")
 
 
-def cmd_asignar_lote(board_id=None):
+def cmd_asignar_lote(archivo_md=None, board_id=None):
     """Pregunta cuántas HU se van a asignar hoy, y para cada una: si ya tiene
     responsable guardado en asignaciones.json lo muestra sin volver a
-    preguntar; si no, pregunta y lo guarda. Muestra progreso 'N de TOTAL'."""
+    preguntar; si no, pregunta y lo guarda. Muestra progreso 'N de TOTAL'.
+
+    En modo agente, cada dato faltante se resuelve con una ida y vuelta
+    separada (un bloque NEEDS_INPUT por pregunta), en vez de un loop
+    interactivo completo."""
     board_id = resolver_board_id(board_id)
-    archivo_md = input("Archivo .md con las historias disponibles: ").strip()
+
+    if not archivo_md:
+        if AGENTE_MODE:
+            necesita_input(
+                "¿Qué archivo .md tiene las historias del sprint a asignar?",
+                [],
+                "archivo_md",
+            )
+        archivo_md = input("Archivo .md con las historias disponibles: ").strip()
+
     if not os.path.isfile(archivo_md):
         sys.exit(f"No se encontró '{archivo_md}'.")
 
@@ -242,28 +380,85 @@ def cmd_asignar_lote(board_id=None):
     ids_disponibles = [h["id"] for h in historias]
 
     try:
-        total = int(input("\n¿Cuántas historias vas a asignar/revisar hoy?: ").strip())
-    except ValueError:
-        sys.exit("Ingresá un número.")
+        total_str = sys.argv[sys.argv.index("asignar-lote") + 2] if not AGENTE_MODE else None
+    except (ValueError, IndexError):
+        total_str = None
+
+    if total_str is None:
+        if AGENTE_MODE:
+            necesita_input(
+                "¿Cuántas historias vas a asignar/revisar en este lote?",
+                [str(i) for i in range(1, len(ids_disponibles) + 1)],
+                "total",
+            )
+        try:
+            total = int(input("\n¿Cuántas historias vas a asignar/revisar hoy?: ").strip())
+        except ValueError:
+            sys.exit("Ingresá un número.")
+    else:
+        try:
+            total = int(total_str)
+        except ValueError:
+            sys.exit("El parámetro 'total' debe ser un número.")
 
     hechas = []
     for i in range(1, total + 1):
         print(f"\n— Historia {i} de {total} —")
         pendientes = [hu for hu in ids_disponibles if hu not in hechas]
-        hu_id = elegir_de_lista(pendientes, "historia")
+
+        # En modo agente, si no hay un argumento para esta iteración, pedimos
+        # la historia a asignar con un NEEDS_INPUT propio.
+        hu_id = None
+        arg_index = sys.argv.index("asignar-lote") + 3 + (i - 1) * 2 if AGENTE_MODE else -1
+        if AGENTE_MODE:
+            try:
+                hu_id = sys.argv[arg_index]
+            except IndexError:
+                necesita_input(
+                    f"Historia {i} de {total}: ¿cuál historia asignamos?",
+                    pendientes,
+                    f"hu_{i}",
+                )
+        if hu_id is None:
+            hu_id = elegir_de_lista(pendientes, "historia")
 
         ya_asignada = asignaciones.get(hu_id)
-        if ya_asignada:
-            print(f"  Ya está asignada a {ya_asignada}.")
-            cambiar = input("  ¿Cambiar el responsable? [s/N]: ").strip().lower()
-            integrante = elegir_de_lista(list(t.MEMBER_IDS.keys()), "integrante") if cambiar == "s" else ya_asignada
+        integrante = None
+
+        if AGENTE_MODE:
+            try:
+                integrante = sys.argv[arg_index + 1]
+            except IndexError:
+                if ya_asignada:
+                    print(f"  Ya está asignada a {ya_asignada}. Pasando al siguiente.")
+                    integrante = ya_asignada
+                else:
+                    necesita_input(
+                        f"¿A quién asignamos {hu_id}?",
+                        list(t.MEMBER_IDS.keys()),
+                        f"integrante_{i}",
+                    )
         else:
-            integrante = elegir_de_lista(list(t.MEMBER_IDS.keys()), "integrante")
+            if ya_asignada:
+                print(f"  Ya está asignada a {ya_asignada}.")
+                cambiar = input("  ¿Cambiar el responsable? [s/N]: ").strip().lower()
+                integrante = (
+                    elegir_de_lista(list(t.MEMBER_IDS.keys()), "integrante")
+                    if cambiar == "s"
+                    else ya_asignada
+                )
+            else:
+                integrante = elegir_de_lista(list(t.MEMBER_IDS.keys()), "integrante")
 
         asignaciones[hu_id] = integrante
         t.guardar_asignaciones(asignaciones)
 
-        card_id, _ = t.find_card_by_hu_id_en_tablero(board_id, hu_id)
+        try:
+            card_id, _ = t.find_card_by_hu_id_en_tablero(board_id, hu_id)
+        except t.TarjetaAmbiguaError as e:
+            print(f"  ⛔ {e}")
+            hechas.append(hu_id)
+            continue
         if not card_id:
             print(f"  ⚠ {hu_id} no está subida a Trello todavía — se guardó igual la asignación local.")
         elif t.asignar_miembro(card_id, integrante):
@@ -291,6 +486,12 @@ def cmd_iniciar(hu_id=None, board_id=None):
     historia: mueve la tarjeta a 'En progreso'."""
     board_id = resolver_board_id(board_id)
     if not hu_id:
+        if AGENTE_MODE:
+            necesita_input(
+                "¿Qué historia estás por empezar a desarrollar?",
+                [],
+                "hu_id",
+            )
         hu_id = input("ID de la historia que estás por empezar (ej. HU-037): ").strip().upper()
     ok, mensaje = t.iniciar_desarrollo(board_id, hu_id)
     print(("✓ " if ok else "✗ ") + mensaje)
@@ -301,6 +502,12 @@ def cmd_finalizar(hu_id=None, board_id=None):
     mueve la tarjeta a 'En Revisión'."""
     board_id = resolver_board_id(board_id)
     if not hu_id:
+        if AGENTE_MODE:
+            necesita_input(
+                "¿Qué historia terminaste de implementar?",
+                [],
+                "hu_id",
+            )
         hu_id = input("ID de la historia que terminaste (ej. HU-037): ").strip().upper()
     ok, mensaje = t.finalizar_desarrollo(board_id, hu_id)
     print(("✓ " if ok else "✗ ") + mensaje)
@@ -313,9 +520,21 @@ def cmd_revisar(hu_id=None, resultado=None, motivo=None, board_id=None):
     se pregunta interactivamente (deja a criterio de la persona, como pediste)."""
     board_id = resolver_board_id(board_id)
     if not hu_id:
+        if AGENTE_MODE:
+            necesita_input(
+                "¿Qué historia estás revisando?",
+                [],
+                "hu_id",
+            )
         hu_id = input("ID de la historia revisada (ej. HU-037): ").strip().upper()
 
     if resultado is None:
+        if AGENTE_MODE:
+            necesita_input(
+                f"¿Cómo quedó la revisión de {hu_id}?",
+                ["ok", "rechazado"],
+                "resultado",
+            )
         print(f"\n¿Cómo quedó la revisión de {hu_id}?")
         opcion = elegir_de_lista(
             ["Está todo bien → mover a Finalizado", "Hay que corregir → volver a En progreso"],
@@ -329,7 +548,6 @@ def cmd_revisar(hu_id=None, resultado=None, motivo=None, board_id=None):
 
     ok, mensaje = t.resolver_revision(board_id, hu_id, aprobado, motivo)
     print(("✓ " if ok else "✗ ") + mensaje)
-
 
 
 # ── Menú interactivo principal ──────────────────────────────────────────────
@@ -376,7 +594,11 @@ def main():
     t.require_credentials()
 
     if len(sys.argv) < 2:
-        menu_interactivo()
+        try:
+            menu_interactivo()
+        except t.TarjetaAmbiguaError as e:
+            print(f"⛔ {e}")
+            sys.exit(1)
         return
 
     comando = sys.argv[1]
@@ -387,7 +609,11 @@ def main():
         print(f"Comandos disponibles: {', '.join(COMANDOS)}")
         sys.exit(1)
 
-    COMANDOS[comando](args)
+    try:
+        COMANDOS[comando](args)
+    except t.TarjetaAmbiguaError as e:
+        print(f"⛔ {e}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
