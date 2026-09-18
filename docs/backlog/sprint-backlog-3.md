@@ -12,7 +12,7 @@
 
 1. **Cerrar al 100% el módulo de Compras**: Completar la conciliación de órdenes de compra contra comprobantes (`HU-037`), la actualización automática de costos y cierre de órdenes (`HU-038`), el ingreso automático e inmutable de existencias a partir de comprobantes recibidos incorporando el tipo documental **Remito** (`HU-026`), y las herramientas de gestión y control financiero (cuenta corriente de proveedores `HU-028` y listado gerencial de pagos y egresos `HU-055`).
 2. **Establecer el maestro de Clientes y Puntos de Venta**: Administrar el padrón de clientes con sus condiciones fiscales y el cliente por defecto Consumidor Final (`HU-021`), y reconectar/habilitar los puntos de venta vinculados a depósitos (`HU-051`).
-3. **Construir el motor transversal de Precios**: Crear las listas de precios por canal (`HU-011`), permitir la definición de precios de artículos por lista (`HU-012`), asignar listas diferenciadas a clientes (`HU-022`) y construir el servicio de resolución automática de precios con cascada de precedencias (`EPIC-01`), dejando la base lista para el circuito de ventas del Sprint 4.
+3. **Construir el motor transversal de Precios**: Crear las listas de precios por canal (`HU-011`), permitir la definición de precios de artículos por lista (`HU-012`), asignar listas diferenciadas a clientes (`HU-022`) y construir el servicio de resolución automática de precios con cascada de precedencias (`HU-056`), dejando la base lista para el circuito de ventas del Sprint 4.
 
 ---
 
@@ -35,8 +35,8 @@
 5. **Cliente genérico inmutable (HU-021)**:
    - Se crea vía seeder el cliente "Consumidor Final" (identificador fijo, condición fiscal Consumidor Final, no eliminable ni editable en su condición base).
 6. **Inclusión obligatoria de HU-012 para sostener Precios**:
-   - `HU-011` crea cabeceras y vigencias; `HU-012` carga los precios de los artículos en `price_list_items`. Sin `HU-012`, `HU-022` y `EPIC-01` carecerían de datos reales sobre los cuales operar.
-7. **Resolución de precios con precedencia estricta (EPIC-01)**:
+   - `HU-011` crea cabeceras y vigencias; `HU-012` carga los precios de los artículos en `price_list_items`. Sin `HU-012`, `HU-022` y `HU-056` carecerían de datos reales sobre los cuales operar.
+7. **Resolución de precios con precedencia estricta (HU-056)**:
    - Cascada: 1) Lista particular asignada al cliente $\rightarrow$ 2) Lista vigente del canal (`mostrador` / `online`) $\rightarrow$ 3) Lista `general` vigente base.
 
 ---
@@ -56,7 +56,7 @@
 | 9 | Crear listas de precios diferenciadas por canal y vigencia | `HU-011` | Listas mostrador, web y general con control de no solapamiento |
 | 10 | Fijar los precios de venta de cada artículo en cada lista | `HU-012` | Carga masiva/ágil de precios unitarios mayores a cero |
 | 11 | Asignar precios preferenciales a clientes particulares | `HU-022` | Vínculo de lista de precios a cliente opcional |
-| 12 | Resolver automáticamente el precio a cobrar en mostrador y web | `EPIC-01` | Action transversal `ResolveArticlePrice` con cascada de precedencias |
+| 12 | Resolver automáticamente el precio a cobrar en mostrador y web | `HU-056` | Action transversal `ResolveArticlePrice` con cascada de precedencias |
 
 ---
 
@@ -75,7 +75,7 @@
 | 9 | **HU-011** | Administrar listas de precios | 5 | Pendiente | nada |
 | 10 | **HU-012** | Definir el precio de venta de los artículos en una lista | 8 | Pendiente | HU-011 |
 | 11 | **HU-022** | Asignar una lista de precios a un cliente | 2 | Pendiente | HU-021, HU-011 |
-| 12 | **EPIC-01** | Resolver el precio de venta según el cliente y el canal | 8 | Pendiente | HU-022, HU-012 |
+| 12 | **HU-056** | Resolver el precio de venta según el cliente y el canal | 8 | Pendiente | HU-022, HU-012 |
 | | | **Total comprometido** | **59** | | |
 
 ---
@@ -106,7 +106,7 @@ Para abordar los 59 SP con máxima eficiencia y sin colisiones de código, el eq
 │ • Etapa 1: HU-011 (Cabeceras de listas de precios y vigencias)           │
 │ • Etapa 2: HU-012 (Carga de precios de artículos en listas)              │
 │ • Etapa 3: HU-022 (Asignación de lista preferencial a cliente)           │
-│ • Etapa 4: EPIC-01 (Algoritmo y Action ResolveArticlePrice en cascada)   │
+│ • Etapa 4: HU-056 (Algoritmo y Action ResolveArticlePrice en cascada)   │
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -202,7 +202,7 @@ Lógica de negocio encapsulada en `app/Actions/{Module}`, respuestas tipadas en 
 - [ ] Reflejar la lista asignada en la ficha y tabla de clientes.
 - [ ] Tests de asignación, nulabilidad y persistencia.
 
-### EPIC-01 — Resolver el precio de venta según cliente y canal (8 SP)
+### HU-056 — Resolver el precio de venta según cliente y canal (8 SP)
 - [ ] Crear Action invocable `App\Actions\Pricing\ResolveArticlePrice`.
 - [ ] Implementar cascada de resolución:
   1. Precio en lista asignada al cliente (si está activa y vigente).

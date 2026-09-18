@@ -93,7 +93,7 @@ absorbidas, más la reserva de estabilización del Sprint 6 (`HAB-03`, sin estim
 | 31 | [HU-055](#hu-055) | Consultar el listado de pagos y egresos del período | CMP | 5 | Pendiente |
 | 32 | [HU-029](#hu-029) | Actualizar precios de forma masiva por porcentaje | PRE | 5 | Pendiente |
 | 33 | [HU-030](#hu-030) | Consultar el historial de cambios de precio | PRE | 3 | Pendiente |
-| 34 | [EPIC-01](#epic-01) | Resolver el precio de venta según el cliente y el canal | PRE | 8 | Pendiente |
+| 34 | [HU-056](#hu-056) | Resolver el precio de venta según el cliente y el canal | PRE | 8 | Pendiente |
 | 35 | [HU-051](#hu-051) | Administrar puntos de venta | ADM | 2 | Pendiente |
 | 36 | [HU-039](#hu-039) | Abrir una venta de mostrador | VTA | 3 | Pendiente |
 | 37 | [HU-040](#hu-040) | Incorporar artículos a la venta por código de barras o búsqueda | VTA | 5 | Pendiente |
@@ -584,7 +584,7 @@ independiente.
     - si el cliente no tiene lista asignada se le aplicará la lista del canal de la operación
 - **Comportamiento:**
     - la asignación queda visible en la ficha del cliente
-    - su efecto sobre el precio se verifica en la historia de resolución de precio (EPIC-01)
+    - su efecto sobre el precio se verifica en la historia de resolución de precio (HU-056)
 
 ---
 
@@ -876,9 +876,9 @@ reimputación innecesarios.
 
 ---
 
-## EPIC-01 - Resolver el precio de venta según el cliente y el canal
+## HU-056 - Resolver el precio de venta según el cliente y el canal
 
-**Tipo:** Epic · **Módulo:** PRE · **Estimación:** 8 SP · **Estado:** Pendiente · **Sprint:** 3 · **Alcance:** `PRE-03` · **Depende de:** HU-022
+**Tipo:** Historia · **Módulo:** PRE · **Estimación:** 8 SP · **Estado:** Pendiente · **Sprint:** 3 · **Alcance:** `PRE-03` · **Depende de:** HU-022
 
 **Como** Vendedor, **necesito** que el sistema determine automáticamente qué precio corresponde a cada línea de la venta, **para** vender siempre al precio correcto sin tener que consultar qué lista aplica en cada caso.
 
@@ -960,13 +960,13 @@ reimputación innecesarios.
 
 ## HU-041 - Calcular el precio, el IVA y los totales de la venta
 
-**Tipo:** Historia · **Módulo:** VTA · **Estimación:** 5 SP · **Estado:** Pendiente · **Alcance:** `VTA-03` · **Depende de:** HU-040, EPIC-01, HU-007
+**Tipo:** Historia · **Módulo:** VTA · **Estimación:** 5 SP · **Estado:** Pendiente · **Alcance:** `VTA-03` · **Depende de:** HU-040, HU-056, HU-007
 
 **Como** Vendedor, **necesito** que cada línea tome su precio automáticamente y que la venta muestre el IVA y el total, **para** cobrar el importe correcto sin calcular nada a mano.
 
 **Criterios de aceptación**
 
-- El precio de cada línea se obtiene de la lista resuelta según `PRE-03` (EPIC-01), y se calculan el IVA discriminado por alícuota, el subtotal y el total. Ningún precio se puede escribir a mano
+- El precio de cada línea se obtiene de la lista resuelta según `PRE-03` (HU-056), y se calculan el IVA discriminado por alícuota, el subtotal y el total. Ningún precio se puede escribir a mano
 - Resto de los criterios a definir en el refinamiento previo al Sprint 4
 
 ## EPIC-03 - Identificar al cliente y determinar el tipo de comprobante
@@ -1124,7 +1124,7 @@ reimputación innecesarios.
 
 **Criterios de aceptación**
 
-- Se publican únicamente los artículos activos marcados como publicables (HU-008), con descripción, imagen (HU-032), categoría y el precio de la lista del canal online resuelto por EPIC-01
+- Se publican únicamente los artículos activos marcados como publicables (HU-008), con descripción, imagen (HU-032), categoría y el precio de la lista del canal online resuelto por HU-056
 - Resto de los criterios a definir en el refinamiento previo al Sprint 5
 
 ## HU-047 - Buscar, filtrar y ordenar artículos en la tienda online
