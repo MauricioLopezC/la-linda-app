@@ -17,6 +17,7 @@
         "laravel/framework": "^13.17",
         "laravel/tinker": "^3.0",
         "laravel/wayfinder": "^0.1.14",
+        "openspout/openspout": "^5.11",
         "spatie/laravel-data": "^4.23",
         "spatie/laravel-typescript-transformer": "^3.3"
     },

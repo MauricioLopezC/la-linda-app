@@ -43,6 +43,7 @@ import { index as stocks } from '@/routes/inventory/stocks';
 import { index as warehouses } from '@/routes/inventory/warehouses';
 import { index as branches } from '@/routes/organization/branches';
 import { index as purchaseOrders } from '@/routes/purchasing/orders';
+import { index as paymentOrders } from '@/routes/purchasing/payment-orders';
 import { index as suppliers } from '@/routes/purchasing/suppliers';
 import { index as supplierVouchers } from '@/routes/purchasing/vouchers';
 import { index as paymentMethods } from '@/routes/sales/payment-methods';
@@ -137,9 +138,8 @@ const navGroups: NavGroup[] = [
         icon: ReceiptText,
       },
       {
-        // TODO(HU-055): repuntar al index del listado de pagos cuando exista.
         title: 'Órdenes de Pago',
-        href: '/purchasing/payment-orders/create',
+        href: paymentOrders(),
         icon: Wallet,
       },
     ],
