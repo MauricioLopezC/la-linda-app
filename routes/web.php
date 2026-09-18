@@ -141,8 +141,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     Route::prefix('purchasing/payment-orders')->name('purchasing.payment-orders.')->group(function () {
+        Route::get('/', [PaymentOrderController::class, 'index'])->name('index');
         Route::get('create', [PaymentOrderController::class, 'create'])->name('create');
         Route::post('/', [PaymentOrderController::class, 'store'])->name('store');
+        Route::get('export/csv', [PaymentOrderController::class, 'exportCsv'])->name('export.csv');
+        Route::get('export/excel', [PaymentOrderController::class, 'exportExcel'])->name('export.excel');
         Route::get('{order}/pdf', [PaymentOrderController::class, 'pdf'])->name('pdf');
         Route::delete('{order}', [PaymentOrderController::class, 'destroy'])->name('destroy');
         Route::get('suppliers/{supplier}/invoices', [PaymentOrderController::class, 'invoices'])
