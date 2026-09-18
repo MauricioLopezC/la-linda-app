@@ -313,7 +313,7 @@ independiente.
 
 ## HU-011 - Administrar listas de precios
 
-**Tipo:** Historia · **Módulo:** PRE · **Estimación:** 5 SP · **Estado:** Pendiente · **Alcance:** `PRE-01` · **Depende de:** nada
+**Tipo:** Historia · **Módulo:** PRE · **Estimación:** 5 SP · **Estado:** Pendiente · **Sprint:** 3 · **Alcance:** `PRE-01` · **Depende de:** nada
 
 **Como** Gerente, **necesito** crear y administrar listas de precios con su canal y su vigencia, **para** aplicar una política de precios distinta según el canal de venta sin tocar el catálogo.
 
@@ -334,7 +334,7 @@ independiente.
 
 ## HU-012 - Definir el precio de venta de los artículos en una lista
 
-**Tipo:** Historia · **Módulo:** PRE · **Estimación:** 8 SP · **Estado:** Pendiente · **Alcance:** `PRE-02` · **Depende de:** HU-011
+**Tipo:** Historia · **Módulo:** PRE · **Estimación:** 8 SP · **Estado:** Pendiente · **Sprint:** 3 · **Alcance:** `PRE-02` · **Depende de:** HU-011
 
 **Como** Gerente, **necesito** definir el precio de venta de cada artículo dentro de cada lista de precios, **para** que toda venta tome siempre un precio controlado y no uno cargado a mano por el vendedor.
 
@@ -435,7 +435,7 @@ independiente.
 
 ## HU-015 - Asociar artículos a sus proveedores
 
-**Tipo:** Historia · **Módulo:** ART · **Estimación:** 5 SP · **Estado:** Pendiente · **Alcance:** `ART-04` · **Depende de:** HU-013
+**Tipo:** Historia · **Módulo:** ART · **Estimación:** 5 SP · **Estado:** Pendiente · **Sprint:** 3 · **Alcance:** `ART-04` · **Depende de:** HU-013
 
 **Como** Encargado de compras, **necesito** asociar cada artículo a los proveedores que lo abastecen con el código que ellos utilizan, **para** poder emitir órdenes de compra sin tener que traducir códigos manualmente.
 
@@ -554,7 +554,7 @@ independiente.
 
 ## HU-021 - Administrar clientes
 
-**Tipo:** Historia · **Módulo:** CLI · **Estimación:** 5 SP · **Estado:** Pendiente · **Alcance:** `CLI-01` · **Depende de:** nada
+**Tipo:** Historia · **Módulo:** CLI · **Estimación:** 5 SP · **Estado:** Pendiente · **Sprint:** 3 · **Alcance:** `CLI-01` · **Depende de:** nada
 
 **Como** Vendedor, **necesito** registrar y modificar los datos de los clientes, **para** poder emitirles el comprobante que corresponde a su condición fiscal.
 
@@ -571,7 +571,7 @@ independiente.
 
 ## HU-022 - Asignar una lista de precios a un cliente
 
-**Tipo:** Historia · **Módulo:** CLI · **Estimación:** 2 SP · **Estado:** Pendiente · **Alcance:** `CLI-02` · **Depende de:** HU-021, HU-011
+**Tipo:** Historia · **Módulo:** CLI · **Estimación:** 2 SP · **Estado:** Pendiente · **Sprint:** 3 · **Alcance:** `CLI-02` · **Depende de:** HU-021, HU-011
 
 **Como** Gerente, **necesito** asignar una lista de precios particular a un cliente, **para** aplicarle condiciones diferenciadas sin necesidad de modificar la lista general.
 
@@ -690,7 +690,7 @@ proveedor y reconocer la deuda o el crédito correspondiente.
 
 ## HU-037 - Imputar el comprobante a una o varias órdenes de compra
 
-**Tipo:** Historia · **Módulo:** CMP · **Estimación:** 5 SP · **Estado:** Pendiente · **Alcance:** `CMP-05` · **Depende de:** HU-036, HU-033
+**Tipo:** Historia · **Módulo:** CMP · **Estimación:** 5 SP · **Estado:** Pendiente · **Sprint:** 3 · **Alcance:** `CMP-05` · **Depende de:** HU-036, HU-033
 
 **Como** Encargado de compras, **necesito** vincular el comprobante con las órdenes que cubre y detallar qué cantidades llegaron, **para** saber contra qué pedido corresponde lo que recibí y qué me queda pendiente.
 
@@ -707,7 +707,7 @@ proveedor y reconocer la deuda o el crédito correspondiente.
 
 ## HU-038 - Actualizar el último costo y cerrar la orden cubierta
 
-**Tipo:** Historia · **Módulo:** CMP · **Estimación:** 3 SP · **Estado:** Pendiente · **Alcance:** `CMP-05` · **Depende de:** HU-037, HU-015
+**Tipo:** Historia · **Módulo:** CMP · **Estimación:** 3 SP · **Estado:** Pendiente · **Sprint:** 3 · **Alcance:** `CMP-05` · **Depende de:** HU-037, HU-015
 
 **Como** Encargado de compras, **necesito** que el comprobante actualice por sí solo el costo de los artículos y cierre la orden que quedó completa, **para** no tener que mantener esa información a mano.
 
@@ -722,7 +722,7 @@ proveedor y reconocer la deuda o el crédito correspondiente.
 
 ## HU-026 - Ingresar el stock a partir del comprobante recibido
 
-**Tipo:** Historia · **Módulo:** CMP · **Estimación:** 8 SP · **Estado:** Pendiente · **Alcance:** `CMP-06` · **Depende de:** HU-037, HU-017
+**Tipo:** Historia · **Módulo:** CMP · **Estimación:** 8 SP · **Estado:** Pendiente · **Sprint:** 3 · **Alcance:** `CMP-06` · **Depende de:** HU-037, HU-017
 
 **Como** Encargado de depósito, **necesito** que el comprobante de proveedor genere automáticamente la entrada de stock, **para** que las existencias reflejen la mercadería recibida sin tener que cargarla dos veces.
 
@@ -809,7 +809,7 @@ reimputación innecesarios.
 
 ## HU-055 - Consultar el listado de pagos y egresos del período
 
-**Tipo:** Historia · **Módulo:** CMP · **Estimación:** 5 SP · **Estado:** Pendiente · **Alcance:** `CMP-08` · **Depende de:** HU-027, HU-036
+**Tipo:** Historia · **Módulo:** CMP · **Estimación:** 5 SP · **Estado:** Pendiente · **Sprint:** 3 · **Alcance:** `CMP-08` · **Depende de:** HU-027, HU-036
 
 **Como** Gerente, **necesito** consultar los pagos y egresos realizados en un período con su detalle, **para** controlar cuánto se gastó y a quién se le pagó sin recopilar la información a mano.
 
@@ -833,7 +833,7 @@ reimputación innecesarios.
 
 ## HU-028 - Consultar el saldo de cuenta corriente de un proveedor
 
-**Tipo:** Historia · **Módulo:** CMP · **Estimación:** 3 SP · **Estado:** Pendiente · **Alcance:** `CMP-08` · **Depende de:** HU-027
+**Tipo:** Historia · **Módulo:** CMP · **Estimación:** 3 SP · **Estado:** Pendiente · **Sprint:** 3 · **Alcance:** `CMP-08` · **Depende de:** HU-027
 
 **Como** Encargado de compras, **necesito** consultar cuánto le debo a cada proveedor con el detalle de lo pendiente, **para** poder priorizar los pagos y detectar comprobantes vencidos.
 
@@ -878,7 +878,7 @@ reimputación innecesarios.
 
 ## EPIC-01 - Resolver el precio de venta según el cliente y el canal
 
-**Tipo:** Epic · **Módulo:** PRE · **Estimación:** 8 SP · **Estado:** Pendiente · **Alcance:** `PRE-03` · **Depende de:** HU-022
+**Tipo:** Epic · **Módulo:** PRE · **Estimación:** 8 SP · **Estado:** Pendiente · **Sprint:** 3 · **Alcance:** `PRE-03` · **Depende de:** HU-022
 
 **Como** Vendedor, **necesito** que el sistema determine automáticamente qué precio corresponde a cada línea de la venta, **para** vender siempre al precio correcto sin tener que consultar qué lista aplica en cada caso.
 
@@ -888,7 +888,7 @@ reimputación innecesarios.
 
 ## HU-051 - Administrar puntos de venta
 
-**Tipo:** Historia · **Módulo:** ADM · **Estimación:** 2 SP · **Estado:** Pendiente · **Alcance:** `ADM-01` · **Depende de:** HU-005
+**Tipo:** Historia · **Módulo:** ADM · **Estimación:** 2 SP · **Estado:** Pendiente · **Sprint:** 3 · **Alcance:** `ADM-01` · **Depende de:** HU-005
 
 **Como** Administrador, **necesito** registrar los puntos de venta de cada sucursal y el depósito del que descuentan stock, **para** que el circuito de ventas de mostrador sepa desde dónde vender y desde dónde descontar mercadería.
 
