@@ -242,18 +242,20 @@ independiente.
 
 **Criterios de aceptación**
 
-- **Datos:** descripción, código interno, código de barras, categoría, subcategoría, marca, unidad de medida, alícuota de IVA, estado (activo, inactivo, discontinuado), indicador de publicable en el canal online
+- **Datos:** descripción, código interno, código de barras, categoría, subcategoría, marca, unidad de medida, alícuota de IVA, estado (activo, inactivo), indicador de publicable en el canal online
 - **Validaciones:**
     - descripción, código interno, categoría y unidad de medida son obligatorios
     - el código interno es único en todo el catálogo
     - el código de barras es único cuando se informa
     - no se admite crear ni modificar un artículo que genere duplicidad de ninguno de los dos códigos
-    - la baja de un artículo con movimientos de stock o ventas asociadas es lógica y lo deja en estado discontinuado
+    - la baja de un artículo con movimientos de stock o ventas asociadas es lógica y lo deja en estado inactivo
 - **Comportamiento:**
     - el artículo NO tiene campo de precio de venta y el formulario no ofrece ninguno
     - el precio se administra exclusivamente desde el módulo de Listas de Precios
     - tampoco tiene proveedor ni depósito como atributos: la relación con proveedores es de muchos a muchos y se administra en HU-015, y la existencia por depósito se consulta en HU-016
     - las imágenes tampoco son un campo del formulario de alta: se administran aparte en HU-032
+
+> **Decisión del equipo (Sprint 3):** se unifica el estado `discontinuado` dentro de `inactivo`. La baja lógica deja el artículo en estado `inactivo` para preservar la integridad referencial histórica sin redundancia de conceptos operativos.
 
 > **Corrección del PO (2026-08-22):** la alícuota de IVA pasa de obligatoria a opcional. `HU-007`
 > (que la administra) bajó de prioridad porque el PO pidió priorizar exclusivamente artículos y
@@ -302,7 +304,7 @@ independiente.
 
 **Criterios de aceptación**
 
-- **Datos:** archivo CSV con las columnas descripción, código interno, código de barras, categoría, subcategoría, marca, unidad de medida, alícuota de IVA, estado (activo, inactivo, discontinuado), indicador de publicable en el canal online
+- **Datos:** archivo CSV con las columnas descripción, código interno, código de barras, categoría, subcategoría, marca, unidad de medida, alícuota de IVA, estado (activo, inactivo), indicador de publicable en el canal online
 - **Validaciones:**
     - se rechaza la fila cuyo código interno ya existe, la que referencia una categoría, marca, unidad o alícuota inexistente, y la que omite un dato obligatorio
     - las filas válidas se importan igualmente aunque otras fallen
