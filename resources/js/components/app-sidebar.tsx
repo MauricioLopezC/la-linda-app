@@ -7,6 +7,7 @@ import {
   FolderTree,
   FolderGit2,
   History,
+  Landmark,
   Package,
   ReceiptText,
   Ruler,
@@ -42,6 +43,7 @@ import { index as stockParameters } from '@/routes/inventory/parameters';
 import { index as stocks } from '@/routes/inventory/stocks';
 import { index as warehouses } from '@/routes/inventory/warehouses';
 import { index as branches } from '@/routes/organization/branches';
+import { index as accountStatement } from '@/routes/purchasing/account-statement';
 import { index as purchaseOrders } from '@/routes/purchasing/orders';
 import { index as paymentOrders } from '@/routes/purchasing/payment-orders';
 import { index as suppliers } from '@/routes/purchasing/suppliers';
@@ -141,6 +143,11 @@ const navGroups: NavGroup[] = [
         title: 'Órdenes de Pago',
         href: paymentOrders(),
         icon: Wallet,
+      },
+      {
+        title: 'Cuenta Corriente',
+        href: accountStatement(),
+        icon: Landmark,
       },
     ],
   },
