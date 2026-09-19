@@ -1,5 +1,6 @@
 import { Link } from '@inertiajs/react';
 import {
+  Banknote,
   Boxes,
   Building2,
   CreditCard,
@@ -45,6 +46,7 @@ import { index as stockParameters } from '@/routes/inventory/parameters';
 import { index as stocks } from '@/routes/inventory/stocks';
 import { index as warehouses } from '@/routes/inventory/warehouses';
 import { index as branches } from '@/routes/organization/branches';
+import { index as priceLists } from '@/routes/pricing/price-lists';
 import { index as accountStatement } from '@/routes/purchasing/account-statement';
 import { index as purchaseOrders } from '@/routes/purchasing/orders';
 import { index as paymentOrders } from '@/routes/purchasing/payment-orders';
@@ -184,16 +186,22 @@ const navGroups: NavGroup[] = [
       },
     ],
   },
-  // {
-  //   label: 'Precios',
-  //   items: [
-  //     {
-  //       title: 'Alícuotas de IVA',
-  //       href: vatRates(),
-  //       icon: Percent,
-  //     },
-  //   ],
-  // },
+  {
+    label: 'Precios',
+    items: [
+      {
+        title: 'Listas de Precios',
+        href: priceLists(),
+        icon: Banknote,
+      },
+      // Fuera de alcance de este sprint: ver nota sobre imports comentados arriba.
+      // {
+      //   title: 'Alícuotas de IVA',
+      //   href: vatRates(),
+      //   icon: Percent,
+      // },
+    ],
+  },
 ];
 
 const footerNavItems: NavItem[] = [
