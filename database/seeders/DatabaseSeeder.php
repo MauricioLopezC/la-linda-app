@@ -18,13 +18,10 @@ use Database\Seeders\Purchasing\SupplierSeeder;
 use Database\Seeders\Purchasing\SupplierVoucherSeeder;
 use Database\Seeders\Sales\PaymentMethodSeeder;
 use Database\Seeders\Sales\PointOfSaleSeeder;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
-
     /**
      * Seed the application's database.
      */
