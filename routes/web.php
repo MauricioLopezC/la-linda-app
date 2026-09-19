@@ -129,6 +129,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('create', [SupplierVoucherController::class, 'create'])->name('create');
         Route::get('articles', [SupplierVoucherController::class, 'searchArticles'])->name('articles');
         Route::get('associable-invoices', [SupplierVoucherController::class, 'associableInvoices'])->name('associable-invoices');
+        Route::get('associable-purchase-orders', [SupplierVoucherController::class, 'associablePurchaseOrders'])->name('associable-purchase-orders');
         Route::post('/', [SupplierVoucherController::class, 'store'])->name('store');
         Route::get('{supplier_voucher}', [SupplierVoucherController::class, 'show'])->name('show');
         Route::post('{supplier_voucher}/annul', [SupplierVoucherController::class, 'annul'])->name('annul');

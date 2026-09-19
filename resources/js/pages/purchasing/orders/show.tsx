@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   Download,
   Pencil,
+  Receipt,
   Truck,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -38,6 +39,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { formatCurrency } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import { cancel, edit, index, issue, pdf } from '@/routes/purchasing/orders';
+import { show as showVoucher } from '@/routes/purchasing/vouchers';
 import type { BreadcrumbItem } from '@/types';
 
 type OrderData = App.Data.Purchasing.PurchaseOrderData;
@@ -51,6 +53,8 @@ const statusClasses: Record<string, string> = {
     'border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300',
   emitida:
     'border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300',
+  cumplida:
+    'border-blue-300 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300',
   cancelada:
     'border-rose-300 bg-rose-50 text-rose-800 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300',
 };
@@ -283,9 +287,11 @@ export default function PurchaseOrderShow({ order }: Props) {
               <div className="border-t pt-2 text-xs text-muted-foreground">
                 {order.status === 'emitida'
                   ? 'Documento emitido formalmente e inmutable.'
-                  : order.status === 'borrador'
-                    ? 'En preparación. Podés editar el detalle antes de emitir.'
-                    : 'Orden cancelada.'}
+                  : order.status === 'cumplida'
+                    ? 'Orden cumplida en su totalidad por comprobantes recibidos.'
+                    : order.status === 'borrador'
+                      ? 'En preparación. Podés editar el detalle antes de emitir.'
+                      : 'Orden cancelada.'}
               </div>
             </CardContent>
           </Card>
@@ -314,21 +320,41 @@ export default function PurchaseOrderShow({ order }: Props) {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-12 text-center">#</TableHead>
-                  <TableHead className="w-32">Código</TableHead>
+                  <TableHead className="w-28">Código</TableHead>
                   <TableHead>Descripción del artículo</TableHead>
-                  <TableHead className="w-24 text-center">U.M.</TableHead>
-                  <TableHead className="w-32 text-right">Cantidad</TableHead>
-                  <TableHead className="w-36 text-right">
+                  <TableHead className="w-20 text-center">U.M.</TableHead>
+                  {order.status === 'emitida' || order.status === 'cumplida' ? (
+                    <>
+                      <TableHead className="w-24 text-right">Pedido</TableHead>
+                      <TableHead className="w-24 text-right">
+                        Recibido
+                      </TableHead>
+                      <TableHead className="w-24 text-right">
+                        Excedente
+                      </TableHead>
+                      <TableHead className="w-24 text-right">
+                        Pendiente
+                      </TableHead>
+                    </>
+                  ) : (
+                    <TableHead className="w-28 text-right">Cantidad</TableHead>
+                  )}
+                  <TableHead className="w-32 text-right">
                     Precio unitario
                   </TableHead>
-                  <TableHead className="w-40 text-right">Subtotal</TableHead>
+                  <TableHead className="w-36 text-right">Subtotal</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {order.items.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={7}
+                      colSpan={
+                        order.status === 'emitida' ||
+                        order.status === 'cumplida'
+                          ? 10
+                          : 7
+                      }
                       className="py-8 text-center text-muted-foreground"
                     >
                       No hay artículos registrados en esta orden.
@@ -349,9 +375,44 @@ export default function PurchaseOrderShow({ order }: Props) {
                       <TableCell className="text-center text-xs text-muted-foreground">
                         {item.unit_of_measure}
                       </TableCell>
-                      <TableCell className="text-right font-mono">
-                        {item.quantity}
-                      </TableCell>
+                      {order.status === 'emitida' ||
+                      order.status === 'cumplida' ? (
+                        <>
+                          <TableCell className="text-right font-mono">
+                            {item.quantity}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-emerald-700 dark:text-emerald-400">
+                            {item.quantity_received}
+                          </TableCell>
+                          <TableCell className="text-right font-mono">
+                            {Number(item.quantity_excess) > 0 ? (
+                              <span className="font-semibold text-amber-600 dark:text-amber-400">
+                                +{item.quantity_excess}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right font-mono">
+                            {Number(item.quantity_pending) <= 0.0001 ? (
+                              <Badge
+                                variant="outline"
+                                className="border-emerald-300 bg-emerald-50 px-1.5 py-0 text-[10px] text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
+                              >
+                                Cumplido
+                              </Badge>
+                            ) : (
+                              <span className="font-semibold text-foreground">
+                                {item.quantity_pending}
+                              </span>
+                            )}
+                          </TableCell>
+                        </>
+                      ) : (
+                        <TableCell className="text-right font-mono">
+                          {item.quantity}
+                        </TableCell>
+                      )}
                       <TableCell className="text-right font-mono">
                         {formatCurrency(item.unit_price)}
                       </TableCell>
@@ -398,6 +459,109 @@ export default function PurchaseOrderShow({ order }: Props) {
             </div>
           </div>
         </Card>
+
+        {/* Comprobantes imputados */}
+        {(order.status === 'emitida' || order.status === 'cumplida') && (
+          <Card className="border bg-card shadow-xs">
+            <CardHeader className="border-b pb-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                    <Receipt className="size-4 text-primary" />
+                    Comprobantes imputados
+                  </CardTitle>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    Facturas, remitos o notas de débito del proveedor que
+                    entregaron mercadería asociada a esta orden.
+                  </p>
+                </div>
+                <span className="rounded bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground">
+                  {order.imputed_vouchers?.length ?? 0}{' '}
+                  {(order.imputed_vouchers?.length ?? 0) === 1
+                    ? 'comprobante'
+                    : 'comprobantes'}
+                </span>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-40">Comprobante</TableHead>
+                    <TableHead className="w-32">Tipo</TableHead>
+                    <TableHead className="w-32">Fecha emisión</TableHead>
+                    <TableHead className="w-32 text-right">
+                      Cant. recibida
+                    </TableHead>
+                    <TableHead className="w-32 text-right">Excedente</TableHead>
+                    <TableHead className="w-36 text-right">
+                      Total comprobante
+                    </TableHead>
+                    <TableHead className="w-28 text-center">Estado</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {!order.imputed_vouchers ||
+                  order.imputed_vouchers.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={7}
+                        className="py-8 text-center text-muted-foreground"
+                      >
+                        No se han registrado comprobantes imputados a esta orden
+                        aún.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    order.imputed_vouchers.map((voucher) => (
+                      <TableRow key={voucher.id}>
+                        <TableCell className="font-mono text-xs font-semibold">
+                          <Link
+                            href={showVoucher.url({
+                              supplier_voucher: voucher.id,
+                            })}
+                            className="text-primary hover:underline"
+                          >
+                            {voucher.formatted_number}
+                          </Link>
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {voucher.type_label}
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {voucher.issue_date_formatted}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-xs font-medium">
+                          {voucher.quantity_received}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-xs">
+                          {Number(voucher.quantity_excess) > 0 ? (
+                            <span className="font-semibold text-amber-600 dark:text-amber-400">
+                              +{voucher.quantity_excess}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-xs font-semibold">
+                          {formatCurrency(voucher.total_amount)}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge
+                            variant="outline"
+                            className="text-xs capitalize"
+                          >
+                            {voucher.status_label}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Modal de Cancelación */}
         <Dialog open={isCancelModalOpen} onOpenChange={setIsCancelModalOpen}>

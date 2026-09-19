@@ -707,6 +707,8 @@ proveedor y reconocer la deuda o el crédito correspondiente.
 - **Comportamiento:** por cada orden imputada se muestra lo pedido, lo ya recibido en comprobantes anteriores y lo que queda pendiente
 - **Verificación:** se imputa un comprobante a dos órdenes del mismo proveedor y se comprueba que el pendiente de cada una queda correctamente descontado
 
+> **Regla de negocio / pesables y excedentes:** cuando el proveedor entrega una cantidad superior a la pendiente de la OC (frecuente en carnicería, fiambrería y productos pesables al no poder fraccionar medias reses o piezas exactas), el sistema permite aceptar el excedente. La cantidad imputada salda el renglón de la OC hasta cubrir su saldo pendiente (sin superar el límite de la orden para preservar el presupuesto contractual), y la diferencia se registra como excedente aceptado (`quantity_excess`). Tanto la cantidad imputada como el excedente ingresan al stock físico real y se totalizan en el comprobante a pagar al proveedor.
+
 ## HU-038 - Actualizar el último costo y cerrar la orden cubierta
 
 **Tipo:** Historia · **Módulo:** CMP · **Estimación:** 3 SP · **Estado:** Pendiente · **Sprint:** 3 · **Alcance:** `CMP-05` · **Depende de:** HU-037, HU-015

@@ -20,6 +20,7 @@ class CreateSupplierVoucher
     public function __construct(
         private ResolveSupplierVoucherStatus $resolveStatus,
         private AssociateCreditNoteToInvoice $associateCreditNote,
+        private ImputeSupplierVoucherToPurchaseOrders $imputeToPurchaseOrders,
     ) {}
 
     /**
@@ -28,7 +29,7 @@ class CreateSupplierVoucher
      *     issue_date: string, due_date: ?string, total_amount: string, notes: ?string,
      *     associated_invoice_id?: ?int, associated_amount?: ?string,
      *     items: array<int, array{article_id: ?int, description: string, quantity: string,
-     *         unit_of_measure: string, unit_price: string, line_total: string}>
+     *         unit_of_measure: string, unit_price: string, line_total: string, purchase_order_item_id?: ?int}>
      * }  $data
      */
     public function handle(array $data): SupplierVoucher
@@ -60,8 +61,23 @@ class CreateSupplierVoucher
                 'notes' => $data['notes'],
             ]);
 
+            $imputationsData = [];
             foreach ($data['items'] as $index => $item) {
-                $voucher->items()->create([...$item, 'position' => $index + 1]);
+                $poItemId = $item['purchase_order_item_id'] ?? null;
+                $cleanItem = collect($item)->except(['purchase_order_item_id'])->all();
+
+                $voucherItem = $voucher->items()->create([...$cleanItem, 'position' => $index + 1]);
+
+                if ($poItemId !== null) {
+                    $imputationsData[] = [
+                        'item' => $voucherItem,
+                        'purchase_order_item_id' => (int) $poItemId,
+                    ];
+                }
+            }
+
+            if (! empty($imputationsData)) {
+                $this->imputeToPurchaseOrders->handle($voucher, $imputationsData);
             }
 
             Log::info('Supplier voucher created', [
@@ -69,6 +85,7 @@ class CreateSupplierVoucher
                 'supplier_id' => $supplier->id,
                 'fiscal_number' => $voucher->letter->value.' '.$voucher->point_of_sale.'-'.$voucher->number,
                 'items_count' => count($data['items']),
+                'imputations_count' => count($imputationsData),
                 'user_id' => auth()->id(),
             ]);
 

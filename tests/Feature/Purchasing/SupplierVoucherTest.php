@@ -151,7 +151,7 @@ test('user registers the transcribed total and complete historical lines', funct
         ->and($voucher->items[1]->line_total)->toBe('200.00');
 });
 
-test('article line quantity accepts no more than two decimal places', function () {
+test('article line quantity accepts no more than three decimal places', function () {
     $supplier = Supplier::factory()->create();
     $article = Article::factory()->create();
 
@@ -160,7 +160,7 @@ test('article line quantity accepts no more than two decimal places', function (
             'items' => [[
                 'article_id' => $article->id,
                 'description' => 'Artículo fraccionado',
-                'quantity' => '1,234',
+                'quantity' => '1,2345',
                 'unit_of_measure' => 'kg',
                 'unit_price' => '1.000,00',
                 'line_total' => '1.234,00',

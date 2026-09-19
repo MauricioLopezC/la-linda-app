@@ -25,7 +25,8 @@
 2. **Imputación de comprobantes a Órdenes de Compra (HU-037)**:
    - La imputación a una o varias OC es **opcional** en el comprobante (se admiten facturas o remitos libres de gastos o compras directas sin OC).
    - Relación N:N: Un comprobante puede imputar renglones de varias OCs del mismo proveedor en estado `emitida`; una OC puede recibir múltiples entregas parciales.
-   - La cantidad recibida acumulada no puede superar la cantidad pedida de cada renglón de la OC.
+   - La cantidad imputada a la orden salda el pendiente de cada renglón de la OC hasta cubrirlo (sin sobrepasarlo para preservar el presupuesto de la orden).
+   - **Manejo de excedentes (pesables / carnicería):** Si el proveedor envía mercadería de más y recepción la acepta (ej. kilos adicionales en medias reses), el sobrante se registra explícitamente como excedente aceptado (`quantity_excess`). Tanto lo imputado a la OC como el excedente ingresan en su totalidad al stock físico real y se liquidan en el comprobante fiscal a pagar.
 3. **Stock inmutable y anulación inversa (HU-026)**:
    - El movimiento de stock de ingreso se genera automáticamente al confirmar el comprobante de recepción (Remito o Factura que acompaña mercadería).
    - Los movimientos de stock son inmutables. Si un comprobante se anula, se genera automáticamente un movimiento inverso compensatorio de egreso con auditoría; nunca se borra el registro histórico original.
@@ -256,7 +257,8 @@ erDiagram
 | id | bigint PK | |
 | purchase_order_item_id | FK → purchase_order_items | obligatorio |
 | supplier_voucher_item_id | FK → supplier_voucher_items | obligatorio |
-| quantity_received | decimal(12,3) | mayor a cero; $\le$ pendiente de la OC |
+| quantity_received | decimal(12,3) | mayor a cero; cantidad que salda la OC ($\le$ pendiente de la OC) |
+| quantity_excess | decimal(12,3) | default 0; mayor o igual a cero; excedente aceptado en recepción |
 | created_at | timestamp | inmutable |
 
 ### `supplier_vouchers` (Adaptación HU-026 / Remito)
