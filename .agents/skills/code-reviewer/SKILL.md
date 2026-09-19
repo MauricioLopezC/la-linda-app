@@ -4,8 +4,9 @@ description: >-
   Activate this skill when the user asks to review a PR, perform a code review, or audit a
   feature/HU branch of the La Linda project against its acceptance criteria. Verifies
   requirements against `product-backlog.md`, checks consistency with project conventions
-  (Actions, Data objects, Form Requests, `.ai/rules`), flags efficiency issues, and formats the
-  final report in markdown for GitHub.
+  (Actions, Data objects, Form Requests, `.ai/rules`), flags efficiency issues, formats the final
+  report in markdown for GitHub, and reflects the review's outcome on the project's Trello board
+  via `automatizaciones/trello/trello_cli.py`.
 ---
 
 # Code Reviewer Skill — La Linda
@@ -13,11 +14,13 @@ description: >-
 Revisa una rama `feature/HU-<n>-...` (o su PR) contra los criterios de aceptación de la HU
 correspondiente en `product-backlog.md`, contra las convenciones del proyecto, y produce un
 informe en Markdown listo para pegar en la PR. Todo hallazgo debe poder ubicarse en `archivo:línea`.
+Al terminar, refleja el veredicto de la review en la tarjeta de Trello de esa HU.
 
 ## Paso 1 — Identificar la HU y sus criterios
 
 1. El nombre de rama sigue `feature/HU-<numero>-slug` (ver `CONTRIBUTING.md`). Extraé el `HU-XXX`
-   de ahí, o pedíselo al usuario si no es reconocible.
+   de ahí, o pedíselo al usuario si no es reconocible. Este mismo ID es el que se usa después para
+   ubicar la tarjeta en Trello — no hay que volver a pedirlo en el Paso 6.
 2. Los criterios de aceptación **viven únicamente en `product-backlog.md`**, buscados por ese ID
    — nunca están (ni deberían estar) copiados en `sprint-backlog-<n>.md`. Si no encontrás el ítem
    ahí, decilo explícitamente en vez de inventar criterios; no avances con criterios supuestos.
@@ -126,3 +129,59 @@ Resumen breve + estado:
 
 No repitas en prosa lo que ya está en el checklist. Si una sección no tiene nada que decir,
 escribí "Sin observaciones" en vez de dejarla vacía o inventar contenido.
+
+## Paso 6 — Reflejar el resultado en Trello
+
+Una vez que el informe del Paso 5 tiene su Conclusión definida, ejecutá el comando que corresponda
+usando `automatizaciones/trello/trello_cli.py` (siempre en modo directo, con `--agente`, nunca
+menú interactivo — ver "Cómo invocar el script" más abajo). El mapeo es directo, por el estado de
+la Conclusión:
+
+| Conclusión del informe | Comando a ejecutar | Efecto en Trello |
+|---|---|---|
+| 🟢 Aprobado | `revisar HU-XXX ok --agente` | Mueve la tarjeta a **"Finalizado"** |
+| 🟡 Requiere Cambios | `revisar HU-XXX rechazado "<resumen de lo que falta>" --agente` | Vuelve a **"En progreso"** con el motivo como comentario |
+| 🔴 Bloqueado | `revisar HU-XXX rechazado "<resumen del bloqueante>" --agente` | Vuelve a **"En progreso"** con el motivo como comentario |
+
+Notas importantes sobre este paso:
+
+- **Esta skill revisa código, no prueba la funcionalidad corriendo.** Aun así, en el flujo actual
+  del equipo, su veredicto es el que decide si la tarjeta pasa a "Finalizado" — no hay una
+  revisión funcional separada después. Por eso el Paso 4 debe ser exhaustivo antes de emitir un
+  🟢: una vez que este paso mueve la tarjeta a "Finalizado", nada la vuelve a abrir automáticamente.
+- El motivo que se pasa a `rechazado` (para 🟡 y 🔴) debe ser un resumen corto y accionable de la
+  sección "Bloqueantes" del informe (o de "Requiere Cambios" si no hay bloqueantes duros) — no
+  pegues el informe completo como comentario de Trello; el informe completo va en la PR de GitHub,
+  el comentario de Trello es solo el motivo en una o dos líneas para que quien retome la historia
+  sepa por dónde empezar.
+- Si el comando de Trello falla (por ejemplo, `TarjetaAmbiguaError` porque hay tarjetas
+  duplicadas, o la tarjeta no existe todavía), no bloquees la entrega del informe de code review
+  por eso: entregá igual el informe completo del Paso 5, y avisá aparte, explícitamente, que no se
+  pudo reflejar el estado en Trello y por qué (mostrando el mensaje de error tal cual lo devolvió
+  el script), para que alguien lo resuelva a mano.
+- No inventes el HU-ID para este paso: usá el mismo que identificaste en el Paso 1. Si por algún
+  motivo cambiaste de HU a mitad de la revisión (por ejemplo, una rama que mezcla dos historias),
+  aclaralo en el informe y preguntá antes de mover cualquier tarjeta.
+
+### Cómo invocar el script
+
+`trello_cli.py` corre en modo directo (por argumentos) o en modo interactivo (menú con preguntas
+por `input()`). Esta skill SIEMPRE debe usar el modo directo con el flag `--agente`, nunca dejar
+que el script caiga al menú interactivo — un agente no puede responder un `input()`.
+
+Si al ejecutar el comando el script imprime un bloque delimitado por `##NEEDS_INPUT##` y
+`##END_NEEDS_INPUT##` (JSON con `pregunta`, `opciones`, `comando_pendiente` y
+`argumento_faltante`), significa que falta un dato que solo el usuario puede decidir — por ejemplo
+a qué integrante reasignar la historia si `rechazado` la deja sin responsable claro. En ese caso:
+
+1. Mostrale al usuario la `pregunta` y las `opciones` tal como vienen en el JSON (con las
+   opciones como botones o lista, según lo que permita la interfaz de la conversación).
+2. Cuando el usuario responda, volvé a correr el mismo comando (`comando_pendiente`) agregando la
+   respuesta como argumento en el lugar del `argumento_faltante`.
+3. No sigas adelante con el resto del flujo de esta skill hasta tener una respuesta concreta —
+   no asumas ni completes ese dato por tu cuenta.
+
+Para conocer el detalle completo de comandos disponibles, argumentos y el formato del protocolo
+`--agente`, consultá `automatizaciones/trello/README.md` — no asumas la sintaxis de memoria; si
+el README y esta skill difieren en algún detalle de invocación, el README es la fuente de verdad
+porque se actualiza junto con el script.

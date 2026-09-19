@@ -65,9 +65,12 @@ COLUMNA_EN_PROGRESO = "En Progreso"
 COLUMNA_EN_REVISION = "En revisión"
 COLUMNA_FINALIZADO = "Finalizado"
 
-# Archivo donde se guardan las asignaciones responsable-por-HU entre
-# ejecuciones del script (en vez de un diccionario hardcodeado en código).
-ASIGNACIONES_PATH = os.environ.get("TRELLO_ASIGNACIONES_PATH", "asignaciones.json")
+ASIGNACIONES_PATH = os.environ.get(
+    "TRELLO_ASIGNACIONES_PATH",
+    "asignaciones.json"
+    if os.path.isfile("asignaciones.json")
+    else os.path.join(os.path.dirname(os.path.abspath(__file__)), "asignaciones.json"),
+)
 
 
 def cargar_asignaciones(path=None):

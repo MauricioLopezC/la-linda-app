@@ -14,3 +14,4 @@ Before planning or editing, find the row whose globs match the file's path and r
 | database/migrations/** | .ai/rules/migrations.md |
 | app/Models/** | .ai/rules/models.md |
 | app/Models/Purchasing/** | .ai/rules/purchasing.md |
+| automatizaciones/trello/** | .ai/rules/trello.md |

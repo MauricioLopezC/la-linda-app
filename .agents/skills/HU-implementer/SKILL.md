@@ -6,6 +6,7 @@ description: >-
   siguiente historia del sprint". Covers researching the existing codebase, writing a versioned
   plan document under docs/plans/, and — after explicit approval — implementing it end to end
   following the project's Laravel/Inertia conventions.
+  Al terminar la implementación, encadena con la skill hu-auditor.
 ---
 
 # HU Implementer Skill — La Linda
@@ -114,6 +115,11 @@ resolverlas primero — no implementar con supuestos sobre esas preguntas.
 
 ## Fase 2 — Implementación (solo tras aprobación explícita)
 
+0. **Avisar inicio en Trello:** Apenas el usuario aprueba el plan y antes de modificar código,
+   ejecutar:
+   `python automatizaciones/trello/trello_cli.py iniciar HU-XXX --agente`
+   Esto mueve la tarjeta a **"En Progreso"** en el tablero. Si el script emite un bloque
+   `##NEEDS_INPUT##`, mostrarle la pregunta y opciones al usuario y volver a invocar con su respuesta.
 1. Seguir el plan en el orden de sus subsecciones (Backend → Rutas → Frontend → Wayfinder →
    Tests), igual que se construyen las dependencias reales: el modelo y la Action tienen que
    existir antes que el Data object los consuma, y este antes que el controller.
@@ -134,8 +140,14 @@ resolverlas primero — no implementar con supuestos sobre esas preguntas.
 
 ## Fase 3 — Informe de cierre para el commit y el PR
 
-Al terminar la implementación (Fase 2) y verificado el chequeo de Definition of Done, generar en
-el chat (no hace falta archivo aparte, esto es texto para pegar/usar al pushear):
+Al terminar la implementación (Fase 2) y verificado el chequeo de Definition of Done:
+
+0. **Actualizar estado en Trello:** Mover la tarjeta a revisión ejecutando:
+   `python automatizaciones/trello/trello_cli.py finalizar HU-XXX --agente`
+   Esto deja la tarjeta en **"En revisión"** en el tablero. Si falta algún dato, resolver el bloque
+   `##NEEDS_INPUT##` con el usuario.
+
+Generar en el chat (no hace falta archivo aparte, esto es texto para pegar/usar al pushear):
 
 ### 1. Mensaje de commit
 
@@ -192,3 +204,21 @@ Reglas para esta fase:
   "Notas" — el informe describe lo que efectivamente se hizo, no lo que se planeó hacer.
 - No inventar resultados de CI: si no se corrió algún check en la Fase 2, decirlo explícitamente
   acá en vez de omitirlo o asumir que pasa.
+
+## Fase 4 — Auditoría independiente (obligatoria antes del push)
+
+Al terminar el informe de cierre de la Fase 3, **ejecutar la skill `hu-auditor`** sobre la HU
+recién implementada. No dar la historia por lista ni sugerir el push hasta tener su veredicto.
+
+Por qué: el mismo agente que implementa no es buen juez de su propio trabajo. La auditoría
+revisa contra `product-backlog.md` y no contra el plan, ejecuta los comandos de nuevo, y
+detecta lo que la Fase 2 pudo pasar por alto.
+
+Reglas para esta fase:
+
+- Si el veredicto es `NO LISTA`, corregir los hallazgos bloqueantes con confirmación del
+  usuario y volver a auditar. No hacer push con bloqueantes abiertos.
+- Si el veredicto es `LISTA CON OBSERVACIONES`, presentar las decisiones pendientes al usuario
+  y esperar su respuesta.
+- El push sigue siendo decisión explícita del usuario, aun con veredicto `LISTA PARA PUSH`.
+- El informe de auditoría es de uso interno: no se commitea.
