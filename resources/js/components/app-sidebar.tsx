@@ -16,6 +16,7 @@ import {
   LayoutGrid,
   Sliders,
   Truck,
+  Users,
   Wallet,
   Warehouse,
 } from 'lucide-react';
@@ -37,6 +38,7 @@ import { index as articles } from '@/routes/catalog/articles';
 import { index as brands } from '@/routes/catalog/brands';
 import { index as categories } from '@/routes/catalog/categories';
 import { index as unitsOfMeasure } from '@/routes/catalog/units-of-measure';
+import { index as customers } from '@/routes/customers';
 import { create as adjustmentsCreate } from '@/routes/inventory/adjustments';
 import { index as movements } from '@/routes/inventory/movements';
 import { index as stockParameters } from '@/routes/inventory/parameters';
@@ -170,6 +172,11 @@ const navGroups: NavGroup[] = [
   {
     label: 'Ventas',
     items: [
+      {
+        title: 'Clientes',
+        href: customers(),
+        icon: Users,
+      },
       {
         title: 'Medios de Pago',
         href: paymentMethods(),
