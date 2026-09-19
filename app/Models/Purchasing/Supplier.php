@@ -4,11 +4,14 @@ namespace App\Models\Purchasing;
 
 use App\Concerns\NormalizesUniqueAttributes;
 use App\Enums\Purchasing\SupplierTaxCondition;
+use App\Models\Catalog\Article;
+use App\Models\Catalog\ArticleSupplier;
 use Database\Factories\Purchasing\SupplierFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Schema;
@@ -85,12 +88,31 @@ class Supplier extends Model
         return $this->hasMany(PaymentOrder::class);
     }
 
+    /** @return BelongsToMany<Article, $this, ArticleSupplier> */
+    public function articles(): BelongsToMany
+    {
+        return $this->belongsToMany(Article::class, 'article_supplier')
+            ->using(ArticleSupplier::class)
+            ->withPivot(['id', 'supplier_article_code', 'last_cost', 'notes'])
+            ->withTimestamps();
+    }
+
+    /** @return HasMany<ArticleSupplier, $this> */
+    public function articleSuppliers(): HasMany
+    {
+        return $this->hasMany(ArticleSupplier::class);
+    }
+
     /**
      * Check if the supplier has associated transactions (purchase orders, vouchers, payment orders, etc.)
      * preventing destructive physical deletion and locking CUIT edits.
      */
     public function hasAssociatedRecords(): bool
     {
+        if (Schema::hasTable('article_supplier') && $this->articleSuppliers()->exists()) {
+            return true;
+        }
+
         if (Schema::hasTable('purchase_orders') && $this->purchaseOrders()->exists()) {
             return true;
         }
