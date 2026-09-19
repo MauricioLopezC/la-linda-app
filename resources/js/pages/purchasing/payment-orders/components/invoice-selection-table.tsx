@@ -48,7 +48,8 @@ export default function InvoiceSelectionTable({
             <TableHead>Comprobante</TableHead>
             <TableHead>Emisión</TableHead>
             <TableHead>Vencimiento</TableHead>
-            <TableHead className="text-right">Saldo disponible</TableHead>
+            <TableHead className="w-36 text-right">Total</TableHead>
+            <TableHead className="w-40 text-right">Saldo a cancelar</TableHead>
             <TableHead className="w-48 text-right">Importe a imputar</TableHead>
           </TableRow>
         </TableHeader>
@@ -56,7 +57,7 @@ export default function InvoiceSelectionTable({
           {!hasSupplier && (
             <TableRow>
               <TableCell
-                colSpan={6}
+                colSpan={7}
                 className="py-8 text-center text-muted-foreground"
               >
                 <ReceiptText className="mx-auto mb-1 size-6 opacity-40" />
@@ -69,7 +70,7 @@ export default function InvoiceSelectionTable({
           {hasSupplier && loading && (
             <TableRow>
               <TableCell
-                colSpan={6}
+                colSpan={7}
                 className="py-8 text-center text-muted-foreground"
               >
                 <Loader2 className="mx-auto mb-1 size-5 animate-spin" />
@@ -81,7 +82,7 @@ export default function InvoiceSelectionTable({
           {hasSupplier && !loading && rows.length === 0 && (
             <TableRow>
               <TableCell
-                colSpan={6}
+                colSpan={7}
                 className="py-8 text-center text-muted-foreground"
               >
                 Este proveedor no tiene comprobantes con importe disponible.
@@ -129,7 +130,10 @@ export default function InvoiceSelectionTable({
                     )}
                   </span>
                 </TableCell>
-                <TableCell className="text-right font-mono">
+                <TableCell className="text-right font-mono text-muted-foreground">
+                  {formatCurrency(voucher.total_amount)}
+                </TableCell>
+                <TableCell className="text-right font-mono font-medium">
                   <span
                     className={
                       voucher.type === 'nota_credito'

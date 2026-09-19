@@ -21,6 +21,8 @@ class ArticleData extends Data
         public string $status,
         public string $status_label,
         public bool $is_online_publishable,
+        /** @var array<ArticleSupplierData> */
+        public array $suppliers = [],
     ) {}
 
     public static function fromModel(Article $article): self
@@ -39,6 +41,9 @@ class ArticleData extends Data
             status: $article->status->value,
             status_label: $article->status->label(),
             is_online_publishable: $article->is_online_publishable,
+            suppliers: $article->relationLoaded('articleSuppliers')
+                ? $article->articleSuppliers->map(fn ($pivot) => ArticleSupplierData::fromModel($pivot))->all()
+                : [],
         );
     }
 }

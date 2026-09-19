@@ -138,7 +138,7 @@ Laravel + Inertia.js + React sobre PostgreSQL, desplegado en Laravel Cloud.
 - [ ] Migración de `articulos` con sus FK a categoría, marca y unidad. **Sin FK a alícuota este sprint** (corrección del PO, 2026-08-22): `alicuotas_iva` no se construye en `HU-007`, que bajó de prioridad, así que la columna `alicuota_iva_id` se agrega recién en el sprint donde entre esa historia
 - [ ] **Verificar que el modelo no tenga campo de precio, ni proveedor, ni depósito** (decisión cerrada del PO)
 - [ ] Validaciones: obligatorios, código interno único, código de barras único cuando se informa
-- [ ] Baja lógica a estado discontinuado cuando hay movimientos asociados
+- [ ] Baja lógica a estado inactivo cuando hay movimientos asociados
 - [ ] Formulario de alta y edición, y listado básico
 - [ ] Seeder con artículos de demostración repartidos entre categorías
 

@@ -37,11 +37,25 @@ class PurchaseOrderData extends Data
         public bool $can_issue,
         public bool $can_cancel,
         public array $items,
+        /** @var array<int, PurchaseOrderImputedVoucherData> */
+        public array $imputed_vouchers,
     ) {}
 
     public static function fromModel(PurchaseOrder $order): self
     {
-        $order->loadMissing(['supplier', 'warehouse', 'items.article.unitOfMeasure', 'user', 'cancelledByUser']);
+        $order->loadMissing([
+            'supplier',
+            'warehouse',
+            'items.article.unitOfMeasure',
+            'items.imputations.supplierVoucherItem.supplierVoucher',
+            'user',
+            'cancelledByUser',
+        ]);
+
+        $imputedVouchers = $order->imputedVouchers()
+            ->map(fn ($voucher) => PurchaseOrderImputedVoucherData::fromVoucherAndOrder($voucher, $order))
+            ->values()
+            ->all();
 
         return new self(
             id: $order->id,
@@ -69,6 +83,7 @@ class PurchaseOrderData extends Data
             can_issue: $order->canBeIssued(),
             can_cancel: $order->canBeCancelled(),
             items: PurchaseOrderItemData::collect($order->items)->all(),
+            imputed_vouchers: $imputedVouchers,
         );
     }
 }

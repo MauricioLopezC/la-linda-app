@@ -6,12 +6,14 @@ use App\Concerns\NormalizesUniqueAttributes;
 use App\Enums\Catalog\ArticleStatus;
 use App\Models\Inventory\StockBalance;
 use App\Models\Inventory\StockMovementItem;
+use App\Models\Purchasing\Supplier;
 use Database\Factories\Catalog\ArticleFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
@@ -62,6 +64,15 @@ class Article extends Model
         return $query->where('status', ArticleStatus::Active);
     }
 
+    /**
+     * @param  Builder<Article>  $query
+     * @return Builder<Article>
+     */
+    public function scopeInactive(Builder $query): Builder
+    {
+        return $query->where('status', ArticleStatus::Inactive);
+    }
+
     /** @return BelongsTo<Category, $this> */
     public function category(): BelongsTo
     {
@@ -98,6 +109,25 @@ class Article extends Model
     public function stockMovementItems(): HasMany
     {
         return $this->hasMany(StockMovementItem::class);
+    }
+
+    /**
+     * @return BelongsToMany<Supplier, $this, ArticleSupplier>
+     */
+    public function suppliers(): BelongsToMany
+    {
+        return $this->belongsToMany(Supplier::class, 'article_supplier')
+            ->using(ArticleSupplier::class)
+            ->withPivot(['id', 'supplier_article_code', 'last_cost', 'notes'])
+            ->withTimestamps();
+    }
+
+    /**
+     * @return HasMany<ArticleSupplier, $this>
+     */
+    public function articleSuppliers(): HasMany
+    {
+        return $this->hasMany(ArticleSupplier::class);
     }
 
     public function hasStockMovements(): bool
