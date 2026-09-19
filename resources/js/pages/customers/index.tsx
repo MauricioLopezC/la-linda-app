@@ -730,8 +730,13 @@ export default function CustomersIndex({
           <form onSubmit={handleCreateSubmit} className="flex flex-col gap-4">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {/* Tipo de Persona */}
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="create-person-type">Tipo de Persona *</Label>
+              <div className="flex flex-col gap-2">
+                <Label
+                  htmlFor="create-person-type"
+                  className="flex h-5 items-center"
+                >
+                  Tipo de Persona *
+                </Label>
                 <Select
                   value={createForm.data.person_type}
                   onValueChange={handleCreatePersonTypeChange}
@@ -751,8 +756,13 @@ export default function CustomersIndex({
               </div>
 
               {/* Condición Fiscal */}
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="create-tax-condition">Condición Fiscal *</Label>
+              <div className="flex flex-col gap-2">
+                <Label
+                  htmlFor="create-tax-condition"
+                  className="flex h-5 items-center"
+                >
+                  Condición Fiscal *
+                </Label>
                 <Select
                   value={createForm.data.tax_condition}
                   onValueChange={handleCreateTaxConditionChange}
@@ -773,8 +783,8 @@ export default function CustomersIndex({
             </div>
 
             {/* Razón Social / Nombre */}
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="create-name">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="create-name" className="flex h-5 items-center">
                 {createForm.data.person_type === 'juridica'
                   ? 'Razón Social *'
                   : 'Nombre y Apellido *'}
@@ -794,8 +804,13 @@ export default function CustomersIndex({
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {/* Tipo de Documento */}
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="create-id-type">Tipo de Documento *</Label>
+              <div className="flex flex-col gap-2">
+                <Label
+                  htmlFor="create-id-type"
+                  className="flex h-5 items-center"
+                >
+                  Tipo de Documento *
+                </Label>
                 <Select
                   value={createForm.data.id_type}
                   disabled={
@@ -826,12 +841,20 @@ export default function CustomersIndex({
               </div>
 
               {/* Número de Documento */}
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="create-id-number">
-                  Número de Documento{' '}
-                  {createForm.data.id_type === 'sin_identificar'
-                    ? '(Opcional)'
-                    : '*'}
+              <div className="flex flex-col gap-2">
+                <Label
+                  htmlFor="create-id-number"
+                  className="flex h-5 items-center justify-between"
+                >
+                  <span className="truncate">
+                    Número de Documento
+                    {createForm.data.id_type !== 'sin_identificar' && ' *'}
+                  </span>
+                  {createForm.data.id_type === 'sin_identificar' && (
+                    <span className="shrink-0 text-xs font-normal text-muted-foreground">
+                      (opcional)
+                    </span>
+                  )}
                 </Label>
                 <Input
                   id="create-id-number"
@@ -853,8 +876,10 @@ export default function CustomersIndex({
             </div>
 
             {/* Domicilio */}
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="create-address">Domicilio</Label>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="create-address" className="flex h-5 items-center">
+                Domicilio
+              </Label>
               <Input
                 id="create-address"
                 placeholder="ej. Av. San Martín 1234"
@@ -866,11 +891,13 @@ export default function CustomersIndex({
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {/* Teléfono */}
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="create-phone">Teléfono</Label>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="create-phone" className="flex h-5 items-center">
+                  Teléfono
+                </Label>
                 <Input
                   id="create-phone"
-                  placeholder="ej. +54 387 15-456-7890"
+                  placeholder="ej. +54 9 387 1234567"
                   value={createForm.data.phone}
                   onChange={(e) => createForm.setData('phone', e.target.value)}
                 />
@@ -878,8 +905,10 @@ export default function CustomersIndex({
               </div>
 
               {/* Email */}
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="create-email">Correo Electrónico</Label>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="create-email" className="flex h-5 items-center">
+                  Correo Electrónico
+                </Label>
                 <Input
                   id="create-email"
                   type="email"
@@ -942,8 +971,13 @@ export default function CustomersIndex({
             <form onSubmit={handleEditSubmit} className="flex flex-col gap-4">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {/* Tipo de Persona */}
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="edit-person-type">Tipo de Persona *</Label>
+                <div className="flex flex-col gap-2">
+                  <Label
+                    htmlFor="edit-person-type"
+                    className="flex h-5 items-center"
+                  >
+                    Tipo de Persona *
+                  </Label>
                   <Select
                     value={editForm.data.person_type}
                     onValueChange={handleEditPersonTypeChange}
@@ -963,8 +997,13 @@ export default function CustomersIndex({
                 </div>
 
                 {/* Condición Fiscal */}
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="edit-tax-condition">Condición Fiscal *</Label>
+                <div className="flex flex-col gap-2">
+                  <Label
+                    htmlFor="edit-tax-condition"
+                    className="flex h-5 items-center"
+                  >
+                    Condición Fiscal *
+                  </Label>
                   <Select
                     value={editForm.data.tax_condition}
                     disabled={editingCustomer.has_associated_records}
@@ -991,8 +1030,8 @@ export default function CustomersIndex({
               </div>
 
               {/* Razón Social / Nombre */}
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="edit-name">
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="edit-name" className="flex h-5 items-center">
                   {editForm.data.person_type === 'juridica'
                     ? 'Razón Social *'
                     : 'Nombre y Apellido *'}
@@ -1007,8 +1046,13 @@ export default function CustomersIndex({
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {/* Tipo de Documento */}
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="edit-id-type">Tipo de Documento *</Label>
+                <div className="flex flex-col gap-2">
+                  <Label
+                    htmlFor="edit-id-type"
+                    className="flex h-5 items-center"
+                  >
+                    Tipo de Documento *
+                  </Label>
                   <Select
                     value={editForm.data.id_type}
                     disabled={
@@ -1040,18 +1084,33 @@ export default function CustomersIndex({
                 </div>
 
                 {/* Número de Documento */}
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="edit-id-number">
-                    Número de Documento{' '}
-                    {editForm.data.id_type === 'sin_identificar'
-                      ? '(Opcional)'
-                      : '*'}
+                <div className="flex flex-col gap-2">
+                  <Label
+                    htmlFor="edit-id-number"
+                    className="flex h-5 items-center justify-between"
+                  >
+                    <span className="truncate">
+                      Número de Documento
+                      {editForm.data.id_type !== 'sin_identificar' && ' *'}
+                    </span>
+                    {editForm.data.id_type === 'sin_identificar' && (
+                      <span className="shrink-0 text-xs font-normal text-muted-foreground">
+                        (opcional)
+                      </span>
+                    )}
                   </Label>
                   <Input
                     id="edit-id-number"
                     disabled={
                       editingCustomer.has_associated_records ||
                       editForm.data.id_type === 'sin_identificar'
+                    }
+                    placeholder={
+                      editForm.data.id_type === 'cuit'
+                        ? 'ej. 30-50085862-8 o 30500858628'
+                        : editForm.data.id_type === 'dni'
+                          ? 'ej. 35123456'
+                          : 'No aplica para sin identificar'
                     }
                     value={editForm.data.id_number}
                     onChange={(e) =>
@@ -1068,8 +1127,10 @@ export default function CustomersIndex({
               </div>
 
               {/* Domicilio */}
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="edit-address">Domicilio</Label>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="edit-address" className="flex h-5 items-center">
+                  Domicilio
+                </Label>
                 <Input
                   id="edit-address"
                   value={editForm.data.address}
@@ -1080,10 +1141,13 @@ export default function CustomersIndex({
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {/* Teléfono */}
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="edit-phone">Teléfono</Label>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="edit-phone" className="flex h-5 items-center">
+                    Teléfono
+                  </Label>
                   <Input
                     id="edit-phone"
+                    placeholder="ej. +54 9 387 1234567"
                     value={editForm.data.phone}
                     onChange={(e) => editForm.setData('phone', e.target.value)}
                   />
@@ -1091,8 +1155,10 @@ export default function CustomersIndex({
                 </div>
 
                 {/* Email */}
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="edit-email">Correo Electrónico</Label>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="edit-email" className="flex h-5 items-center">
+                    Correo Electrónico
+                  </Label>
                   <Input
                     id="edit-email"
                     type="email"

@@ -326,3 +326,42 @@ test('user can toggle active status of regular customer', function () {
 
     expect($customer->fresh()->is_active)->toBeFalse();
 });
+
+test('valid phone formats are accepted for Argentina standard', function (?string $phone) {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->post(route('customers.store'), [
+            'person_type' => PersonType::Fisica->value,
+            'name' => 'Test Phone',
+            'tax_condition' => CustomerTaxCondition::ConsumidorFinal->value,
+            'id_type' => CustomerIdType::SinIdentificar->value,
+            'phone' => $phone,
+        ])
+        ->assertSessionHasNoErrors(['phone']);
+})->with([
+    'null' => [null],
+    'full international' => ['+54 9 387 1234567'],
+    'international 0054' => ['0054 9 387 1234567'],
+    'with dashes' => ['387 15-123-4567'],
+    'with dots' => ['11.1234.5678'],
+    'only numbers' => ['3874000000'],
+]);
+
+test('invalid phone formats are rejected for Argentina standard', function (string $phone) {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->post(route('customers.store'), [
+            'person_type' => PersonType::Fisica->value,
+            'name' => 'Test Phone',
+            'tax_condition' => CustomerTaxCondition::ConsumidorFinal->value,
+            'id_type' => CustomerIdType::SinIdentificar->value,
+            'phone' => $phone,
+        ])
+        ->assertSessionHasErrors(['phone']);
+})->with([
+    'other country' => ['+55 9 387 1234567'],
+    'letters' => ['+54 9 abc 1234567'],
+    'too short' => ['123'],
+]);

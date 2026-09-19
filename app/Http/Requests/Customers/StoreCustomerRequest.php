@@ -94,7 +94,12 @@ class StoreCustomerRequest extends FormRequest
             ],
             'id_number' => $idNumberRules,
             'address' => ['nullable', 'string', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:50'],
+            'phone' => [
+                'nullable',
+                'string',
+                'max:50',
+                'regex:/^(?:(?:(?:\+|00)?54\s?9?)?\s?(?:0?[1-9]\d{1,3})?\s?(?:15)?[-\s.]?\d{3,4}[-\s.]?\d{4})$/',
+            ],
             'email' => ['nullable', 'string', 'email:rfc', 'max:255'],
             'is_active' => ['sometimes', 'boolean'],
         ];
@@ -115,6 +120,7 @@ class StoreCustomerRequest extends FormRequest
             'id_number.digits_between' => 'El DNI debe tener entre 7 y 9 dígitos.',
             'id_number.numeric' => 'El número de documento debe contener solo dígitos numéricos.',
             'email.email' => 'El correo electrónico debe tener un formato válido.',
+            'phone.regex' => 'El formato del teléfono no es válido. Ej: +54 9 387 1234567',
         ];
     }
 }
