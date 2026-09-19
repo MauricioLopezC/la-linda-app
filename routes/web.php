@@ -14,6 +14,7 @@ use App\Http\Controllers\Organization\BranchController;
 use App\Http\Controllers\Pricing\VatRateController;
 use App\Http\Controllers\Purchasing\PaymentOrderController;
 use App\Http\Controllers\Purchasing\PurchaseOrderController;
+use App\Http\Controllers\Purchasing\SupplierAccountStatementController;
 use App\Http\Controllers\Purchasing\SupplierController;
 use App\Http\Controllers\Purchasing\SupplierVoucherController;
 use App\Http\Controllers\Sales\PaymentMethodController;
@@ -159,6 +160,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('{customer}', [CustomerController::class, 'update'])->name('update');
         Route::patch('{customer}/toggle', [CustomerController::class, 'toggleStatus'])->name('toggle');
         Route::delete('{customer}', [CustomerController::class, 'destroy'])->name('destroy');
+    });
+
+    Route::prefix('purchasing/account-statement')->name('purchasing.account-statement.')->group(function () {
+        Route::get('/', [SupplierAccountStatementController::class, 'index'])->name('index');
+        Route::get('export/csv', [SupplierAccountStatementController::class, 'exportCsv'])->name('export.csv');
+        Route::get('export/excel', [SupplierAccountStatementController::class, 'exportExcel'])->name('export.excel');
     });
 });
 
