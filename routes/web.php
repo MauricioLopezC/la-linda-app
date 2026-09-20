@@ -5,6 +5,7 @@ use App\Http\Controllers\Catalog\ArticleSupplierController;
 use App\Http\Controllers\Catalog\BrandController;
 use App\Http\Controllers\Catalog\CategoryController;
 use App\Http\Controllers\Catalog\UnitOfMeasureController;
+use App\Http\Controllers\Customers\CustomerController;
 use App\Http\Controllers\Inventory\StockAdjustmentController;
 use App\Http\Controllers\Inventory\StockConsultationController;
 use App\Http\Controllers\Inventory\StockMovementHistoryController;
@@ -159,6 +160,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('{order}', [PaymentOrderController::class, 'destroy'])->name('destroy');
         Route::get('suppliers/{supplier}/invoices', [PaymentOrderController::class, 'invoices'])
             ->name('suppliers.invoices');
+    });
+
+    Route::prefix('customers')->name('customers.')->group(function () {
+        Route::get('/', [CustomerController::class, 'index'])->name('index');
+        Route::post('/', [CustomerController::class, 'store'])->name('store');
+        Route::put('{customer}', [CustomerController::class, 'update'])->name('update');
+        Route::patch('{customer}/toggle', [CustomerController::class, 'toggleStatus'])->name('toggle');
+        Route::delete('{customer}', [CustomerController::class, 'destroy'])->name('destroy');
     });
 
     Route::prefix('purchasing/account-statement')->name('purchasing.account-statement.')->group(function () {

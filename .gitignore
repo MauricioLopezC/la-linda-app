@@ -29,3 +29,9 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
