@@ -2,7 +2,6 @@
 
 namespace App\Actions\Purchasing;
 
-use App\Enums\Purchasing\PurchaseOrderStatus;
 use App\Enums\Purchasing\SupplierVoucherStatus;
 use App\Models\Purchasing\PurchaseOrder;
 use App\Models\Purchasing\SupplierVoucher;
@@ -12,6 +11,11 @@ use Illuminate\Validation\ValidationException;
 
 class AnnulSupplierVoucher
 {
+    public function __construct(
+        private EvaluatePurchaseOrderFulfillment $evaluateFulfillment,
+        private UpdateLastPurchaseCost $updateLastPurchaseCost,
+    ) {}
+
     public function handle(SupplierVoucher $supplierVoucher, string $reason, ?int $userId = null): SupplierVoucher
     {
         $trimmedReason = trim($reason);
@@ -40,18 +44,15 @@ class AnnulSupplierVoucher
                 'annulment_reason' => $trimmedReason,
             ]);
 
-            // Revertir a emitida cualquier OC que estuviera cumplida y ahora vuelva a tener saldo pendiente
             $affectedOrders = PurchaseOrder::query()
                 ->whereHas('items.imputations', function ($query) use ($voucher) {
                     $query->whereIn('supplier_voucher_item_id', $voucher->items()->select('id'));
                 })
-                ->get();
+                ->pluck('id')
+                ->all();
 
-            foreach ($affectedOrders as $order) {
-                if ($order->isFulfilled() && ! $order->fresh(['items.imputations'])->isFullyReceived()) {
-                    $order->update(['status' => PurchaseOrderStatus::Issued]);
-                }
-            }
+            $this->evaluateFulfillment->handleMany($affectedOrders);
+            $this->updateLastPurchaseCost->recalculateForAnnulledVoucher($voucher);
 
             Log::info('Supplier voucher annulled', [
                 'supplier_voucher_id' => $voucher->id,

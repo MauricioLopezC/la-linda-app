@@ -2,8 +2,6 @@
 
 namespace App\Actions\Purchasing;
 
-use App\Enums\Purchasing\PurchaseOrderStatus;
-use App\Models\Purchasing\PurchaseOrder;
 use App\Models\Purchasing\PurchaseOrderItem;
 use App\Models\Purchasing\PurchaseOrderVoucherImputation;
 use App\Models\Purchasing\SupplierVoucher;
@@ -12,6 +10,8 @@ use Illuminate\Validation\ValidationException;
 
 class ImputeSupplierVoucherToPurchaseOrders
 {
+    public function __construct(private EvaluatePurchaseOrderFulfillment $evaluateFulfillment) {}
+
     /**
      * Imputes the lines of a supplier voucher to their matching purchase order items.
      *
@@ -85,16 +85,6 @@ class ImputeSupplierVoucherToPurchaseOrders
             $affectedOrders[$order->id] = $order;
         }
 
-        // Evaluar cumplimiento de las órdenes de compra afectadas (HU-038 preparation)
-        $ordersToEvaluate = PurchaseOrder::query()
-            ->whereIn('id', array_keys($affectedOrders))
-            ->with('items.imputations')
-            ->get();
-
-        foreach ($ordersToEvaluate as $order) {
-            if ($order->isFullyReceived()) {
-                $order->update(['status' => PurchaseOrderStatus::Fulfilled]);
-            }
-        }
+        $this->evaluateFulfillment->handleMany(array_keys($affectedOrders));
     }
 }

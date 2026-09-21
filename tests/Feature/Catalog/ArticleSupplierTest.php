@@ -29,7 +29,6 @@ test('user can attach a supplier to an article with valid data', function () {
     $this->actingAs($user)->post(route('catalog.articles.suppliers.store', $article), [
         'supplier_id' => $supplier->id,
         'supplier_article_code' => 'ART-SUP-001',
-        'last_cost' => '125.50',
         'notes' => 'Proveedor preferencial',
     ])->assertSessionHasNoErrors();
 
@@ -38,7 +37,7 @@ test('user can attach a supplier to an article with valid data', function () {
         'supplier_id' => $supplier->id,
         'supplier_article_code' => 'ART-SUP-001',
         'supplier_article_code_normalized' => 'art-sup-001',
-        'last_cost' => 125.50,
+        'last_cost' => null,
         'notes' => 'Proveedor preferencial',
     ]);
 });
@@ -51,7 +50,6 @@ test('user can attach an article from the supplier perspective', function () {
     $this->actingAs($user)->post(route('purchasing.suppliers.articles.store', $supplier), [
         'article_id' => $article->id,
         'supplier_article_code' => 'SUP-CODE-99',
-        'last_cost' => '300.00',
     ])->assertSessionHasNoErrors();
 
     $this->assertDatabaseHas('article_supplier', [
@@ -59,7 +57,7 @@ test('user can attach an article from the supplier perspective', function () {
         'supplier_id' => $supplier->id,
         'supplier_article_code' => 'SUP-CODE-99',
         'supplier_article_code_normalized' => 'sup-code-99',
-        'last_cost' => 300.00,
+        'last_cost' => null,
     ]);
 });
 
@@ -170,32 +168,36 @@ test('different suppliers can use the same article code', function () {
     ]);
 });
 
-test('last cost is nullable and must be greater than zero when informed', function () {
+test('last cost cannot be entered manually when associating articles and suppliers', function () {
     $user = User::factory()->create();
     $article = Article::factory()->create();
     $supplier1 = Supplier::factory()->create();
     $supplier2 = Supplier::factory()->create();
-    $supplier3 = Supplier::factory()->create();
-
-    // Null is valid
+    // Omitting the cost leaves it unknown.
     $this->actingAs($user)->post(route('catalog.articles.suppliers.store', $article), [
         'supplier_id' => $supplier1->id,
         'supplier_article_code' => 'COD-NULL',
-        'last_cost' => null,
     ])->assertSessionHasNoErrors();
 
-    // 0 is invalid
+    $this->assertDatabaseHas('article_supplier', [
+        'article_id' => $article->id,
+        'supplier_id' => $supplier1->id,
+        'last_cost' => null,
+    ]);
+
+    // Any manually supplied cost is forbidden.
     $this->actingAs($user)->post(route('catalog.articles.suppliers.store', $article), [
         'supplier_id' => $supplier2->id,
         'supplier_article_code' => 'COD-ZERO',
-        'last_cost' => 0,
+        'last_cost' => '20.00',
     ])->assertSessionHasErrors('last_cost');
 
-    // Negative is invalid
-    $this->actingAs($user)->post(route('catalog.articles.suppliers.store', $article), [
-        'supplier_id' => $supplier3->id,
-        'supplier_article_code' => 'COD-NEG',
-        'last_cost' => -10.5,
+    $this->assertDatabaseMissing('article_supplier', ['supplier_id' => $supplier2->id]);
+
+    $this->actingAs($user)->post(route('purchasing.suppliers.articles.store', $supplier2), [
+        'article_id' => $article->id,
+        'supplier_article_code' => 'COD-PROV',
+        'last_cost' => '20.00',
     ])->assertSessionHasErrors('last_cost');
 });
 
@@ -235,13 +237,12 @@ test('user can update an association from article or supplier perspective', func
         'supplier' => $supplier,
     ]), [
         'supplier_article_code' => 'NEW-CODE',
-        'last_cost' => '75.25',
         'notes' => 'Actualizado desde artículo',
     ])->assertSessionHasNoErrors();
 
     $pivot->refresh();
     expect($pivot->supplier_article_code)->toBe('NEW-CODE');
-    expect((float) $pivot->last_cost)->toBe(75.25);
+    expect((float) $pivot->last_cost)->toBe(50.0);
     expect($pivot->notes)->toBe('Actualizado desde artículo');
 
     // Update from supplier route
@@ -250,13 +251,41 @@ test('user can update an association from article or supplier perspective', func
         'article' => $article,
     ]), [
         'supplier_article_code' => 'NEW-CODE-2',
-        'last_cost' => '90.00',
         'notes' => 'Actualizado desde proveedor',
     ])->assertSessionHasNoErrors();
 
     $pivot->refresh();
     expect($pivot->supplier_article_code)->toBe('NEW-CODE-2');
-    expect((float) $pivot->last_cost)->toBe(90.00);
+    expect((float) $pivot->last_cost)->toBe(50.0);
+});
+
+test('manual cost changes are rejected from both association endpoints', function () {
+    $user = User::factory()->create();
+    $article = Article::factory()->create();
+    $supplier = Supplier::factory()->create();
+    $association = ArticleSupplier::factory()->create([
+        'article_id' => $article->id,
+        'supplier_id' => $supplier->id,
+        'last_cost' => '50.00',
+    ]);
+
+    $this->actingAs($user)->put(route('catalog.articles.suppliers.update', [
+        'article' => $article,
+        'supplier' => $supplier,
+    ]), [
+        'supplier_article_code' => $association->supplier_article_code,
+        'last_cost' => '75.00',
+    ])->assertSessionHasErrors('last_cost');
+
+    $this->actingAs($user)->put(route('purchasing.suppliers.articles.update', [
+        'supplier' => $supplier,
+        'article' => $article,
+    ]), [
+        'supplier_article_code' => $association->supplier_article_code,
+        'last_cost' => '90.00',
+    ])->assertSessionHasErrors('last_cost');
+
+    expect($association->fresh()->last_cost)->toBe('50.00');
 });
 
 test('updating an association ignores its own code for uniqueness but rejects existing code', function () {
@@ -283,7 +312,6 @@ test('updating an association ignores its own code for uniqueness but rejects ex
         'supplier' => $supplier,
     ]), [
         'supplier_article_code' => 'CODE-1',
-        'last_cost' => '100.00',
     ])->assertSessionHasNoErrors();
 
     // Updating article2 to CODE-1 should fail

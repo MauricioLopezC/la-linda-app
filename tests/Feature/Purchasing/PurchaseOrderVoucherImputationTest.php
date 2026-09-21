@@ -5,6 +5,7 @@ use App\Enums\Purchasing\SupplierVoucherLetter;
 use App\Enums\Purchasing\SupplierVoucherStatus;
 use App\Enums\Purchasing\SupplierVoucherType;
 use App\Models\Catalog\Article;
+use App\Models\Catalog\ArticleSupplier;
 use App\Models\Inventory\Warehouse;
 use App\Models\Purchasing\PurchaseOrder;
 use App\Models\Purchasing\PurchaseOrderItem;
@@ -19,6 +20,7 @@ test('user can impute a single purchase order item when registering a supplier v
     $supplier = Supplier::factory()->create();
     $warehouse = Warehouse::factory()->create();
     $article = Article::factory()->create();
+    ArticleSupplier::factory()->create(['article_id' => $article->id, 'supplier_id' => $supplier->id]);
 
     $order = PurchaseOrder::factory()->issued()->create([
         'supplier_id' => $supplier->id,
@@ -78,6 +80,7 @@ test('order with pending balance remains in emitida status until fully received'
     $supplier = Supplier::factory()->create();
     $warehouse = Warehouse::factory()->create();
     $article = Article::factory()->create();
+    ArticleSupplier::factory()->create(['article_id' => $article->id, 'supplier_id' => $supplier->id]);
 
     $order = PurchaseOrder::factory()->issued()->create([
         'supplier_id' => $supplier->id,
@@ -127,6 +130,7 @@ test('surplus / excess delivery is accepted and recorded in quantity_excess with
     $supplier = Supplier::factory()->create();
     $warehouse = Warehouse::factory()->create();
     $article = Article::factory()->create();
+    ArticleSupplier::factory()->create(['article_id' => $article->id, 'supplier_id' => $supplier->id]);
 
     $order = PurchaseOrder::factory()->issued()->create([
         'supplier_id' => $supplier->id,
@@ -186,6 +190,7 @@ test('multiple vouchers can partially impute the same purchase order line until 
     $supplier = Supplier::factory()->create();
     $warehouse = Warehouse::factory()->create();
     $article = Article::factory()->create();
+    ArticleSupplier::factory()->create(['article_id' => $article->id, 'supplier_id' => $supplier->id]);
 
     $order = PurchaseOrder::factory()->issued()->create([
         'supplier_id' => $supplier->id,
@@ -260,7 +265,9 @@ test('a single voucher can impute items from multiple purchase orders of the sam
     $supplier = Supplier::factory()->create();
     $warehouse = Warehouse::factory()->create();
     $articleA = Article::factory()->create();
+    ArticleSupplier::factory()->create(['article_id' => $articleA->id, 'supplier_id' => $supplier->id]);
     $articleB = Article::factory()->create();
+    ArticleSupplier::factory()->create(['article_id' => $articleB->id, 'supplier_id' => $supplier->id]);
 
     $order1 = PurchaseOrder::factory()->issued()->create([
         'supplier_id' => $supplier->id,
@@ -330,6 +337,7 @@ test('imputing an item from a different supplier fails validation', function () 
     $supplierB = Supplier::factory()->create();
     $warehouse = Warehouse::factory()->create();
     $article = Article::factory()->create();
+    ArticleSupplier::factory()->create(['article_id' => $article->id, 'supplier_id' => $supplierA->id]);
 
     $orderB = PurchaseOrder::factory()->issued()->create([
         'supplier_id' => $supplierB->id,
@@ -372,6 +380,7 @@ test('imputing an item from a draft purchase order fails validation', function (
     $supplier = Supplier::factory()->create();
     $warehouse = Warehouse::factory()->create();
     $article = Article::factory()->create();
+    ArticleSupplier::factory()->create(['article_id' => $article->id, 'supplier_id' => $supplier->id]);
 
     $draftOrder = PurchaseOrder::factory()->create([
         'supplier_id' => $supplier->id,
@@ -414,6 +423,7 @@ test('annulling a supplier voucher restores purchase order pending balance and r
     $supplier = Supplier::factory()->create();
     $warehouse = Warehouse::factory()->create();
     $article = Article::factory()->create();
+    ArticleSupplier::factory()->create(['article_id' => $article->id, 'supplier_id' => $supplier->id]);
 
     $order = PurchaseOrder::factory()->issued()->create([
         'supplier_id' => $supplier->id,
@@ -477,6 +487,7 @@ test('associable purchase orders endpoint returns only issued orders with pendin
     $supplierB = Supplier::factory()->create();
     $warehouse = Warehouse::factory()->create();
     $article = Article::factory()->create();
+    ArticleSupplier::factory()->create(['article_id' => $article->id, 'supplier_id' => $supplierA->id]);
 
     // Order 1: Issued with pending items for Supplier A (should be returned)
     $order1 = PurchaseOrder::factory()->issued()->create([
@@ -541,6 +552,7 @@ test('purchase order show page provides imputed vouchers and received breakdown 
     $supplier = Supplier::factory()->create();
     $warehouse = Warehouse::factory()->create();
     $article = Article::factory()->create();
+    ArticleSupplier::factory()->create(['article_id' => $article->id, 'supplier_id' => $supplier->id]);
 
     $order = PurchaseOrder::factory()->issued()->create([
         'supplier_id' => $supplier->id,
@@ -594,7 +606,9 @@ test('imputing an item with non-matching article_id fails validation', function 
     $supplier = Supplier::factory()->create();
     $warehouse = Warehouse::factory()->create();
     $articleA = Article::factory()->create(['description' => 'Artículo A']);
+    ArticleSupplier::factory()->create(['article_id' => $articleA->id, 'supplier_id' => $supplier->id]);
     $articleB = Article::factory()->create(['description' => 'Artículo B']);
+    ArticleSupplier::factory()->create(['article_id' => $articleB->id, 'supplier_id' => $supplier->id]);
 
     $order = PurchaseOrder::factory()->issued()->create([
         'supplier_id' => $supplier->id,
@@ -637,6 +651,7 @@ test('imputing an item with zero pending balance fails validation', function () 
     $supplier = Supplier::factory()->create();
     $warehouse = Warehouse::factory()->create();
     $article = Article::factory()->create();
+    ArticleSupplier::factory()->create(['article_id' => $article->id, 'supplier_id' => $supplier->id]);
 
     $order = PurchaseOrder::factory()->issued()->create([
         'supplier_id' => $supplier->id,

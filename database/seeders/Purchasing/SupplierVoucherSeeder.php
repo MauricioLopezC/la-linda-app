@@ -7,6 +7,7 @@ use App\Actions\Purchasing\CreateSupplierVoucher;
 use App\Enums\Purchasing\SupplierVoucherLetter;
 use App\Enums\Purchasing\SupplierVoucherType;
 use App\Models\Catalog\Article;
+use App\Models\Catalog\ArticleSupplier;
 use App\Models\Purchasing\Supplier;
 use App\Models\Purchasing\SupplierVoucher;
 use App\Models\User;
@@ -70,6 +71,15 @@ class SupplierVoucherSeeder extends Seeder
                     'line_total' => number_format($quantity * $unitPrice, 2, '.', ''),
                 ];
             })->all();
+
+            if ($type->isInvoice()) {
+                foreach ($items as $item) {
+                    ArticleSupplier::query()->firstOrCreate(
+                        ['article_id' => $item['article_id'], 'supplier_id' => $supplier->id],
+                        ['supplier_article_code' => 'DEMO-'.$supplier->id.'-'.$item['article_id']]
+                    );
+                }
+            }
 
             $createSupplierVoucher->handle([
                 'supplier_id' => $supplier->id,
