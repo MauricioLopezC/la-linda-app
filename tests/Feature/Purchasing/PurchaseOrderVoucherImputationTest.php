@@ -588,3 +588,115 @@ test('purchase order show page provides imputed vouchers and received breakdown 
             ->where('order.items.0.quantity_pending', '4.000')
         );
 });
+
+test('imputing an item with non-matching article_id fails validation', function () {
+    $user = User::factory()->create();
+    $supplier = Supplier::factory()->create();
+    $warehouse = Warehouse::factory()->create();
+    $articleA = Article::factory()->create(['description' => 'Artículo A']);
+    $articleB = Article::factory()->create(['description' => 'Artículo B']);
+
+    $order = PurchaseOrder::factory()->issued()->create([
+        'supplier_id' => $supplier->id,
+        'warehouse_id' => $warehouse->id,
+    ]);
+    $poItem = PurchaseOrderItem::factory()->create([
+        'purchase_order_id' => $order->id,
+        'article_id' => $articleA->id,
+        'quantity' => '10.000',
+    ]);
+
+    // Send voucher item with articleB but referencing poItem with articleA
+    $response = $this->actingAs($user)->post(route('purchasing.vouchers.store'), [
+        'supplier_id' => $supplier->id,
+        'type' => SupplierVoucherType::Invoice->value,
+        'letter' => SupplierVoucherLetter::A->value,
+        'point_of_sale' => '1',
+        'number' => '131',
+        'issue_date' => today()->toDateString(),
+        'due_date' => today()->addDays(30)->toDateString(),
+        'total_amount' => '100,00',
+        'items' => [
+            [
+                'article_id' => $articleB->id,
+                'description' => $articleB->description,
+                'quantity' => '5,000',
+                'unit_of_measure' => 'un',
+                'unit_price' => '20,00',
+                'line_total' => '100,00',
+                'purchase_order_item_id' => $poItem->id,
+            ],
+        ],
+    ]);
+
+    $response->assertSessionHasErrors('items.0.article_id');
+});
+
+test('imputing an item with zero pending balance fails validation', function () {
+    $user = User::factory()->create();
+    $supplier = Supplier::factory()->create();
+    $warehouse = Warehouse::factory()->create();
+    $article = Article::factory()->create();
+
+    $order = PurchaseOrder::factory()->issued()->create([
+        'supplier_id' => $supplier->id,
+        'warehouse_id' => $warehouse->id,
+    ]);
+    $poItem = PurchaseOrderItem::factory()->create([
+        'purchase_order_id' => $order->id,
+        'article_id' => $article->id,
+        'quantity' => '10.000',
+        'unit_price' => '100.00',
+        'line_total' => '1000.00',
+    ]);
+
+    // Fulfill the order first
+    $this->actingAs($user)->post(route('purchasing.vouchers.store'), [
+        'supplier_id' => $supplier->id,
+        'type' => SupplierVoucherType::Invoice->value,
+        'letter' => SupplierVoucherLetter::A->value,
+        'point_of_sale' => '1',
+        'number' => '132',
+        'issue_date' => today()->toDateString(),
+        'due_date' => today()->addDays(30)->toDateString(),
+        'total_amount' => '1000,00',
+        'items' => [
+            [
+                'article_id' => $article->id,
+                'description' => $article->description,
+                'quantity' => '10,000',
+                'unit_of_measure' => 'un',
+                'unit_price' => '100,00',
+                'line_total' => '1000,00',
+                'purchase_order_item_id' => $poItem->id,
+            ],
+        ],
+    ])->assertSessionHasNoErrors()->assertRedirect();
+
+    expect($order->fresh()->status)->toBe(PurchaseOrderStatus::Fulfilled);
+
+    // Attempt to impute again to the already fulfilled line
+    $response = $this->actingAs($user)->post(route('purchasing.vouchers.store'), [
+        'supplier_id' => $supplier->id,
+        'type' => SupplierVoucherType::Invoice->value,
+        'letter' => SupplierVoucherLetter::A->value,
+        'point_of_sale' => '1',
+        'number' => '133',
+        'issue_date' => today()->toDateString(),
+        'due_date' => today()->addDays(30)->toDateString(),
+        'total_amount' => '200,00',
+        'items' => [
+            [
+                'article_id' => $article->id,
+                'description' => $article->description,
+                'quantity' => '2,000',
+                'unit_of_measure' => 'un',
+                'unit_price' => '100,00',
+                'line_total' => '200,00',
+                'purchase_order_item_id' => $poItem->id,
+            ],
+        ],
+    ]);
+
+    $response->assertSessionHasErrors('items.0.purchase_order_item_id');
+});

@@ -44,7 +44,11 @@ class SupplierData extends Data
             has_associated_records: $supplier->hasAssociatedRecords(),
             created_at: $supplier->created_at?->toIso8601String(),
             articles: $supplier->relationLoaded('articleSuppliers')
-                ? $supplier->articleSuppliers->map(fn ($pivot) => ArticleSupplierData::fromModel($pivot))->all()
+                ? $supplier->articleSuppliers->map(function ($pivot) use ($supplier) {
+                    $pivot->setRelation('supplier', $supplier);
+
+                    return ArticleSupplierData::fromModel($pivot);
+                })->all()
                 : [],
         );
     }

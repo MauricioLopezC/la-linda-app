@@ -42,7 +42,11 @@ class ArticleData extends Data
             status_label: $article->status->label(),
             is_online_publishable: $article->is_online_publishable,
             suppliers: $article->relationLoaded('articleSuppliers')
-                ? $article->articleSuppliers->map(fn ($pivot) => ArticleSupplierData::fromModel($pivot))->all()
+                ? $article->articleSuppliers->map(function ($pivot) use ($article) {
+                    $pivot->setRelation('article', $article);
+
+                    return ArticleSupplierData::fromModel($pivot);
+                })->all()
                 : [],
         );
     }

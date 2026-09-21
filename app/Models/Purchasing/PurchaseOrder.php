@@ -174,6 +174,7 @@ class PurchaseOrder extends Model
     public function imputedVouchers(): Collection
     {
         return SupplierVoucher::query()
+            ->with('items.imputations')
             ->whereHas('items.imputations', function ($query) {
                 $query->whereIn('purchase_order_item_id', $this->items()->select('id'));
             })

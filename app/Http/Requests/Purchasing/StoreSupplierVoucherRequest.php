@@ -286,33 +286,66 @@ class StoreSupplierVoucherRequest extends FormRequest
                 return;
             }
 
+            $poItemIds = collect($items)
+                ->pluck('purchase_order_item_id')
+                ->filter(fn ($id) => is_numeric($id))
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->all();
+
+            if (empty($poItemIds)) {
+                return;
+            }
+
+            $poItems = PurchaseOrderItem::query()
+                ->with(['purchaseOrder', 'article'])
+                ->whereKey($poItemIds)
+                ->get()
+                ->keyBy('id');
+
             foreach ($items as $index => $item) {
                 $poItemId = Arr::get($item, 'purchase_order_item_id');
+                if (! is_numeric($poItemId)) {
+                    continue;
+                }
 
-                if (is_numeric($poItemId)) {
-                    /** @var PurchaseOrderItem|null $poItem */
-                    $poItem = PurchaseOrderItem::query()
-                        ->with('purchaseOrder')
-                        ->whereKey((int) $poItemId)
-                        ->first();
+                /** @var PurchaseOrderItem|null $poItem */
+                $poItem = $poItems->get((int) $poItemId);
+                if ($poItem === null) {
+                    continue;
+                }
 
-                    if ($poItem !== null) {
-                        $purchaseOrder = $poItem->purchaseOrder;
+                $purchaseOrder = $poItem->purchaseOrder;
 
-                        if ($purchaseOrder->supplier_id !== $supplierId) {
-                            $validator->errors()->add(
-                                "items.{$index}.purchase_order_item_id",
-                                "La orden de compra #{$purchaseOrder->order_number} no pertenece al proveedor seleccionado."
-                            );
-                        }
+                if ($purchaseOrder->supplier_id !== $supplierId) {
+                    $validator->errors()->add(
+                        "items.{$index}.purchase_order_item_id",
+                        "La orden de compra #{$purchaseOrder->order_number} no pertenece al proveedor seleccionado."
+                    );
+                }
 
-                        if (! $purchaseOrder->isIssued()) {
-                            $validator->errors()->add(
-                                "items.{$index}.purchase_order_item_id",
-                                "La orden de compra #{$purchaseOrder->order_number} no se encuentra en estado emitida."
-                            );
-                        }
-                    }
+                if (! $purchaseOrder->isIssued()) {
+                    $validator->errors()->add(
+                        "items.{$index}.purchase_order_item_id",
+                        "La orden de compra #{$purchaseOrder->order_number} no se encuentra en estado emitida."
+                    );
+                }
+
+                // Validación de artículo coincidente
+                $articleId = Arr::get($item, 'article_id');
+                if ($articleId !== null && (int) $articleId !== $poItem->article_id) {
+                    $validator->errors()->add(
+                        "items.{$index}.article_id",
+                        "El artículo seleccionado no coincide con el artículo solicitado en la orden #{$purchaseOrder->order_number}."
+                    );
+                }
+
+                // Rechazo preventivo de saldo cero
+                if ((float) $poItem->quantityPending() <= 0.0001) {
+                    $validator->errors()->add(
+                        "items.{$index}.purchase_order_item_id",
+                        "El renglón de la orden de compra #{$purchaseOrder->order_number} ya se encuentra cubierto en su totalidad."
+                    );
                 }
             }
         });

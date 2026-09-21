@@ -17,6 +17,7 @@ return new class extends Migration
             $table->timestamp('created_at')->useCurrent();
 
             $table->unique(['purchase_order_item_id', 'supplier_voucher_item_id'], 'po_voucher_imputations_unique');
+            $table->index('supplier_voucher_item_id');
         });
     }
 
