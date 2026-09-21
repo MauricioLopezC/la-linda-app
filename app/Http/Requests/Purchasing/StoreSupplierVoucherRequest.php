@@ -7,6 +7,7 @@ use App\Enums\Purchasing\SupplierVoucherLetter;
 use App\Enums\Purchasing\SupplierVoucherStatus;
 use App\Enums\Purchasing\SupplierVoucherType;
 use App\Models\Catalog\Article;
+use App\Models\Purchasing\PurchaseOrderItem;
 use App\Models\Purchasing\Supplier;
 use App\Models\Purchasing\SupplierVoucher;
 use Illuminate\Database\Query\Builder;
@@ -14,6 +15,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 use LogicException;
 
 class StoreSupplierVoucherRequest extends FormRequest
@@ -39,6 +41,7 @@ class StoreSupplierVoucherRequest extends FormRequest
                 }
 
                 $articleId = Arr::get($item, 'article_id') ?: null;
+                $poItemId = Arr::get($item, 'purchase_order_item_id') ?: null;
                 $lineTotal = $this->normalizeArgentineMoney(Arr::get($item, 'line_total'));
 
                 // Concept lines (no catalog article) are transcribed with just a description and
@@ -48,6 +51,7 @@ class StoreSupplierVoucherRequest extends FormRequest
                 if ($articleId === null) {
                     return [
                         'article_id' => null,
+                        'purchase_order_item_id' => null,
                         'description' => $this->normalizeRequiredText(Arr::get($item, 'description')),
                         'quantity' => '1',
                         'unit_of_measure' => self::CONCEPT_UNIT_OF_MEASURE,
@@ -58,6 +62,7 @@ class StoreSupplierVoucherRequest extends FormRequest
 
                 return [
                     'article_id' => $articleId,
+                    'purchase_order_item_id' => $poItemId !== null ? (int) $poItemId : null,
                     'description' => $this->normalizeRequiredText(Arr::get($item, 'description')),
                     'quantity' => $this->normalizeDecimal(Arr::get($item, 'quantity')),
                     'unit_of_measure' => $this->normalizeRequiredText(Arr::get($item, 'unit_of_measure')),
@@ -86,7 +91,7 @@ class StoreSupplierVoucherRequest extends FormRequest
      *     issue_date: string, due_date: ?string, total_amount: string, notes: ?string,
      *     associated_invoice_id: ?int, associated_amount: ?string,
      *     items: array<int, array{article_id: ?int, description: string, quantity: string,
-     *         unit_of_measure: string, unit_price: string, line_total: string}>
+     *         unit_of_measure: string, unit_price: string, line_total: string, purchase_order_item_id?: ?int}>
      * }
      */
     public function voucherData(): array
@@ -106,8 +111,10 @@ class StoreSupplierVoucherRequest extends FormRequest
             }
 
             $articleId = $item['article_id'] ?? null;
+            $poItemId = $item['purchase_order_item_id'] ?? null;
             $items[] = [
                 'article_id' => $articleId === null ? null : (int) $articleId,
+                'purchase_order_item_id' => $poItemId === null ? null : (int) $poItemId,
                 'description' => (string) $item['description'],
                 'quantity' => (string) $item['quantity'],
                 'unit_of_measure' => (string) $item['unit_of_measure'],
@@ -196,7 +203,8 @@ class StoreSupplierVoucherRequest extends FormRequest
                 'lte:total_amount',
             ],
             'items' => ['required', 'array', 'min:1'],
-            'items.*' => ['required', 'array:article_id,description,quantity,unit_of_measure,unit_price,line_total'],
+            'items.*' => ['required', 'array:article_id,purchase_order_item_id,description,quantity,unit_of_measure,unit_price,line_total'],
+            'items.*.purchase_order_item_id' => ['nullable', 'integer', 'exists:purchase_order_items,id'],
             'items.*.article_id' => [
                 'nullable',
                 'integer',
@@ -205,7 +213,7 @@ class StoreSupplierVoucherRequest extends FormRequest
                 ),
             ],
             'items.*.description' => ['required', 'string', 'max:500'],
-            'items.*.quantity' => ['required', 'numeric', 'decimal:0,2', 'min:0.01', 'max:999999999.99'],
+            'items.*.quantity' => ['required', 'numeric', 'decimal:0,3', 'min:0.001', 'max:999999999.999'],
             'items.*.unit_of_measure' => ['required', 'string', 'max:50'],
             'items.*.unit_price' => ['required', 'numeric', 'decimal:0,2', 'min:0.01', 'max:9999999999.99'],
             'items.*.line_total' => ['required', 'numeric', 'decimal:0,2', 'min:0.01', 'max:9999999999.99'],
@@ -236,6 +244,7 @@ class StoreSupplierVoucherRequest extends FormRequest
             'associated_invoice_id' => 'factura asociada',
             'associated_amount' => 'importe aplicado',
             'items' => 'ítems',
+            'items.*.purchase_order_item_id' => 'orden de compra del ítem :position',
             'items.*.article_id' => 'artículo del ítem :position',
             'items.*.description' => 'descripción del ítem :position',
             'items.*.quantity' => 'cantidad del ítem :position',
@@ -265,6 +274,81 @@ class StoreSupplierVoucherRequest extends FormRequest
             'associated_amount.lte' => 'El importe aplicado no puede superar el importe total de la nota de crédito.',
             '*.prohibited' => 'Este dato es derivado y no puede cargarse manualmente.',
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator): void {
+            $supplierId = (int) $this->input('supplier_id');
+            $items = $this->input('items', []);
+
+            if (! is_array($items)) {
+                return;
+            }
+
+            $poItemIds = collect($items)
+                ->pluck('purchase_order_item_id')
+                ->filter(fn ($id) => is_numeric($id))
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->all();
+
+            if (empty($poItemIds)) {
+                return;
+            }
+
+            $poItems = PurchaseOrderItem::query()
+                ->with(['purchaseOrder', 'article'])
+                ->whereKey($poItemIds)
+                ->get()
+                ->keyBy('id');
+
+            foreach ($items as $index => $item) {
+                $poItemId = Arr::get($item, 'purchase_order_item_id');
+                if (! is_numeric($poItemId)) {
+                    continue;
+                }
+
+                /** @var PurchaseOrderItem|null $poItem */
+                $poItem = $poItems->get((int) $poItemId);
+                if ($poItem === null) {
+                    continue;
+                }
+
+                $purchaseOrder = $poItem->purchaseOrder;
+
+                if ($purchaseOrder->supplier_id !== $supplierId) {
+                    $validator->errors()->add(
+                        "items.{$index}.purchase_order_item_id",
+                        "La orden de compra #{$purchaseOrder->order_number} no pertenece al proveedor seleccionado."
+                    );
+                }
+
+                if (! $purchaseOrder->isIssued()) {
+                    $validator->errors()->add(
+                        "items.{$index}.purchase_order_item_id",
+                        "La orden de compra #{$purchaseOrder->order_number} no se encuentra en estado emitida."
+                    );
+                }
+
+                // Validación de artículo coincidente
+                $articleId = Arr::get($item, 'article_id');
+                if ($articleId !== null && (int) $articleId !== $poItem->article_id) {
+                    $validator->errors()->add(
+                        "items.{$index}.article_id",
+                        "El artículo seleccionado no coincide con el artículo solicitado en la orden #{$purchaseOrder->order_number}."
+                    );
+                }
+
+                // Rechazo preventivo de saldo cero
+                if ((float) $poItem->quantityPending() <= 0.0001) {
+                    $validator->errors()->add(
+                        "items.{$index}.purchase_order_item_id",
+                        "El renglón de la orden de compra #{$purchaseOrder->order_number} ya se encuentra cubierto en su totalidad."
+                    );
+                }
+            }
+        });
     }
 
     private function normalizeFiscalNumber(mixed $value, int $length): mixed

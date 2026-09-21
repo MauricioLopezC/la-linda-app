@@ -8,6 +8,7 @@ use App\Models\Inventory\Warehouse;
 use App\Models\User;
 use Database\Factories\Purchasing\PurchaseOrderFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -123,6 +124,11 @@ class PurchaseOrder extends Model
         return $this->status === PurchaseOrderStatus::Cancelled;
     }
 
+    public function isFulfilled(): bool
+    {
+        return $this->status === PurchaseOrderStatus::Fulfilled;
+    }
+
     public function canBeEdited(): bool
     {
         return $this->isDraft();
@@ -136,6 +142,45 @@ class PurchaseOrder extends Model
     public function canBeCancelled(): bool
     {
         return $this->isIssued();
+    }
+
+    /**
+     * @param  Builder<PurchaseOrder>  $query
+     */
+    public function scopeIssued(Builder $query): void
+    {
+        $query->where('status', PurchaseOrderStatus::Issued);
+    }
+
+    public function isFullyReceived(): bool
+    {
+        if ($this->items->isEmpty()) {
+            return false;
+        }
+
+        return $this->items->every(fn (PurchaseOrderItem $item): bool => $item->isFullyReceived());
+    }
+
+    public function hasPendingItems(): bool
+    {
+        return $this->items->contains(fn (PurchaseOrderItem $item): bool => (float) $item->quantityPending() > 0.0001);
+    }
+
+    /**
+     * Get the vouchers that have imputed this purchase order.
+     *
+     * @return Collection<int, SupplierVoucher>
+     */
+    public function imputedVouchers(): Collection
+    {
+        return SupplierVoucher::query()
+            ->with('items.imputations')
+            ->whereHas('items.imputations', function ($query) {
+                $query->whereIn('purchase_order_item_id', $this->items()->select('id'));
+            })
+            ->distinct()
+            ->orderByDesc('issue_date')
+            ->get();
     }
 
     /**

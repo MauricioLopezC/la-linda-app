@@ -100,7 +100,7 @@ class ArticleSeeder extends Seeder
                 'brand' => 'Playadito',
                 'unit' => 'Unidad',
                 'barcode' => '7795678901234',
-                'status' => ArticleStatus::Discontinued,
+                'status' => ArticleStatus::Inactive,
                 'is_online_publishable' => false,
             ],
             [

@@ -3,6 +3,7 @@ import {
   FileText,
   Landmark,
   MapPin,
+  Package,
   Pencil,
   Plus,
   Power,
@@ -19,6 +20,7 @@ import {
 } from '@/actions/App/Http/Controllers/Purchasing/SupplierController';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
+import SortableTableHead from '@/components/sortable-table-head';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -51,13 +53,19 @@ import { Textarea } from '@/components/ui/textarea';
 import { dashboard } from '@/routes';
 import { index } from '@/routes/purchasing/suppliers';
 import type { BreadcrumbItem } from '@/types';
+import ManageSupplierArticlesDialog from './components/manage-supplier-articles-dialog';
 
 type Supplier = App.Data.Purchasing.SupplierData;
+type Article = App.Data.Catalog.ArticleData;
 type TaxConditionOption = App.Data.Purchasing.SupplierTaxConditionOptionData;
+
+type SupplierSortColumn =
+  'business_name' | 'tax_id' | 'tax_condition' | 'is_active';
 
 type Props = {
   suppliers: Supplier[];
   taxConditions: TaxConditionOption[];
+  availableArticles: Article[];
   filters: {
     search: string;
     tax_condition: string;
@@ -79,9 +87,13 @@ type SupplierFormData = {
 export default function SuppliersIndex({
   suppliers = [],
   taxConditions = [],
+  availableArticles = [],
   filters,
 }: Props) {
   const [searchTerm, setSearchTerm] = useState(filters.search ?? '');
+  const [sortColumn, setSortColumn] =
+    useState<SupplierSortColumn>('business_name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [selectedTaxCondition, setSelectedTaxCondition] = useState(
     filters.tax_condition ?? 'all',
   );
@@ -92,6 +104,37 @@ export default function SuppliersIndex({
   const [deletingSupplier, setDeletingSupplier] = useState<Supplier | null>(
     null,
   );
+  const [managingArticlesSupplier, setManagingArticlesSupplier] =
+    useState<Supplier | null>(null);
+
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortColumn(column as SupplierSortColumn);
+      setSortDirection('asc');
+    }
+  };
+
+  const sortedSuppliers = [...suppliers].sort((a, b) => {
+    let aVal = '';
+    let bVal = '';
+
+    if (sortColumn === 'is_active') {
+      aVal = a.is_active ? '1' : '0';
+      bVal = b.is_active ? '1' : '0';
+    } else {
+      aVal = (a[sortColumn] ?? '').toLowerCase();
+      bVal = (b[sortColumn] ?? '').toLowerCase();
+    }
+
+    const cmp = aVal.localeCompare(bVal, 'es', {
+      numeric: true,
+      sensitivity: 'base',
+    });
+
+    return sortDirection === 'asc' ? cmp : -cmp;
+  });
 
   const createForm = useForm<SupplierFormData>({
     business_name: '',
@@ -266,11 +309,11 @@ export default function SuppliersIndex({
 
         {/* Toolbar & Filters */}
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="flex flex-1 flex-wrap items-center gap-3">
             {/* Search Input */}
             <form
               onSubmit={handleSearchSubmit}
-              className="relative max-w-sm flex-1"
+              className="relative max-w-sm min-w-[200px] flex-1"
             >
               <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -315,7 +358,7 @@ export default function SuppliersIndex({
             </Select>
           </div>
 
-          <Button onClick={handleOpenCreate}>
+          <Button onClick={handleOpenCreate} className="shrink-0">
             <Plus className="mr-1.5 size-4" />
             Nuevo Proveedor
           </Button>
@@ -326,17 +369,53 @@ export default function SuppliersIndex({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Razón Social / Rubro</TableHead>
-                <TableHead>CUIT</TableHead>
-                <TableHead>Condición Fiscal</TableHead>
-                <TableHead>Domicilio / Contacto</TableHead>
-                <TableHead>Condiciones Comerciales</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
+                <SortableTableHead
+                  column="business_name"
+                  currentColumn={sortColumn}
+                  currentDirection={sortDirection}
+                  onSort={handleSort}
+                  className="min-w-[220px]"
+                >
+                  Razón Social / Rubro
+                </SortableTableHead>
+                <SortableTableHead
+                  column="tax_id"
+                  currentColumn={sortColumn}
+                  currentDirection={sortDirection}
+                  onSort={handleSort}
+                  className="w-36"
+                >
+                  CUIT
+                </SortableTableHead>
+                <SortableTableHead
+                  column="tax_condition"
+                  currentColumn={sortColumn}
+                  currentDirection={sortDirection}
+                  onSort={handleSort}
+                  className="w-44"
+                >
+                  Condición Fiscal
+                </SortableTableHead>
+                <TableHead className="min-w-[200px]">
+                  Domicilio / Contacto
+                </TableHead>
+                <TableHead className="min-w-[180px]">
+                  Condiciones Comerciales
+                </TableHead>
+                <SortableTableHead
+                  column="is_active"
+                  currentColumn={sortColumn}
+                  currentDirection={sortDirection}
+                  onSort={handleSort}
+                  className="w-28"
+                >
+                  Estado
+                </SortableTableHead>
+                <TableHead className="w-36 text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {suppliers.length === 0 ? (
+              {sortedSuppliers.length === 0 ? (
                 <TableRow>
                   <TableCell
                     colSpan={7}
@@ -347,7 +426,7 @@ export default function SuppliersIndex({
                   </TableCell>
                 </TableRow>
               ) : (
-                suppliers.map((supplier) => (
+                sortedSuppliers.map((supplier) => (
                   <TableRow key={supplier.id}>
                     <TableCell className="font-medium">
                       <div className="flex flex-col">
@@ -416,6 +495,15 @@ export default function SuppliersIndex({
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setManagingArticlesSupplier(supplier)}
+                          aria-label={`Gestionar artículos de ${supplier.business_name}`}
+                          title="Artículos"
+                        >
+                          <Package className="size-4" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -788,6 +876,21 @@ export default function SuppliersIndex({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <ManageSupplierArticlesDialog
+        supplier={
+          managingArticlesSupplier
+            ? (suppliers.find((s) => s.id === managingArticlesSupplier.id) ??
+              managingArticlesSupplier)
+            : null
+        }
+        open={managingArticlesSupplier !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setManagingArticlesSupplier(null);
+          }
+        }}
+        availableArticles={availableArticles}
+      />
     </>
   );
 }

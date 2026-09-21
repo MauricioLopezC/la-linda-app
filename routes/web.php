@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Catalog\ArticleController;
+use App\Http\Controllers\Catalog\ArticleSupplierController;
 use App\Http\Controllers\Catalog\BrandController;
 use App\Http\Controllers\Catalog\CategoryController;
 use App\Http\Controllers\Catalog\UnitOfMeasureController;
@@ -53,6 +54,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/', [ArticleController::class, 'store'])->name('store');
         Route::put('{article}', [ArticleController::class, 'update'])->name('update');
         Route::delete('{article}', [ArticleController::class, 'destroy'])->name('destroy');
+        Route::post('{article}/suppliers', [ArticleSupplierController::class, 'storeForArticle'])->name('suppliers.store');
+        Route::put('{article}/suppliers/{supplier}', [ArticleSupplierController::class, 'updateForArticle'])->name('suppliers.update');
+        Route::delete('{article}/suppliers/{supplier}', [ArticleSupplierController::class, 'destroyForArticle'])->name('suppliers.destroy');
     });
 
     Route::prefix('organization/branches')->name('organization.branches.')->group(function () {
@@ -125,6 +129,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('{supplier}', [SupplierController::class, 'update'])->name('update');
         Route::patch('{supplier}/toggle', [SupplierController::class, 'toggleStatus'])->name('toggle');
         Route::delete('{supplier}', [SupplierController::class, 'destroy'])->name('destroy');
+        Route::post('{supplier}/articles', [ArticleSupplierController::class, 'storeForSupplier'])->name('articles.store');
+        Route::put('{supplier}/articles/{article}', [ArticleSupplierController::class, 'updateForSupplier'])->name('articles.update');
+        Route::delete('{supplier}/articles/{article}', [ArticleSupplierController::class, 'destroyForSupplier'])->name('articles.destroy');
     });
 
     Route::prefix('purchasing/vouchers')->name('purchasing.vouchers.')->group(function () {
@@ -132,6 +139,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('create', [SupplierVoucherController::class, 'create'])->name('create');
         Route::get('articles', [SupplierVoucherController::class, 'searchArticles'])->name('articles');
         Route::get('associable-invoices', [SupplierVoucherController::class, 'associableInvoices'])->name('associable-invoices');
+        Route::get('associable-purchase-orders', [SupplierVoucherController::class, 'associablePurchaseOrders'])->name('associable-purchase-orders');
         Route::post('/', [SupplierVoucherController::class, 'store'])->name('store');
         Route::get('{supplier_voucher}', [SupplierVoucherController::class, 'show'])->name('show');
         Route::post('{supplier_voucher}/annul', [SupplierVoucherController::class, 'annul'])->name('annul');

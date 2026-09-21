@@ -38,11 +38,4 @@ class ArticleFactory extends Factory
             'status' => ArticleStatus::Inactive,
         ]);
     }
-
-    public function discontinued(): static
-    {
-        return $this->state(fn (): array => [
-            'status' => ArticleStatus::Discontinued,
-        ]);
-    }
 }

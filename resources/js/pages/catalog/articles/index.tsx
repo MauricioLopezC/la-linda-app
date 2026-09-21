@@ -1,5 +1,5 @@
 import { Head, router, useForm } from '@inertiajs/react';
-import { Ban, Pencil, Plus, Search } from 'lucide-react';
+import { Ban, Pencil, Plus, Search, Truck } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import {
@@ -9,6 +9,7 @@ import {
 } from '@/actions/App/Http/Controllers/Catalog/ArticleController';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
+import SortableTableHead from '@/components/sortable-table-head';
 import TablePagination from '@/components/table-pagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -40,17 +41,28 @@ import {
 import { dashboard } from '@/routes';
 import { index } from '@/routes/catalog/articles';
 import type { BreadcrumbItem } from '@/types';
+import ManageArticleSuppliersDialog from './components/manage-article-suppliers-dialog';
 
 type Article = App.Data.Catalog.ArticleData;
 type Category = App.Data.Catalog.CategoryData;
 type Brand = App.Data.Catalog.BrandData;
 type UnitOfMeasure = App.Data.Catalog.UnitOfMeasureData;
+type Supplier = App.Data.Purchasing.SupplierData;
+
+type SortColumn =
+  | 'internal_code'
+  | 'description'
+  | 'category_name'
+  | 'brand_name'
+  | 'unit_of_measure_name'
+  | 'status';
 
 type Props = {
   articles: Article[];
   categories: Category[];
   brands: Brand[];
   unitsOfMeasure: UnitOfMeasure[];
+  availableSuppliers: Supplier[];
 };
 
 type ArticleFormData = {
@@ -81,15 +93,7 @@ const emptyForm: ArticleFormData = {
 };
 
 const statusBadgeVariant = (status: string) => {
-  if (status === 'active') {
-    return 'default' as const;
-  }
-
-  if (status === 'inactive') {
-    return 'secondary' as const;
-  }
-
-  return 'destructive' as const;
+  return status === 'active' ? ('default' as const) : ('secondary' as const);
 };
 
 export default function ArticlesIndex({
@@ -97,10 +101,15 @@ export default function ArticlesIndex({
   categories = [],
   brands = [],
   unitsOfMeasure = [],
+  availableSuppliers = [],
 }: Props) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [sortColumn, setSortColumn] = useState<SortColumn>('description');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingArticle, setEditingArticle] = useState<Article | null>(null);
+  const [managingSuppliersArticle, setManagingSuppliersArticle] =
+    useState<Article | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 10;
 
@@ -127,6 +136,15 @@ export default function ArticlesIndex({
     return parent ? `${parent.name} > ${category.name}` : category.name;
   };
 
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortColumn(column as SortColumn);
+      setSortDirection('asc');
+    }
+  };
+
   const filteredArticles = articles.filter((article) => {
     const term = searchTerm.trim().toLowerCase();
 
@@ -139,12 +157,32 @@ export default function ArticlesIndex({
     );
   });
 
-  const totalPages = Math.max(
-    1,
-    Math.ceil(filteredArticles.length / PAGE_SIZE),
-  );
+  const sortedArticles = [...filteredArticles].sort((a, b) => {
+    let aVal = '';
+    let bVal = '';
+
+    if (sortColumn === 'category_name') {
+      aVal = categoryPath(a.category_id);
+      bVal = categoryPath(b.category_id);
+    } else if (sortColumn === 'brand_name') {
+      aVal = a.brand_name ?? '';
+      bVal = b.brand_name ?? '';
+    } else {
+      aVal = a[sortColumn] ?? '';
+      bVal = b[sortColumn] ?? '';
+    }
+
+    const cmp = aVal.localeCompare(bVal, 'es', {
+      numeric: true,
+      sensitivity: 'base',
+    });
+
+    return sortDirection === 'asc' ? cmp : -cmp;
+  });
+
+  const totalPages = Math.max(1, Math.ceil(sortedArticles.length / PAGE_SIZE));
   const safeCurrentPage = Math.min(currentPage, totalPages);
-  const paginatedArticles = filteredArticles.slice(
+  const paginatedArticles = sortedArticles.slice(
     (safeCurrentPage - 1) * PAGE_SIZE,
     safeCurrentPage * PAGE_SIZE,
   );
@@ -226,7 +264,7 @@ export default function ArticlesIndex({
     });
   };
 
-  const discontinue = (article: Article) => {
+  const deactivate = (article: Article) => {
     router.delete(destroy.url({ article: article.id }), {
       preserveScroll: true,
       onSuccess: () =>
@@ -382,7 +420,6 @@ export default function ArticlesIndex({
           <SelectContent>
             <SelectItem value="active">Activo</SelectItem>
             <SelectItem value="inactive">Inactivo</SelectItem>
-            <SelectItem value="discontinued">Discontinuado</SelectItem>
           </SelectContent>
         </Select>
         <InputError message={form.errors.status} />
@@ -434,13 +471,55 @@ export default function ArticlesIndex({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Código interno</TableHead>
-                <TableHead>Descripción</TableHead>
-                <TableHead>Categoría</TableHead>
-                <TableHead>Marca</TableHead>
-                <TableHead>Unidad</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
+                <SortableTableHead
+                  column="internal_code"
+                  label="Código interno"
+                  currentColumn={sortColumn}
+                  direction={sortDirection}
+                  onSort={handleSort}
+                  className="w-32"
+                />
+                <SortableTableHead
+                  column="description"
+                  label="Descripción"
+                  currentColumn={sortColumn}
+                  direction={sortDirection}
+                  onSort={handleSort}
+                  className="min-w-[200px]"
+                />
+                <SortableTableHead
+                  column="category_name"
+                  label="Categoría"
+                  currentColumn={sortColumn}
+                  direction={sortDirection}
+                  onSort={handleSort}
+                  className="w-44"
+                />
+                <SortableTableHead
+                  column="brand_name"
+                  label="Marca"
+                  currentColumn={sortColumn}
+                  direction={sortDirection}
+                  onSort={handleSort}
+                  className="w-32"
+                />
+                <SortableTableHead
+                  column="unit_of_measure_name"
+                  label="Unidad"
+                  currentColumn={sortColumn}
+                  direction={sortDirection}
+                  onSort={handleSort}
+                  className="w-24"
+                />
+                <SortableTableHead
+                  column="status"
+                  label="Estado"
+                  currentColumn={sortColumn}
+                  direction={sortDirection}
+                  onSort={handleSort}
+                  className="w-28"
+                />
+                <TableHead className="w-36 text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -472,6 +551,15 @@ export default function ArticlesIndex({
                       <Button
                         variant="ghost"
                         size="icon"
+                        onClick={() => setManagingSuppliersArticle(article)}
+                        aria-label={`Gestionar proveedores de ${article.description}`}
+                        title="Proveedores"
+                      >
+                        <Truck className="size-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={() => openEdit(article)}
                         aria-label={`Editar ${article.description}`}
                       >
@@ -480,9 +568,14 @@ export default function ArticlesIndex({
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => discontinue(article)}
-                        disabled={article.status === 'discontinued'}
+                        onClick={() => deactivate(article)}
+                        disabled={article.status === 'inactive'}
                         aria-label={`Dar de baja ${article.description}`}
+                        title={
+                          article.status === 'inactive'
+                            ? 'Ya está inactivo'
+                            : 'Dar de baja (inactivar)'
+                        }
                       >
                         <Ban className="size-4" />
                       </Button>
@@ -549,6 +642,21 @@ export default function ArticlesIndex({
           </form>
         </DialogContent>
       </Dialog>
+      <ManageArticleSuppliersDialog
+        article={
+          managingSuppliersArticle
+            ? (articles.find((a) => a.id === managingSuppliersArticle.id) ??
+              managingSuppliersArticle)
+            : null
+        }
+        open={managingSuppliersArticle !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setManagingSuppliersArticle(null);
+          }
+        }}
+        availableSuppliers={availableSuppliers}
+      />
     </>
   );
 }

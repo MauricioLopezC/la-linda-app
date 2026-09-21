@@ -188,11 +188,11 @@ test('brand and barcode are not required', function () {
     ]))->assertSessionHasNoErrors();
 });
 
-test('status can be set freely to active, inactive or discontinued from the form', function () {
+test('status can be set freely to active or inactive from the form', function () {
     $user = User::factory()->create();
     $article = Article::factory()->create();
 
-    foreach (['inactive', 'discontinued', 'active'] as $status) {
+    foreach (['inactive', 'active'] as $status) {
         $this->actingAs($user)->put(route('catalog.articles.update', $article), articlePayload([
             'internal_code' => $article->internal_code,
             'status' => $status,
@@ -200,9 +200,14 @@ test('status can be set freely to active, inactive or discontinued from the form
 
         expect($article->fresh()->status->value)->toBe($status);
     }
+
+    $this->actingAs($user)->put(route('catalog.articles.update', $article), articlePayload([
+        'internal_code' => $article->internal_code,
+        'status' => 'discontinued',
+    ]))->assertSessionHasErrors('status');
 });
 
-test('dar de baja an article sets it to discontinued without deleting it', function () {
+test('dar de baja an article sets it to inactive without deleting it', function () {
     $user = User::factory()->create();
     $article = Article::factory()->create();
 
@@ -210,15 +215,15 @@ test('dar de baja an article sets it to discontinued without deleting it', funct
         ->assertSessionHasNoErrors();
 
     $this->assertDatabaseHas('articles', ['id' => $article->id]);
-    expect($article->fresh()->status->value)->toBe('discontinued');
+    expect($article->fresh()->status->value)->toBe('inactive');
 });
 
-test('dar de baja an already discontinued article keeps it discontinued', function () {
+test('dar de baja an already inactive article keeps it inactive', function () {
     $user = User::factory()->create();
-    $article = Article::factory()->discontinued()->create();
+    $article = Article::factory()->inactive()->create();
 
     $this->actingAs($user)->delete(route('catalog.articles.destroy', $article))
         ->assertSessionHasNoErrors();
 
-    expect($article->fresh()->status->value)->toBe('discontinued');
+    expect($article->fresh()->status->value)->toBe('inactive');
 });

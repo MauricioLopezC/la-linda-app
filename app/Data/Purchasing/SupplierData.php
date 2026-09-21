@@ -2,6 +2,7 @@
 
 namespace App\Data\Purchasing;
 
+use App\Data\Catalog\ArticleSupplierData;
 use App\Models\Purchasing\Supplier;
 use App\Rules\Purchasing\ValidCuit;
 use Spatie\LaravelData\Data;
@@ -22,6 +23,8 @@ class SupplierData extends Data
         public bool $is_active,
         public bool $has_associated_records,
         public ?string $created_at,
+        /** @var array<ArticleSupplierData> */
+        public array $articles = [],
     ) {}
 
     public static function fromModel(Supplier $supplier): self
@@ -40,6 +43,13 @@ class SupplierData extends Data
             is_active: $supplier->is_active,
             has_associated_records: $supplier->hasAssociatedRecords(),
             created_at: $supplier->created_at?->toIso8601String(),
+            articles: $supplier->relationLoaded('articleSuppliers')
+                ? $supplier->articleSuppliers->map(function ($pivot) use ($supplier) {
+                    $pivot->setRelation('supplier', $supplier);
+
+                    return ArticleSupplierData::fromModel($pivot);
+                })->all()
+                : [],
         );
     }
 }
