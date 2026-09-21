@@ -3,6 +3,7 @@
 namespace Database\Seeders\Pricing;
 
 use App\Enums\Pricing\PriceListChannel;
+use App\Enums\Pricing\PriceListScope;
 use App\Models\Pricing\PriceList;
 use Illuminate\Database\Seeder;
 
@@ -14,10 +15,11 @@ class PriceListSeeder extends Seeder
     public function run(): void
     {
         PriceList::updateOrCreate(
-            ['channel' => PriceListChannel::General->value],
+            ['name_normalized' => 'lista general'],
             [
                 'name' => 'Lista General',
-                'description' => 'Lista de precios general vigente por defecto.',
+                'description' => 'Lista de precios base del sistema. Es la última de la cascada, por eso no lleva fecha de fin.',
+                'scope' => PriceListScope::Canal,
                 'channel' => PriceListChannel::General,
                 'valid_from' => now()->toDateString(),
                 'valid_to' => null,

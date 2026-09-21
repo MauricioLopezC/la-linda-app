@@ -2,13 +2,17 @@
 
 namespace App\Actions\Pricing;
 
+use App\Concerns\GuardsGeneralPriceListCoverage;
 use App\Enums\Pricing\PriceListChannel;
+use App\Enums\Pricing\PriceListScope;
 use App\Models\Pricing\PriceList;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class UpdatePriceList
 {
+    use GuardsGeneralPriceListCoverage;
+
     /**
      * @param  array<string, mixed>  $data
      */
@@ -23,33 +27,24 @@ class UpdatePriceList
         }
 
         $wasGeneral = $priceList->channel === PriceListChannel::General;
+        $scope = PriceListScope::from((string) $data['scope']);
 
-        return DB::transaction(function () use ($priceList, $data, $isActive, $wasGeneral) {
+        return DB::transaction(function () use ($priceList, $data, $isActive, $scope, $wasGeneral) {
             $priceList->update([
                 'name' => (string) $data['name'],
                 'description' => $data['description'] ?? null,
-                'channel' => $data['channel'],
+                'scope' => $scope,
+                'channel' => $scope === PriceListScope::Canal ? $data['channel'] : null,
                 'valid_from' => $data['valid_from'],
                 'valid_to' => $data['valid_to'] ?? null,
                 'is_active' => $isActive,
             ]);
 
-            if ($wasGeneral && ! $this->hasActiveVigenteGeneralList()) {
-                throw ValidationException::withMessages([
-                    'price_list' => 'Debe existir siempre al menos una lista general activa y vigente.',
-                ]);
+            if ($wasGeneral || $priceList->channel === PriceListChannel::General) {
+                $this->assertGeneralCoverageSurvives();
             }
 
             return $priceList;
         });
-    }
-
-    private function hasActiveVigenteGeneralList(): bool
-    {
-        return PriceList::query()
-            ->where('channel', PriceListChannel::General)
-            ->active()
-            ->vigente()
-            ->exists();
     }
 }

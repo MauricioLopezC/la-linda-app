@@ -47,11 +47,25 @@ type Props = { priceLists: PriceList[] };
 type PriceListFormData = {
   name: string;
   description: string;
+  scope: string;
   channel: string;
   valid_from: string;
   valid_to: string;
   is_active: boolean;
 };
+
+const SCOPE_OPTIONS = [
+  {
+    value: 'canal',
+    label: 'De canal',
+    hint: 'Precio base de un canal de venta. Solo puede haber una vigente por canal a la vez.',
+  },
+  {
+    value: 'particular',
+    label: 'Particular',
+    hint: 'Precio preferencial para los clientes que la tengan asignada. Puede convivir con las de canal.',
+  },
+];
 
 const CHANNEL_OPTIONS = [
   { value: 'general', label: 'General' },
@@ -80,6 +94,7 @@ export default function PriceListsIndex({ priceLists = [] }: Props) {
   const createForm = useForm<PriceListFormData>({
     name: '',
     description: '',
+    scope: 'canal',
     channel: '',
     valid_from: '',
     valid_to: '',
@@ -88,6 +103,7 @@ export default function PriceListsIndex({ priceLists = [] }: Props) {
   const editForm = useForm<PriceListFormData>({
     name: '',
     description: '',
+    scope: 'canal',
     channel: '',
     valid_from: '',
     valid_to: '',
@@ -118,7 +134,8 @@ export default function PriceListsIndex({ priceLists = [] }: Props) {
     editForm.setData({
       name: priceList.name,
       description: priceList.description ?? '',
-      channel: priceList.channel,
+      scope: priceList.scope,
+      channel: priceList.channel ?? '',
       valid_from: priceList.valid_from,
       valid_to: priceList.valid_to ?? '',
       is_active: priceList.is_active,
@@ -186,24 +203,55 @@ export default function PriceListsIndex({ priceLists = [] }: Props) {
         <InputError message={form.errors.name} />
       </div>
       <div className="grid gap-2">
-        <Label htmlFor={`${prefix}-price-list-channel`}>Canal *</Label>
+        <Label htmlFor={`${prefix}-price-list-scope`}>Tipo de lista *</Label>
         <Select
-          value={form.data.channel}
-          onValueChange={(value) => form.setData('channel', value)}
+          value={form.data.scope}
+          onValueChange={(value) => {
+            form.setData('scope', value);
+
+            if (value !== 'canal') {
+              form.setData('channel', '');
+            }
+          }}
         >
-          <SelectTrigger id={`${prefix}-price-list-channel`}>
-            <SelectValue placeholder="Seleccioná el canal" />
+          <SelectTrigger id={`${prefix}-price-list-scope`}>
+            <SelectValue placeholder="Seleccioná el tipo" />
           </SelectTrigger>
           <SelectContent>
-            {CHANNEL_OPTIONS.map((option) => (
+            {SCOPE_OPTIONS.map((option) => (
               <SelectItem key={option.value} value={option.value}>
                 {option.label}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
-        <InputError message={form.errors.channel} />
+        <p className="text-xs text-muted-foreground">
+          {SCOPE_OPTIONS.find((option) => option.value === form.data.scope)
+            ?.hint ?? ''}
+        </p>
+        <InputError message={form.errors.scope} />
       </div>
+      {form.data.scope === 'canal' && (
+        <div className="grid gap-2">
+          <Label htmlFor={`${prefix}-price-list-channel`}>Canal *</Label>
+          <Select
+            value={form.data.channel}
+            onValueChange={(value) => form.setData('channel', value)}
+          >
+            <SelectTrigger id={`${prefix}-price-list-channel`}>
+              <SelectValue placeholder="Seleccioná el canal" />
+            </SelectTrigger>
+            <SelectContent>
+              {CHANNEL_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <InputError message={form.errors.channel} />
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-4">
         <div className="grid gap-2">
           <Label htmlFor={`${prefix}-price-list-valid-from`}>
@@ -285,6 +333,7 @@ export default function PriceListsIndex({ priceLists = [] }: Props) {
             <TableHeader>
               <TableRow>
                 <TableHead>Nombre</TableHead>
+                <TableHead>Tipo</TableHead>
                 <TableHead>Canal</TableHead>
                 <TableHead>Vigencia</TableHead>
                 <TableHead>Estado</TableHead>
@@ -297,7 +346,7 @@ export default function PriceListsIndex({ priceLists = [] }: Props) {
               {filteredPriceLists.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={7}
+                    colSpan={8}
                     className="py-12 text-center text-muted-foreground"
                   >
                     No se encontraron listas de precios registradas.
@@ -309,7 +358,12 @@ export default function PriceListsIndex({ priceLists = [] }: Props) {
                     <TableCell className="font-medium">
                       {priceList.name}
                     </TableCell>
-                    <TableCell>{priceList.channel_label}</TableCell>
+                    <TableCell>{priceList.scope_label}</TableCell>
+                    <TableCell>
+                      {priceList.channel_label ?? (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
                     <TableCell>
                       {priceList.valid_from}
                       {priceList.valid_to

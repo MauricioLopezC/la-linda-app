@@ -15,7 +15,8 @@ return new class extends Migration
             $table->id();
             $table->string('name', 100);
             $table->string('name_normalized', 100)->unique();
-            $table->string('channel');
+            $table->string('scope', 20)->index();
+            $table->string('channel', 20)->nullable()->index();
             $table->date('valid_from');
             $table->date('valid_to')->nullable();
             $table->boolean('is_active')->default(true)->index();

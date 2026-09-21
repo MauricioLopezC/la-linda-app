@@ -3,6 +3,7 @@
 namespace Database\Factories\Pricing;
 
 use App\Enums\Pricing\PriceListChannel;
+use App\Enums\Pricing\PriceListScope;
 use App\Models\Pricing\PriceList;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -20,12 +21,29 @@ class PriceListFactory extends Factory
     {
         return [
             'name' => fake()->unique()->words(3, true),
+            'scope' => PriceListScope::Canal,
             'channel' => fake()->randomElement(PriceListChannel::cases()),
             'valid_from' => now()->subMonth()->toDateString(),
             'valid_to' => null,
             'is_active' => true,
             'description' => null,
         ];
+    }
+
+    public function forChannel(PriceListChannel|string $channel): static
+    {
+        return $this->state(fn (): array => [
+            'scope' => PriceListScope::Canal,
+            'channel' => $channel,
+        ]);
+    }
+
+    public function particular(): static
+    {
+        return $this->state(fn (): array => [
+            'scope' => PriceListScope::Particular,
+            'channel' => null,
+        ]);
     }
 
     public function inactive(): static
