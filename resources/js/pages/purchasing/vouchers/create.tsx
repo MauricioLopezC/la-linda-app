@@ -1,11 +1,23 @@
 import { Head, Link, useForm } from '@inertiajs/react';
-import { ArrowLeft, ChevronsUpDown, Loader2, Plus, Trash2 } from 'lucide-react';
+import {
+  AlertCircle,
+  ArrowLeft,
+  ChevronDown,
+  ChevronUp,
+  ChevronsUpDown,
+  FileText,
+  Loader2,
+  PackageCheck,
+  Plus,
+  Trash2,
+} from 'lucide-react';
 import type { FormEvent } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { store } from '@/actions/App/Http/Controllers/Purchasing/SupplierVoucherController';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -33,6 +45,7 @@ import { cn, formatCurrency } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import {
   associableInvoices as searchAssociableInvoices,
+  associablePurchaseOrders as searchAssociablePurchaseOrders,
   articles as searchArticles,
   index,
 } from '@/routes/purchasing/vouchers';
@@ -42,6 +55,7 @@ type Supplier = App.Data.Purchasing.SupplierOptionData;
 type Option = App.Data.Purchasing.SupplierVoucherOptionData;
 type Article = App.Data.Purchasing.PurchaseOrderArticleOptionData;
 type AssociableInvoice = App.Data.Purchasing.AssociableInvoiceOptionData;
+type ImputablePurchaseOrder = App.Data.Purchasing.PurchaseOrderImputableData;
 
 const CREDIT_NOTE_TYPE = 'nota_credito';
 
@@ -57,6 +71,9 @@ type VoucherItemForm = {
   unit_price: string;
   line_total: string;
   line_total_touched: boolean;
+  purchase_order_item_id?: number | null;
+  purchase_order_number?: string | null;
+  pending_quantity?: number | null;
 };
 
 type VoucherFormData = {
@@ -90,6 +107,9 @@ const emptyItem = (): VoucherItemForm => ({
   unit_price: '',
   line_total: '',
   line_total_touched: false,
+  purchase_order_item_id: null,
+  purchase_order_number: null,
+  pending_quantity: null,
 });
 
 function formatDecimalInput(value: string, decimals: number): string {
@@ -284,6 +304,9 @@ export default function CreateSupplierVoucher({
                 article !== null && item.article_id === null
                   ? false
                   : item.line_total_touched,
+              purchase_order_item_id: null,
+              purchase_order_number: null,
+              pending_quantity: null,
             }
           : item,
       ),
@@ -314,6 +337,7 @@ export default function CreateSupplierVoucher({
             ? canonicalMoney(item.line_total)
             : canonicalMoney(item.unit_price),
           line_total: canonicalMoney(item.line_total),
+          purchase_order_item_id: item.purchase_order_item_id ?? null,
         };
       }),
     }));
@@ -532,6 +556,27 @@ export default function CreateSupplierVoucher({
           />
         )}
 
+        {form.data.supplier_id && form.data.type !== CREDIT_NOTE_TYPE && (
+          <PurchaseOrderAssociation
+            supplierId={form.data.supplier_id}
+            currentItems={form.data.items}
+            onImportItems={(importedItems) => {
+              const isOnlyOneEmpty =
+                form.data.items.length === 1 &&
+                form.data.items[0].article_id === null &&
+                form.data.items[0].description.trim() === '' &&
+                form.data.items[0].line_total.trim() === '';
+
+              form.setData((data) => ({
+                ...data,
+                items: isOnlyOneEmpty
+                  ? importedItems
+                  : [...data.items, ...importedItems],
+              }));
+            }}
+          />
+        )}
+
         <Card>
           <CardHeader className="flex-row items-center justify-between gap-4">
             <div>
@@ -561,6 +606,52 @@ export default function CreateSupplierVoucher({
                   key={itemIndex}
                   className="grid gap-3 rounded-lg border bg-muted/20 p-4 md:grid-cols-2 xl:grid-cols-12"
                 >
+                  {item.purchase_order_item_id && (
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-2 text-xs md:col-span-2 xl:col-span-12">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge
+                          variant="outline"
+                          className="border-blue-300 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300"
+                        >
+                          <FileText className="mr-1 size-3" />
+                          Imputando a {item.purchase_order_number}
+                        </Badge>
+                        <span className="text-muted-foreground">
+                          Saldo pendiente en OC:{' '}
+                          <strong className="font-semibold text-foreground">
+                            {item.pending_quantity}
+                          </strong>{' '}
+                          {item.unit_of_measure}
+                        </span>
+                      </div>
+                      {(() => {
+                        const enteredQty =
+                          Number(canonicalMoney(item.quantity)) || 0;
+                        const pendingQty = Number(item.pending_quantity) || 0;
+
+                        if (enteredQty > pendingQty) {
+                          const excess = (enteredQty - pendingQty)
+                            .toFixed(3)
+                            .replace(/\.?0+$/, '');
+
+                          return (
+                            <Badge
+                              variant="outline"
+                              className="border-amber-400 bg-amber-50 text-amber-900 dark:border-amber-700 dark:bg-amber-950/60 dark:text-amber-200"
+                            >
+                              <AlertCircle className="mr-1 size-3 text-amber-600 dark:text-amber-400" />
+                              Excedente: +{excess} {item.unit_of_measure} (se
+                              ingresará al inventario y se facturará; la OC
+                              quedará cumplida)
+                            </Badge>
+                          );
+                        }
+
+                        return null;
+                      })()}
+                    </div>
+                  )}
+
                   <div className="space-y-1.5 md:col-span-2 xl:col-span-3">
                     <ArticleSearch
                       selectedLabel={item.article_label}
@@ -602,14 +693,14 @@ export default function CreateSupplierVoucher({
                           updateItem(
                             itemIndex,
                             'quantity',
-                            formatDecimalInput(event.target.value, 2),
+                            formatDecimalInput(event.target.value, 3),
                           )
                         }
                         onBlur={() =>
                           updateItem(
                             itemIndex,
                             'quantity',
-                            completeDecimalInput(item.quantity, 2),
+                            completeDecimalInput(item.quantity, 3),
                           )
                         }
                       />
@@ -1085,6 +1176,348 @@ function ArticleSearch({
         </PopoverContent>
       </Popover>
     </div>
+  );
+}
+
+function PurchaseOrderAssociation({
+  supplierId,
+  currentItems,
+  onImportItems,
+}: {
+  supplierId: string;
+  currentItems: VoucherItemForm[];
+  onImportItems: (items: VoucherItemForm[]) => void;
+}) {
+  const [orders, setOrders] = useState<ImputablePurchaseOrder[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const [expandedOrders, setExpandedOrders] = useState<Record<number, boolean>>(
+    {},
+  );
+
+  useEffect(() => {
+    if (supplierId === '') {
+      return;
+    }
+
+    const abortController = new AbortController();
+    const timer = window.setTimeout(() => {
+      setIsLoading(true);
+
+      fetch(
+        searchAssociablePurchaseOrders.url({
+          query: { supplier_id: supplierId },
+        }),
+        {
+          headers: { Accept: 'application/json' },
+          signal: abortController.signal,
+        },
+      )
+        .then((res) => (res.ok ? res.json() : []))
+        .then((data) => setOrders(data as ImputablePurchaseOrder[]))
+        .catch((error) => {
+          if (!(error instanceof DOMException && error.name === 'AbortError')) {
+            setOrders([]);
+          }
+        })
+        .finally(() => {
+          if (!abortController.signal.aborted) {
+            setIsLoading(false);
+            setHasLoaded(true);
+          }
+        });
+    }, 150);
+
+    return () => {
+      window.clearTimeout(timer);
+      abortController.abort();
+    };
+  }, [supplierId]);
+
+  if (supplierId === '' || (!isLoading && hasLoaded && orders.length === 0)) {
+    return null;
+  }
+
+  const toggleExpand = (orderId: number) => {
+    setExpandedOrders((prev) => ({ ...prev, [orderId]: !prev[orderId] }));
+  };
+
+  const importOrder = (order: ImputablePurchaseOrder) => {
+    const newItems: VoucherItemForm[] = [];
+    let alreadyImportedCount = 0;
+
+    for (const item of order.items) {
+      const isAlreadyIn = currentItems.some(
+        (ci) => ci.purchase_order_item_id === item.id,
+      );
+
+      if (isAlreadyIn) {
+        alreadyImportedCount++;
+        continue;
+      }
+
+      newItems.push({
+        article_id: String(item.article_id),
+        article_label: `${item.article_internal_code} · ${item.article_description}`,
+        description: item.article_description,
+        quantity: formatDecimalInput(
+          item.quantity_pending.replace('.', ','),
+          3,
+        ),
+        unit_of_measure: item.unit_of_measure,
+        unit_price: formatArgentineMoneyInput(
+          Number(item.unit_price).toFixed(2).replace('.', ','),
+        ),
+        line_total: formatArgentineMoneyInput(
+          (Number(item.quantity_pending) * Number(item.unit_price))
+            .toFixed(2)
+            .replace('.', ','),
+        ),
+        line_total_touched: false,
+        purchase_order_item_id: item.id,
+        purchase_order_number: item.purchase_order_number,
+        pending_quantity: Number(item.quantity_pending),
+      });
+    }
+
+    if (newItems.length === 0) {
+      if (alreadyImportedCount > 0) {
+        toast.info(
+          'Los artículos de esta orden ya están en el detalle del comprobante.',
+        );
+      } else {
+        toast.info('Esta orden no tiene renglones con saldo pendiente.');
+      }
+
+      return;
+    }
+
+    onImportItems(newItems);
+    toast.success(
+      `Se importaron ${newItems.length} artículos de la orden ${order.order_number}.`,
+    );
+  };
+
+  const importAllOrders = () => {
+    const allNewItems: VoucherItemForm[] = [];
+    let totalImported = 0;
+
+    for (const order of orders) {
+      for (const item of order.items) {
+        const isAlreadyIn =
+          currentItems.some((ci) => ci.purchase_order_item_id === item.id) ||
+          allNewItems.some((ni) => ni.purchase_order_item_id === item.id);
+
+        if (!isAlreadyIn) {
+          allNewItems.push({
+            article_id: String(item.article_id),
+            article_label: `${item.article_internal_code} · ${item.article_description}`,
+            description: item.article_description,
+            quantity: formatDecimalInput(
+              item.quantity_pending.replace('.', ','),
+              3,
+            ),
+            unit_of_measure: item.unit_of_measure,
+            unit_price: formatArgentineMoneyInput(
+              Number(item.unit_price).toFixed(2).replace('.', ','),
+            ),
+            line_total: formatArgentineMoneyInput(
+              (Number(item.quantity_pending) * Number(item.unit_price))
+                .toFixed(2)
+                .replace('.', ','),
+            ),
+            line_total_touched: false,
+            purchase_order_item_id: item.id,
+            purchase_order_number: item.purchase_order_number,
+            pending_quantity: Number(item.quantity_pending),
+          });
+          totalImported++;
+        }
+      }
+    }
+
+    if (allNewItems.length === 0) {
+      toast.info(
+        'Los artículos de las órdenes pendientes ya fueron importados.',
+      );
+
+      return;
+    }
+
+    onImportItems(allNewItems);
+    toast.success(
+      `Se importaron ${totalImported} artículos de las órdenes de compra.`,
+    );
+  };
+
+  return (
+    <Card className="border-blue-200 bg-blue-50/30 dark:border-blue-900/60 dark:bg-blue-950/20">
+      <CardHeader className="flex-row items-center justify-between gap-4 pb-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <PackageCheck className="size-5 text-blue-600 dark:text-blue-400" />
+            <CardTitle className="text-base">
+              Órdenes de compra pendientes de entrega (opcional)
+            </CardTitle>
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Podés imputar la recepción de mercadería a una o varias órdenes
+            emitidas para este proveedor.
+          </p>
+        </div>
+        {!isLoading && orders.length > 0 && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={importAllOrders}
+            className="shrink-0 bg-background"
+          >
+            Importar todas ({orders.length})
+          </Button>
+        )}
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
+        {isLoading && (
+          <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
+            <Loader2 className="size-4 animate-spin" />
+            Consultando órdenes de compra pendientes…
+          </div>
+        )}
+
+        {!isLoading &&
+          orders.map((order) => {
+            const isExpanded = !!expandedOrders[order.id];
+            const allItemsImported =
+              order.items.length > 0 &&
+              order.items.every((item) =>
+                currentItems.some(
+                  (ci) => ci.purchase_order_item_id === item.id,
+                ),
+              );
+
+            return (
+              <div
+                key={order.id}
+                className="rounded-lg border bg-card p-3 shadow-xs transition-colors"
+              >
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex flex-wrap items-center gap-2 text-sm">
+                    <span className="font-mono font-bold text-foreground">
+                      {order.order_number}
+                    </span>
+                    <span className="text-muted-foreground">·</span>
+                    <span className="text-xs text-muted-foreground">
+                      Emisión: {order.issue_date_formatted}
+                    </span>
+                    <span className="text-muted-foreground">·</span>
+                    <span className="text-xs text-muted-foreground">
+                      Depósito: {order.warehouse_name}
+                    </span>
+                    <span className="text-muted-foreground">·</span>
+                    <span className="font-mono text-xs font-semibold text-foreground">
+                      {formatCurrency(order.total_amount)}
+                    </span>
+                    <Badge variant="secondary" className="text-xs font-normal">
+                      {order.items.length}{' '}
+                      {order.items.length === 1
+                        ? 'ítem pendiente'
+                        : 'ítems pendientes'}
+                    </Badge>
+                  </div>
+
+                  <div className="flex items-center gap-2 self-end sm:self-auto">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => toggleExpand(order.id)}
+                      className="text-xs text-muted-foreground"
+                    >
+                      {isExpanded ? (
+                        <>
+                          <ChevronUp className="mr-1 size-3" />
+                          Ocultar detalle
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDown className="mr-1 size-3" />
+                          Ver artículos
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={allItemsImported ? 'secondary' : 'default'}
+                      size="sm"
+                      disabled={allItemsImported}
+                      onClick={() => importOrder(order)}
+                      className="text-xs"
+                    >
+                      {allItemsImported ? 'Ya importada' : 'Importar a ítems'}
+                    </Button>
+                  </div>
+                </div>
+
+                {isExpanded && (
+                  <div className="mt-3 overflow-x-auto border-t pt-3">
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="border-b text-muted-foreground">
+                          <th className="pb-1.5 font-medium">Código</th>
+                          <th className="pb-1.5 font-medium">Artículo</th>
+                          <th className="pb-1.5 text-center font-medium">
+                            U.M.
+                          </th>
+                          <th className="pb-1.5 text-right font-medium">
+                            Pedido
+                          </th>
+                          <th className="pb-1.5 text-right font-medium">
+                            Recibido
+                          </th>
+                          <th className="pb-1.5 text-right font-medium">
+                            Pendiente
+                          </th>
+                          <th className="pb-1.5 text-right font-medium">
+                            Costo pactado
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border/50">
+                        {order.items.map((item) => (
+                          <tr key={item.id} className="py-1">
+                            <td className="py-1.5 font-mono font-semibold">
+                              {item.article_internal_code}
+                            </td>
+                            <td className="py-1.5">
+                              {item.article_description}
+                            </td>
+                            <td className="py-1.5 text-center text-muted-foreground">
+                              {item.unit_of_measure}
+                            </td>
+                            <td className="py-1.5 text-right font-mono">
+                              {item.quantity_requested}
+                            </td>
+                            <td className="py-1.5 text-right font-mono">
+                              {item.quantity_received}
+                            </td>
+                            <td className="py-1.5 text-right font-mono font-semibold text-blue-600 dark:text-blue-400">
+                              {item.quantity_pending}
+                            </td>
+                            <td className="py-1.5 text-right font-mono">
+                              {formatCurrency(item.unit_price)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+      </CardContent>
+    </Card>
   );
 }
 

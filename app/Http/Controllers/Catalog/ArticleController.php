@@ -3,12 +3,13 @@
 namespace App\Http\Controllers\Catalog;
 
 use App\Actions\Catalog\CreateArticle;
-use App\Actions\Catalog\DiscontinueArticle;
+use App\Actions\Catalog\DeactivateArticle;
 use App\Actions\Catalog\UpdateArticle;
 use App\Data\Catalog\ArticleData;
 use App\Data\Catalog\BrandData;
 use App\Data\Catalog\CategoryData;
 use App\Data\Catalog\UnitOfMeasureData;
+use App\Data\Purchasing\SupplierData;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Catalog\StoreArticleRequest;
 use App\Http\Requests\Catalog\UpdateArticleRequest;
@@ -16,6 +17,7 @@ use App\Models\Catalog\Article;
 use App\Models\Catalog\Brand;
 use App\Models\Catalog\Category;
 use App\Models\Catalog\UnitOfMeasure;
+use App\Models\Purchasing\Supplier;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -25,8 +27,13 @@ class ArticleController extends Controller
     public function index(): Response
     {
         $articles = Article::query()
-            ->with(['category', 'brand', 'unitOfMeasure'])
+            ->with(['category', 'brand', 'unitOfMeasure', 'articleSuppliers.supplier'])
             ->orderBy('description')
+            ->get();
+
+        $availableSuppliers = Supplier::query()
+            ->where('is_active', true)
+            ->orderBy('business_name')
             ->get();
 
         return Inertia::render('catalog/articles/index', [
@@ -34,6 +41,7 @@ class ArticleController extends Controller
             'categories' => CategoryData::collect(Category::query()->orderBy('name')->get()),
             'brands' => BrandData::collect(Brand::query()->orderBy('name')->get()),
             'unitsOfMeasure' => UnitOfMeasureData::collect(UnitOfMeasure::query()->orderBy('name')->get()),
+            'availableSuppliers' => SupplierData::collect($availableSuppliers),
         ]);
     }
 
@@ -51,7 +59,7 @@ class ArticleController extends Controller
         return back()->with('success', 'Artículo actualizado correctamente.');
     }
 
-    public function destroy(Article $article, DiscontinueArticle $action): RedirectResponse
+    public function destroy(Article $article, DeactivateArticle $action): RedirectResponse
     {
         $action->handle($article);
 

@@ -6,6 +6,7 @@ use App\Actions\Purchasing\AnnulSupplierVoucher;
 use App\Actions\Purchasing\CreateSupplierVoucher;
 use App\Data\Purchasing\AssociableInvoiceOptionData;
 use App\Data\Purchasing\PurchaseOrderArticleOptionData;
+use App\Data\Purchasing\PurchaseOrderImputableData;
 use App\Data\Purchasing\SupplierOptionData;
 use App\Data\Purchasing\SupplierVoucherData;
 use App\Data\Purchasing\SupplierVoucherListData;
@@ -16,10 +17,12 @@ use App\Enums\Purchasing\SupplierVoucherType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Purchasing\AnnulSupplierVoucherRequest;
 use App\Http\Requests\Purchasing\AssociableInvoicesRequest;
+use App\Http\Requests\Purchasing\AssociablePurchaseOrdersRequest;
 use App\Http\Requests\Purchasing\ListSupplierVouchersRequest;
 use App\Http\Requests\Purchasing\SearchSupplierVoucherArticlesRequest;
 use App\Http\Requests\Purchasing\StoreSupplierVoucherRequest;
 use App\Models\Catalog\Article;
+use App\Models\Purchasing\PurchaseOrder;
 use App\Models\Purchasing\Supplier;
 use App\Models\Purchasing\SupplierVoucher;
 use Illuminate\Database\Eloquent\Builder;
@@ -135,6 +138,30 @@ class SupplierVoucherController extends Controller
             ->values();
 
         return response()->json($invoices);
+    }
+
+    /**
+     * Purchase orders eligible for imputation to a new supplier voucher (HU-037):
+     * same supplier, issued status, with at least one item with pending quantity > 0.
+     */
+    public function associablePurchaseOrders(AssociablePurchaseOrdersRequest $request): JsonResponse
+    {
+        $orders = PurchaseOrder::query()
+            ->where('supplier_id', $request->validated('supplier_id'))
+            ->issued()
+            ->with([
+                'warehouse',
+                'items.article.unitOfMeasure',
+                'items.imputations.supplierVoucherItem.supplierVoucher',
+            ])
+            ->orderByDesc('issue_date')
+            ->orderByDesc('id')
+            ->get()
+            ->filter(fn (PurchaseOrder $order): bool => $order->hasPendingItems())
+            ->map(fn (PurchaseOrder $order): array => PurchaseOrderImputableData::fromModel($order)->toArray())
+            ->values();
+
+        return response()->json($orders);
     }
 
     public function store(StoreSupplierVoucherRequest $request, CreateSupplierVoucher $action): RedirectResponse

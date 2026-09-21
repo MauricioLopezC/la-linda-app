@@ -2,7 +2,9 @@
 
 namespace App\Actions\Purchasing;
 
+use App\Enums\Purchasing\PurchaseOrderStatus;
 use App\Enums\Purchasing\SupplierVoucherStatus;
+use App\Models\Purchasing\PurchaseOrder;
 use App\Models\Purchasing\SupplierVoucher;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -37,6 +39,19 @@ class AnnulSupplierVoucher
                 'annulled_by' => $userId ?? auth()->id(),
                 'annulment_reason' => $trimmedReason,
             ]);
+
+            // Revertir a emitida cualquier OC que estuviera cumplida y ahora vuelva a tener saldo pendiente
+            $affectedOrders = PurchaseOrder::query()
+                ->whereHas('items.imputations', function ($query) use ($voucher) {
+                    $query->whereIn('supplier_voucher_item_id', $voucher->items()->select('id'));
+                })
+                ->get();
+
+            foreach ($affectedOrders as $order) {
+                if ($order->isFulfilled() && ! $order->fresh(['items.imputations'])->isFullyReceived()) {
+                    $order->update(['status' => PurchaseOrderStatus::Issued]);
+                }
+            }
 
             Log::info('Supplier voucher annulled', [
                 'supplier_voucher_id' => $voucher->id,

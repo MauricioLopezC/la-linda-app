@@ -93,7 +93,7 @@ absorbidas, más la reserva de estabilización del Sprint 6 (`HAB-03`, sin estim
 | 31 | [HU-055](#hu-055) | Consultar el listado de pagos y egresos del período | CMP | 5 | Pendiente |
 | 32 | [HU-029](#hu-029) | Actualizar precios de forma masiva por porcentaje | PRE | 5 | Pendiente |
 | 33 | [HU-030](#hu-030) | Consultar el historial de cambios de precio | PRE | 3 | Pendiente |
-| 34 | [EPIC-01](#epic-01) | Resolver el precio de venta según el cliente y el canal | PRE | 8 | Pendiente |
+| 34 | [HU-056](#hu-056) | Resolver el precio de venta según el cliente y el canal | PRE | 8 | Pendiente |
 | 35 | [HU-051](#hu-051) | Administrar puntos de venta | ADM | 2 | Pendiente |
 | 36 | [HU-039](#hu-039) | Abrir una venta de mostrador | VTA | 3 | Pendiente |
 | 37 | [HU-040](#hu-040) | Incorporar artículos a la venta por código de barras o búsqueda | VTA | 5 | Pendiente |
@@ -242,18 +242,20 @@ independiente.
 
 **Criterios de aceptación**
 
-- **Datos:** descripción, código interno, código de barras, categoría, subcategoría, marca, unidad de medida, alícuota de IVA, estado (activo, inactivo, discontinuado), indicador de publicable en el canal online
+- **Datos:** descripción, código interno, código de barras, categoría, subcategoría, marca, unidad de medida, alícuota de IVA, estado (activo, inactivo), indicador de publicable en el canal online
 - **Validaciones:**
     - descripción, código interno, categoría y unidad de medida son obligatorios
     - el código interno es único en todo el catálogo
     - el código de barras es único cuando se informa
     - no se admite crear ni modificar un artículo que genere duplicidad de ninguno de los dos códigos
-    - la baja de un artículo con movimientos de stock o ventas asociadas es lógica y lo deja en estado discontinuado
+    - la baja de un artículo con movimientos de stock o ventas asociadas es lógica y lo deja en estado inactivo
 - **Comportamiento:**
     - el artículo NO tiene campo de precio de venta y el formulario no ofrece ninguno
     - el precio se administra exclusivamente desde el módulo de Listas de Precios
     - tampoco tiene proveedor ni depósito como atributos: la relación con proveedores es de muchos a muchos y se administra en HU-015, y la existencia por depósito se consulta en HU-016
     - las imágenes tampoco son un campo del formulario de alta: se administran aparte en HU-032
+
+> **Decisión del equipo (Sprint 3):** se unifica el estado `discontinuado` dentro de `inactivo`. La baja lógica deja el artículo en estado `inactivo` para preservar la integridad referencial histórica sin redundancia de conceptos operativos.
 
 > **Corrección del PO (2026-08-22):** la alícuota de IVA pasa de obligatoria a opcional. `HU-007`
 > (que la administra) bajó de prioridad porque el PO pidió priorizar exclusivamente artículos y
@@ -302,7 +304,7 @@ independiente.
 
 **Criterios de aceptación**
 
-- **Datos:** archivo CSV con las columnas descripción, código interno, código de barras, categoría, subcategoría, marca, unidad de medida, alícuota de IVA, estado (activo, inactivo, discontinuado), indicador de publicable en el canal online
+- **Datos:** archivo CSV con las columnas descripción, código interno, código de barras, categoría, subcategoría, marca, unidad de medida, alícuota de IVA, estado (activo, inactivo), indicador de publicable en el canal online
 - **Validaciones:**
     - se rechaza la fila cuyo código interno ya existe, la que referencia una categoría, marca, unidad o alícuota inexistente, y la que omite un dato obligatorio
     - las filas válidas se importan igualmente aunque otras fallen
@@ -584,7 +586,7 @@ independiente.
     - si el cliente no tiene lista asignada se le aplicará la lista del canal de la operación
 - **Comportamiento:**
     - la asignación queda visible en la ficha del cliente
-    - su efecto sobre el precio se verifica en la historia de resolución de precio (EPIC-01)
+    - su efecto sobre el precio se verifica en la historia de resolución de precio (HU-056)
 
 ---
 
@@ -704,6 +706,8 @@ proveedor y reconocer la deuda o el crédito correspondiente.
     - solo se pueden recibir artículos que figuren en alguna de las órdenes imputadas
 - **Comportamiento:** por cada orden imputada se muestra lo pedido, lo ya recibido en comprobantes anteriores y lo que queda pendiente
 - **Verificación:** se imputa un comprobante a dos órdenes del mismo proveedor y se comprueba que el pendiente de cada una queda correctamente descontado
+
+> **Regla de negocio / pesables y excedentes:** cuando el proveedor entrega una cantidad superior a la pendiente de la OC (frecuente en carnicería, fiambrería y productos pesables al no poder fraccionar medias reses o piezas exactas), el sistema permite aceptar el excedente. La cantidad imputada salda el renglón de la OC hasta cubrir su saldo pendiente (sin superar el límite de la orden para preservar el presupuesto contractual), y la diferencia se registra como excedente aceptado (`quantity_excess`). Tanto la cantidad imputada como el excedente ingresan al stock físico real y se totalizan en el comprobante a pagar al proveedor.
 
 ## HU-038 - Actualizar el último costo y cerrar la orden cubierta
 
@@ -876,9 +880,9 @@ reimputación innecesarios.
 
 ---
 
-## EPIC-01 - Resolver el precio de venta según el cliente y el canal
+## HU-056 - Resolver el precio de venta según el cliente y el canal
 
-**Tipo:** Epic · **Módulo:** PRE · **Estimación:** 8 SP · **Estado:** Pendiente · **Sprint:** 3 · **Alcance:** `PRE-03` · **Depende de:** HU-022
+**Tipo:** Historia · **Módulo:** PRE · **Estimación:** 8 SP · **Estado:** Pendiente · **Sprint:** 3 · **Alcance:** `PRE-03` · **Depende de:** HU-022
 
 **Como** Vendedor, **necesito** que el sistema determine automáticamente qué precio corresponde a cada línea de la venta, **para** vender siempre al precio correcto sin tener que consultar qué lista aplica en cada caso.
 
@@ -960,13 +964,13 @@ reimputación innecesarios.
 
 ## HU-041 - Calcular el precio, el IVA y los totales de la venta
 
-**Tipo:** Historia · **Módulo:** VTA · **Estimación:** 5 SP · **Estado:** Pendiente · **Alcance:** `VTA-03` · **Depende de:** HU-040, EPIC-01, HU-007
+**Tipo:** Historia · **Módulo:** VTA · **Estimación:** 5 SP · **Estado:** Pendiente · **Alcance:** `VTA-03` · **Depende de:** HU-040, HU-056, HU-007
 
 **Como** Vendedor, **necesito** que cada línea tome su precio automáticamente y que la venta muestre el IVA y el total, **para** cobrar el importe correcto sin calcular nada a mano.
 
 **Criterios de aceptación**
 
-- El precio de cada línea se obtiene de la lista resuelta según `PRE-03` (EPIC-01), y se calculan el IVA discriminado por alícuota, el subtotal y el total. Ningún precio se puede escribir a mano
+- El precio de cada línea se obtiene de la lista resuelta según `PRE-03` (HU-056), y se calculan el IVA discriminado por alícuota, el subtotal y el total. Ningún precio se puede escribir a mano
 - Resto de los criterios a definir en el refinamiento previo al Sprint 4
 
 ## EPIC-03 - Identificar al cliente y determinar el tipo de comprobante
@@ -1124,7 +1128,7 @@ reimputación innecesarios.
 
 **Criterios de aceptación**
 
-- Se publican únicamente los artículos activos marcados como publicables (HU-008), con descripción, imagen (HU-032), categoría y el precio de la lista del canal online resuelto por EPIC-01
+- Se publican únicamente los artículos activos marcados como publicables (HU-008), con descripción, imagen (HU-032), categoría y el precio de la lista del canal online resuelto por HU-056
 - Resto de los criterios a definir en el refinamiento previo al Sprint 5
 
 ## HU-047 - Buscar, filtrar y ordenar artículos en la tienda online

@@ -6,11 +6,13 @@ use App\Actions\Purchasing\CreateSupplier;
 use App\Actions\Purchasing\DeleteSupplier;
 use App\Actions\Purchasing\ToggleSupplierStatus;
 use App\Actions\Purchasing\UpdateSupplier;
+use App\Data\Catalog\ArticleData;
 use App\Data\Purchasing\SupplierData;
 use App\Enums\Purchasing\SupplierTaxCondition;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Purchasing\StoreSupplierRequest;
 use App\Http\Requests\Purchasing\UpdateSupplierRequest;
+use App\Models\Catalog\Article;
 use App\Models\Purchasing\Supplier;
 use App\Rules\Purchasing\ValidCuit;
 use Illuminate\Database\Eloquent\Builder;
@@ -24,6 +26,7 @@ class SupplierController extends Controller
     public function index(Request $request): Response
     {
         $suppliers = Supplier::query()
+            ->with(['articleSuppliers.article'])
             ->when($request->filled('search'), function (Builder $query) use ($request) {
                 $search = trim((string) $request->input('search'));
                 $cleanSearch = ValidCuit::sanitize($search);
@@ -51,8 +54,15 @@ class SupplierController extends Controller
             ->orderBy('business_name')
             ->get();
 
+        $availableArticles = Article::query()
+            ->active()
+            ->with(['category', 'brand', 'unitOfMeasure'])
+            ->orderBy('description')
+            ->get();
+
         return Inertia::render('purchasing/suppliers/index', [
             'suppliers' => SupplierData::collect($suppliers),
+            'availableArticles' => ArticleData::collect($availableArticles),
             'taxConditions' => SupplierTaxCondition::toOptions(),
             'filters' => [
                 'search' => (string) $request->input('search', ''),
