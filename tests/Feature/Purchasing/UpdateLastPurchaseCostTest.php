@@ -1,11 +1,15 @@
 <?php
 
+use App\Actions\Purchasing\UpdateLastPurchaseCost;
+use App\Enums\Purchasing\SupplierVoucherStatus;
 use App\Enums\Purchasing\SupplierVoucherType;
 use App\Models\Catalog\Article;
 use App\Models\Catalog\ArticleSupplier;
 use App\Models\Purchasing\Supplier;
 use App\Models\Purchasing\SupplierVoucher;
+use App\Models\Purchasing\SupplierVoucherItem;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 
 /** @return array<string, mixed> */
 function hu038VoucherData(Supplier $supplier, array $items, string $number, array $overrides = []): array
@@ -175,4 +179,82 @@ test('annulling the newest invoice restores the cost of the previous active invo
     ])->assertSessionHasNoErrors();
 
     expect($association->fresh()->last_cost)->toBe('20.00');
+});
+
+test('cost updates preload all article supplier associations in one query', function () {
+    $supplier = Supplier::factory()->create();
+    $articles = Article::factory()->count(3)->create();
+    $associations = $articles->map(fn (Article $article) => ArticleSupplier::factory()->create([
+        'supplier_id' => $supplier->id,
+        'article_id' => $article->id,
+        'last_cost' => null,
+    ]));
+    $voucher = SupplierVoucher::factory()->invoice()->create(['supplier_id' => $supplier->id]);
+
+    $articles->each(fn (Article $article, int $index) => SupplierVoucherItem::factory()->create([
+        'supplier_voucher_id' => $voucher->id,
+        'position' => $index + 1,
+        'article_id' => $article->id,
+        'unit_price' => number_format(100 + $index, 2, '.', ''),
+    ]));
+
+    DB::enableQueryLog();
+    app(UpdateLastPurchaseCost::class)->handle($voucher);
+    $queries = collect(DB::getQueryLog());
+    DB::disableQueryLog();
+
+    $associationSelects = $queries->filter(
+        fn (array $query): bool => str_contains(strtolower($query['query']), 'from "article_supplier"')
+    );
+
+    expect($associationSelects)->toHaveCount(1)
+        ->and($associations->map(fn (ArticleSupplier $association): string => $association->fresh()->last_cost)->all())
+        ->toBe(['100.00', '101.00', '102.00']);
+});
+
+test('cost recalculation loads associations and previous invoice items in batches', function () {
+    $supplier = Supplier::factory()->create();
+    $articles = Article::factory()->count(3)->create();
+    $associations = $articles->map(fn (Article $article) => ArticleSupplier::factory()->create([
+        'supplier_id' => $supplier->id,
+        'article_id' => $article->id,
+        'last_cost' => '200.00',
+    ]));
+    $previousVoucher = SupplierVoucher::factory()->invoice()->create(['supplier_id' => $supplier->id]);
+    $annulledVoucher = SupplierVoucher::factory()->invoice()->create([
+        'supplier_id' => $supplier->id,
+        'status' => SupplierVoucherStatus::Cancelled,
+    ]);
+
+    foreach ($articles as $index => $article) {
+        SupplierVoucherItem::factory()->create([
+            'supplier_voucher_id' => $previousVoucher->id,
+            'position' => $index + 1,
+            'article_id' => $article->id,
+            'unit_price' => number_format(100 + $index, 2, '.', ''),
+        ]);
+        SupplierVoucherItem::factory()->create([
+            'supplier_voucher_id' => $annulledVoucher->id,
+            'position' => $index + 1,
+            'article_id' => $article->id,
+            'unit_price' => '200.00',
+        ]);
+    }
+
+    DB::enableQueryLog();
+    app(UpdateLastPurchaseCost::class)->recalculateForAnnulledVoucher($annulledVoucher);
+    $queries = collect(DB::getQueryLog());
+    DB::disableQueryLog();
+
+    $associationSelects = $queries->filter(
+        fn (array $query): bool => str_contains(strtolower($query['query']), 'from "article_supplier"')
+    );
+    $itemSelects = $queries->filter(
+        fn (array $query): bool => str_contains(strtolower($query['query']), 'from "supplier_voucher_items"')
+    );
+
+    expect($associationSelects)->toHaveCount(1)
+        ->and($itemSelects)->toHaveCount(2)
+        ->and($associations->map(fn (ArticleSupplier $association): string => $association->fresh()->last_cost)->all())
+        ->toBe(['100.00', '101.00', '102.00']);
 });
