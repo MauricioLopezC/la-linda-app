@@ -19,6 +19,7 @@ import {
   Users,
   Wallet,
   Warehouse,
+  Store,
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
@@ -54,7 +55,7 @@ import { index as paymentMethods } from '@/routes/sales/payment-methods';
 // Módulos "Alícuotas de IVA" y "Puntos de Venta" no están en el
 // alcance de este sprint; se ocultan del menú sin borrar el código que los soporta.
 // import { index as vatRates } from '@/routes/pricing/vat-rates';
-// import { index as pointsOfSale } from '@/routes/sales/points-of-sale';
+import { index as pointsOfSale } from '@/routes/sales/points-of-sale';
 import type { NavGroup, NavItem } from '@/types';
 
 const navGroups: NavGroup[] = [
@@ -162,11 +163,11 @@ const navGroups: NavGroup[] = [
         icon: Building2,
       },
       // Fuera de alcance de este sprint: ver nota sobre imports comentados arriba.
-      // {
-      //   title: 'Puntos de Venta',
-      //   href: pointsOfSale(),
-      //   icon: Store,
-      // },
+      {
+        title: 'Puntos de Venta',
+        href: pointsOfSale(),
+        icon: Store,
+      },
     ],
   },
   {
