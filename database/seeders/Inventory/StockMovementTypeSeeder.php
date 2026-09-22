@@ -24,6 +24,12 @@ class StockMovementTypeSeeder extends Seeder
                 'description' => 'Ingreso de mercadería por recepción de comprobante de proveedor',
             ],
             [
+                'name' => 'Reversión de Entrada por Compra',
+                'code' => StockMovementType::CODE_PURCHASE_ENTRY_REVERSAL,
+                'sign' => -1,
+                'description' => 'Reversión de mercadería por anulación de remito de proveedor',
+            ],
+            [
                 'name' => 'Salida por Venta',
                 'code' => StockMovementType::CODE_SALE_EXIT,
                 'sign' => -1,

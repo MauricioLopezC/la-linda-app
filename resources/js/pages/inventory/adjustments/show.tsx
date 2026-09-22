@@ -1,6 +1,7 @@
 import { Head, Link, setLayoutProps } from '@inertiajs/react';
 import {
   ArrowLeft,
+  ArrowUpRight,
   Calendar,
   FileText,
   Printer,
@@ -32,6 +33,7 @@ import {
   show,
 } from '@/routes/inventory/adjustments';
 import { index as stocksIndex } from '@/routes/inventory/stocks';
+import { show as showSupplierVoucher } from '@/routes/purchasing/vouchers';
 import type { BreadcrumbItem } from '@/types';
 
 type MovementDetail = App.Data.Inventory.StockMovementDetailData;
@@ -193,6 +195,82 @@ export default function ShowStockAdjustment({ movement }: Props) {
               </div>
             </div>
 
+            {/* Origin Voucher / Reversal Information */}
+            {(movement.supplier_voucher_id ||
+              movement.reversal_of_movement_id ||
+              movement.reversal_movement_id) && (
+              <div className="flex flex-wrap items-center gap-4 rounded-lg border border-blue-200 bg-blue-50/50 p-4 text-sm dark:border-blue-900/60 dark:bg-blue-950/30">
+                {movement.supplier_voucher_id && (
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-foreground">
+                      Comprobante de origen:
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      asChild
+                      className="gap-1.5 bg-background font-normal"
+                    >
+                      <Link
+                        href={showSupplierVoucher({
+                          supplier_voucher: movement.supplier_voucher_id,
+                        })}
+                      >
+                        Remito{' '}
+                        {movement.supplier_voucher_formatted_number ??
+                          `#${movement.supplier_voucher_id}`}
+                        <ArrowUpRight className="size-3.5" />
+                      </Link>
+                    </Button>
+                  </div>
+                )}
+                {movement.reversal_of_movement_id && (
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-foreground">
+                      Reversa del movimiento:
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      asChild
+                      className="gap-1.5 bg-background font-normal"
+                    >
+                      <Link
+                        href={show.url({
+                          stock_movement: movement.reversal_of_movement_id,
+                        })}
+                      >
+                        Movimiento #{movement.reversal_of_movement_id}
+                        <ArrowUpRight className="size-3.5" />
+                      </Link>
+                    </Button>
+                  </div>
+                )}
+                {movement.reversal_movement_id && (
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-error-fg">
+                      Anulado mediante:
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      asChild
+                      className="gap-1.5 border-error-fg/30 bg-background font-normal text-error-fg"
+                    >
+                      <Link
+                        href={show.url({
+                          stock_movement: movement.reversal_movement_id,
+                        })}
+                      >
+                        Reversa #{movement.reversal_movement_id}
+                        <ArrowUpRight className="size-3.5" />
+                      </Link>
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Observations if any */}
             {movement.notes && (
               <div className="border-l-2 border-primary bg-muted/20 py-1 pl-3 text-xs">
@@ -225,11 +303,11 @@ export default function ShowStockAdjustment({ movement }: Props) {
                 <TableBody>
                   {movement.items.map((item) => {
                     const delta = parseFloat(item.quantity);
+                    const finalQty = parseFloat(item.final_quantity);
                     const sysQty =
                       item.system_quantity !== null
                         ? parseFloat(item.system_quantity)
-                        : 0;
-                    const finalQty = parseFloat(item.final_quantity);
+                        : finalQty - delta;
 
                     return (
                       <TableRow key={item.id}>
@@ -268,7 +346,9 @@ export default function ShowStockAdjustment({ movement }: Props) {
                                 delta,
                                 item.unit_of_measure_name,
                               )}{' '}
-                              (Sobrante)
+                              {movement.type_code === 'purchase_entry'
+                                ? '(Entrada remito)'
+                                : '(Sobrante)'}
                             </span>
                           ) : delta < -0.0001 ? (
                             <span className="font-semibold text-rose-600">
@@ -276,7 +356,9 @@ export default function ShowStockAdjustment({ movement }: Props) {
                                 delta,
                                 item.unit_of_measure_name,
                               )}{' '}
-                              (Faltante)
+                              {movement.type_code === 'purchase_entry_reversal'
+                                ? '(Reversa remito)'
+                                : '(Faltante)'}
                             </span>
                           ) : (
                             <span className="text-muted-foreground">

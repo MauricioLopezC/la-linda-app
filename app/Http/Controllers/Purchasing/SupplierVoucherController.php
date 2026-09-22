@@ -7,6 +7,7 @@ use App\Actions\Purchasing\CreateSupplierVoucher;
 use App\Data\Purchasing\AssociableInvoiceOptionData;
 use App\Data\Purchasing\PurchaseOrderArticleOptionData;
 use App\Data\Purchasing\PurchaseOrderImputableData;
+use App\Data\Purchasing\PurchaseOrderWarehouseOptionData;
 use App\Data\Purchasing\SupplierOptionData;
 use App\Data\Purchasing\SupplierVoucherData;
 use App\Data\Purchasing\SupplierVoucherListData;
@@ -22,6 +23,7 @@ use App\Http\Requests\Purchasing\ListSupplierVouchersRequest;
 use App\Http\Requests\Purchasing\SearchSupplierVoucherArticlesRequest;
 use App\Http\Requests\Purchasing\StoreSupplierVoucherRequest;
 use App\Models\Catalog\Article;
+use App\Models\Inventory\Warehouse;
 use App\Models\Purchasing\PurchaseOrder;
 use App\Models\Purchasing\Supplier;
 use App\Models\Purchasing\SupplierVoucher;
@@ -87,6 +89,9 @@ class SupplierVoucherController extends Controller
         return Inertia::render('purchasing/vouchers/create', [
             'suppliers' => SupplierOptionData::collect(
                 Supplier::query()->active()->select(['id', 'business_name', 'tax_id'])->orderBy('business_name')->get()
+            ),
+            'warehouses' => PurchaseOrderWarehouseOptionData::collect(
+                Warehouse::query()->active()->select(['id', 'name'])->orderBy('name')->get()
             ),
             'voucherTypes' => SupplierVoucherOptionData::collect(SupplierVoucherType::toOptions()),
             'letters' => SupplierVoucherOptionData::collect(SupplierVoucherLetter::toOptions()),
@@ -166,7 +171,9 @@ class SupplierVoucherController extends Controller
 
     public function store(StoreSupplierVoucherRequest $request, CreateSupplierVoucher $action): RedirectResponse
     {
-        $voucher = $action->handle($request->voucherData());
+        $data = $request->voucherData();
+        $data['user_id'] = (int) auth()->id();
+        $voucher = $action->handle($data);
 
         return to_route('purchasing.vouchers.show', $voucher)
             ->with('success', 'Comprobante de proveedor registrado correctamente.');
@@ -174,7 +181,7 @@ class SupplierVoucherController extends Controller
 
     public function show(SupplierVoucher $supplierVoucher): Response
     {
-        $supplierVoucher->load(['supplier', 'items.article', 'annulledByUser']);
+        $supplierVoucher->load(['supplier', 'warehouse', 'items.article', 'annulledByUser', 'stockMovement.reversal']);
 
         return Inertia::render('purchasing/vouchers/show', [
             'voucher' => SupplierVoucherData::fromModel($supplierVoucher),
@@ -187,7 +194,7 @@ class SupplierVoucherController extends Controller
         AnnulSupplierVoucher $action,
     ): RedirectResponse {
         $data = $request->validated();
-        $action->handle($supplierVoucher, (string) $data['reason']);
+        $action->handle($supplierVoucher, (string) $data['reason'], (int) auth()->id());
 
         return back()->with('success', 'Comprobante anulado correctamente.');
     }

@@ -122,6 +122,9 @@ class StockAdjustmentController extends Controller
             'items.article.unitOfMeasure',
             'items.article.category',
             'items.article.brand',
+            'supplierVoucher',
+            'reversalOf.supplierVoucher',
+            'reversal',
         ]);
 
         return Inertia::render('inventory/adjustments/show', [

@@ -11,6 +11,7 @@ enum SupplierVoucherStatus: string
     case PartiallyApplied = 'imputada_parcial';
     case Applied = 'imputada';
     case Cancelled = 'anulada';
+    case Confirmed = 'confirmado';
 
     public function label(): string
     {
@@ -22,6 +23,7 @@ enum SupplierVoucherStatus: string
             self::PartiallyApplied => 'Imputada parcialmente',
             self::Applied => 'Imputada',
             self::Cancelled => 'Anulada',
+            self::Confirmed => 'Confirmado',
         };
     }
 }

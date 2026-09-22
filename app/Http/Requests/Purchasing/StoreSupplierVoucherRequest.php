@@ -3,10 +3,10 @@
 namespace App\Http\Requests\Purchasing;
 
 use App\Enums\Catalog\ArticleStatus;
-use App\Enums\Purchasing\SupplierVoucherLetter;
 use App\Enums\Purchasing\SupplierVoucherStatus;
 use App\Enums\Purchasing\SupplierVoucherType;
 use App\Models\Catalog\Article;
+use App\Models\Inventory\Warehouse;
 use App\Models\Purchasing\PurchaseOrderItem;
 use App\Models\Purchasing\Supplier;
 use App\Models\Purchasing\SupplierVoucher;
@@ -33,9 +33,12 @@ class StoreSupplierVoucherRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        $type = $this->input('type');
+        $isRemito = $type === SupplierVoucherType::Remito->value;
+
         $submittedItems = $this->input('items', []);
         $items = is_array($submittedItems)
-            ? array_map(function (mixed $item): mixed {
+            ? array_map(function (mixed $item) use ($isRemito): mixed {
                 if (! is_array($item)) {
                     return $item;
                 }
@@ -43,6 +46,12 @@ class StoreSupplierVoucherRequest extends FormRequest
                 $articleId = Arr::get($item, 'article_id') ?: null;
                 $poItemId = Arr::get($item, 'purchase_order_item_id') ?: null;
                 $lineTotal = $this->normalizeArgentineMoney(Arr::get($item, 'line_total'));
+                $unitPrice = $this->normalizeArgentineMoney(Arr::get($item, 'unit_price'));
+
+                if ($isRemito) {
+                    $unitPrice = ($unitPrice === null || $unitPrice === '') ? '0.00' : $unitPrice;
+                    $lineTotal = ($lineTotal === null || $lineTotal === '') ? '0.00' : $lineTotal;
+                }
 
                 // Concept lines (no catalog article) are transcribed with just a description and
                 // an amount. Quantity, unit and unit price are not asked for on screen: they are
@@ -66,16 +75,24 @@ class StoreSupplierVoucherRequest extends FormRequest
                     'description' => $this->normalizeRequiredText(Arr::get($item, 'description')),
                     'quantity' => $this->normalizeDecimal(Arr::get($item, 'quantity')),
                     'unit_of_measure' => $this->normalizeRequiredText(Arr::get($item, 'unit_of_measure')),
-                    'unit_price' => $this->normalizeArgentineMoney(Arr::get($item, 'unit_price')),
+                    'unit_price' => $unitPrice,
                     'line_total' => $lineTotal,
                 ];
             }, $submittedItems)
             : $submittedItems;
 
+        $totalAmount = $this->normalizeArgentineMoney($this->input('total_amount'));
+        if ($isRemito && ($totalAmount === null || $totalAmount === '')) {
+            $totalAmount = '0.00';
+        }
+
+        $warehouseId = $this->input('warehouse_id');
+
         $this->merge([
+            'warehouse_id' => $warehouseId !== null && $warehouseId !== '' ? (int) $warehouseId : null,
             'point_of_sale' => $this->normalizeFiscalNumber($this->input('point_of_sale'), 4),
             'number' => $this->normalizeFiscalNumber($this->input('number'), 8),
-            'total_amount' => $this->normalizeArgentineMoney($this->input('total_amount')),
+            'total_amount' => $totalAmount,
             'notes' => $this->normalizeOptionalText($this->input('notes')),
             'associated_invoice_id' => $this->input('associated_invoice_id') ?: null,
             'associated_amount' => $this->filled('associated_amount')
@@ -89,7 +106,7 @@ class StoreSupplierVoucherRequest extends FormRequest
      * @return array{
      *     supplier_id: int, type: string, letter: string, point_of_sale: string, number: string,
      *     issue_date: string, due_date: ?string, total_amount: string, notes: ?string,
-     *     associated_invoice_id: ?int, associated_amount: ?string,
+     *     warehouse_id?: ?int, associated_invoice_id: ?int, associated_amount: ?string,
      *     items: array<int, array{article_id: ?int, description: string, quantity: string,
      *         unit_of_measure: string, unit_price: string, line_total: string, purchase_order_item_id?: ?int}>
      * }
@@ -127,9 +144,11 @@ class StoreSupplierVoucherRequest extends FormRequest
         $notes = $validated['notes'] ?? null;
         $associatedInvoiceId = $validated['associated_invoice_id'] ?? null;
         $associatedAmount = $validated['associated_amount'] ?? null;
+        $warehouseId = $validated['warehouse_id'] ?? null;
 
         return [
             'supplier_id' => (int) $validated['supplier_id'],
+            'warehouse_id' => $warehouseId === null ? null : (int) $warehouseId,
             'type' => (string) $validated['type'],
             'letter' => (string) $validated['letter'],
             'point_of_sale' => (string) $validated['point_of_sale'],
@@ -151,6 +170,43 @@ class StoreSupplierVoucherRequest extends FormRequest
         $voucherTable = (new SupplierVoucher)->getTable();
         $articleTable = (new Article)->getTable();
 
+        $isRemito = $this->input('type') === SupplierVoucherType::Remito->value;
+        $hasImputations = is_array($this->input('items'))
+            && collect($this->input('items'))->contains(fn ($i) => is_array($i) && ! empty($i['purchase_order_item_id']));
+
+        $warehouseRules = ['prohibited'];
+        if ($isRemito) {
+            $warehouseTable = (new Warehouse)->getTable();
+            if (! $hasImputations) {
+                $warehouseRules = [
+                    'required',
+                    'integer',
+                    Rule::exists($warehouseTable, 'id')->where(
+                        fn (Builder $query): Builder => $query->where('is_active', true)
+                    ),
+                ];
+            } else {
+                $warehouseRules = [
+                    'nullable',
+                    'integer',
+                    Rule::exists($warehouseTable, 'id')->where(
+                        fn (Builder $query): Builder => $query->where('is_active', true)
+                    ),
+                ];
+            }
+        }
+
+        $letterRules = $isRemito
+            ? ['required', Rule::in(['R', 'X'])]
+            : ['required', Rule::in(['A', 'B', 'C', 'M'])];
+
+        $dueDateRules = $isRemito
+            ? ['prohibited']
+            : ['nullable', 'date_format:Y-m-d', 'after_or_equal:issue_date'];
+
+        $totalAmountMin = $isRemito ? 'min:0' : 'min:0.01';
+        $itemAmountMin = $isRemito ? 'min:0' : 'min:0.01';
+
         return [
             'supplier_id' => [
                 'required',
@@ -159,8 +215,9 @@ class StoreSupplierVoucherRequest extends FormRequest
                     fn (Builder $query): Builder => $query->where('is_active', true)
                 ),
             ],
+            'warehouse_id' => $warehouseRules,
             'type' => ['required', Rule::enum(SupplierVoucherType::class)],
-            'letter' => ['required', Rule::enum(SupplierVoucherLetter::class)],
+            'letter' => $letterRules,
             'point_of_sale' => ['required', 'string', 'size:4', 'regex:/^\d{4}$/'],
             'number' => [
                 'required',
@@ -176,8 +233,8 @@ class StoreSupplierVoucherRequest extends FormRequest
                 ),
             ],
             'issue_date' => ['required', 'date_format:Y-m-d', 'before_or_equal:today'],
-            'due_date' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:issue_date'],
-            'total_amount' => ['required', 'numeric', 'decimal:0,2', 'min:0.01', 'max:9999999999.99'],
+            'due_date' => $dueDateRules,
+            'total_amount' => ['required', 'numeric', 'decimal:0,2', $totalAmountMin, 'max:9999999999.99'],
             'notes' => ['nullable', 'string', 'max:2000'],
             // HU-054 "vinculación en la carga": only a credit note may reference a source invoice,
             // of the same active supplier. The amount also has to fit the invoice's live pending
@@ -215,8 +272,8 @@ class StoreSupplierVoucherRequest extends FormRequest
             'items.*.description' => ['required', 'string', 'max:500'],
             'items.*.quantity' => ['required', 'numeric', 'decimal:0,3', 'min:0.001', 'max:999999999.999'],
             'items.*.unit_of_measure' => ['required', 'string', 'max:50'],
-            'items.*.unit_price' => ['required', 'numeric', 'decimal:0,2', 'min:0.01', 'max:9999999999.99'],
-            'items.*.line_total' => ['required', 'numeric', 'decimal:0,2', 'min:0.01', 'max:9999999999.99'],
+            'items.*.unit_price' => ['required', 'numeric', 'decimal:0,2', $itemAmountMin, 'max:9999999999.99'],
+            'items.*.line_total' => ['required', 'numeric', 'decimal:0,2', $itemAmountMin, 'max:9999999999.99'],
             'net_amount' => ['prohibited'],
             'vat_amount' => ['prohibited'],
             'other_taxes_amount' => ['prohibited'],
@@ -233,6 +290,7 @@ class StoreSupplierVoucherRequest extends FormRequest
     {
         return [
             'supplier_id' => 'proveedor',
+            'warehouse_id' => 'depósito',
             'type' => 'tipo de comprobante',
             'letter' => 'letra',
             'point_of_sale' => 'punto de venta',
@@ -259,11 +317,16 @@ class StoreSupplierVoucherRequest extends FormRequest
     {
         return [
             'supplier_id.exists' => 'El proveedor seleccionado no existe o está inactivo.',
+            'warehouse_id.prohibited' => 'Solo los remitos pueden tener un depósito asignado.',
+            'warehouse_id.required' => 'El depósito es obligatorio para un remito libre.',
+            'warehouse_id.exists' => 'El depósito seleccionado no existe o no se encuentra activo.',
             'point_of_sale.regex' => 'El punto de venta debe contener hasta 4 dígitos numéricos.',
             'number.regex' => 'El número de comprobante debe contener hasta 8 dígitos numéricos.',
             'number.unique' => 'Ya existe un comprobante del proveedor con el mismo tipo, letra, punto de venta y número.',
             'issue_date.before_or_equal' => 'La fecha de emisión no puede ser posterior a la fecha actual.',
             'due_date.after_or_equal' => 'La fecha de vencimiento no puede ser anterior a la fecha de emisión.',
+            'due_date.prohibited' => 'El remito no admite fecha de vencimiento.',
+            'letter.in' => 'La letra no es válida para el tipo de comprobante seleccionado.',
             'items.required' => 'El comprobante debe contener al menos un ítem.',
             'items.min' => 'El comprobante debe contener al menos un ítem.',
             'items.*.article_id.exists' => 'El artículo del ítem :position no existe o está inactivo.',
@@ -279,11 +342,23 @@ class StoreSupplierVoucherRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator): void {
+            $type = $this->input('type');
+            $isRemito = $type === SupplierVoucherType::Remito->value;
             $supplierId = (int) $this->input('supplier_id');
             $items = $this->input('items', []);
 
             if (! is_array($items)) {
                 return;
+            }
+
+            if ($isRemito) {
+                $hasCatalogArticle = collect($items)
+                    ->filter(fn ($item) => is_array($item))
+                    ->contains(fn ($item) => ! empty($item['article_id']));
+
+                if (! $hasCatalogArticle) {
+                    $validator->errors()->add('items', 'El remito debe contener al menos un renglón con artículo de catálogo.');
+                }
             }
 
             $poItemIds = collect($items)
@@ -302,6 +377,25 @@ class StoreSupplierVoucherRequest extends FormRequest
                 ->whereKey($poItemIds)
                 ->get()
                 ->keyBy('id');
+
+            if ($isRemito) {
+                $warehouseIds = $poItems->map(fn ($item) => $item->purchaseOrder->warehouse_id)->unique()->values();
+                if ($warehouseIds->count() > 1) {
+                    $validator->errors()->add(
+                        'warehouse_id',
+                        'Las órdenes de compra seleccionadas pertenecen a depósitos distintos. Debe registrar remitos separados por depósito.'
+                    );
+                } elseif ($warehouseIds->isNotEmpty()) {
+                    $derivedWarehouseId = (int) $warehouseIds->first();
+                    $submittedWarehouseId = $this->input('warehouse_id');
+                    if ($submittedWarehouseId !== null && (int) $submittedWarehouseId !== $derivedWarehouseId) {
+                        $validator->errors()->add(
+                            'warehouse_id',
+                            'El depósito seleccionado no coincide con el depósito de la orden de compra.'
+                        );
+                    }
+                }
+            }
 
             foreach ($items as $index => $item) {
                 $poItemId = Arr::get($item, 'purchase_order_item_id');

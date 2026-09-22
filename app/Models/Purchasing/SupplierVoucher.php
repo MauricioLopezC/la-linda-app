@@ -7,6 +7,8 @@ use App\Enums\Purchasing\PaymentOrderStatus;
 use App\Enums\Purchasing\SupplierVoucherLetter;
 use App\Enums\Purchasing\SupplierVoucherStatus;
 use App\Enums\Purchasing\SupplierVoucherType;
+use App\Models\Inventory\StockMovement;
+use App\Models\Inventory\Warehouse;
 use App\Models\User;
 use Closure;
 use Database\Factories\Purchasing\SupplierVoucherFactory;
@@ -17,11 +19,13 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
  * @property int $supplier_id
+ * @property int|null $warehouse_id
  * @property SupplierVoucherType $type
  * @property SupplierVoucherLetter $letter
  * @property string $point_of_sale
@@ -37,6 +41,8 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property Supplier $supplier
+ * @property Warehouse|null $warehouse
+ * @property StockMovement|null $stockMovement
  * @property Collection<int, SupplierVoucherItem> $items
  * @property User|null $annulledByUser
  * @property Collection<int, PaymentOrderItem> $paymentOrderItems
@@ -45,6 +51,7 @@ use Illuminate\Support\Carbon;
  */
 #[Fillable([
     'supplier_id',
+    'warehouse_id',
     'type',
     'letter',
     'point_of_sale',
@@ -86,6 +93,18 @@ class SupplierVoucher extends Model
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);
+    }
+
+    /** @return BelongsTo<Warehouse, $this> */
+    public function warehouse(): BelongsTo
+    {
+        return $this->belongsTo(Warehouse::class);
+    }
+
+    /** @return HasOne<StockMovement, $this> */
+    public function stockMovement(): HasOne
+    {
+        return $this->hasOne(StockMovement::class, 'supplier_voucher_id');
     }
 
     /** @return HasMany<SupplierVoucherItem, $this> */
@@ -216,7 +235,7 @@ class SupplierVoucher extends Model
      */
     public function outstandingAmount(): string
     {
-        if ($this->status === SupplierVoucherStatus::Cancelled) {
+        if ($this->status === SupplierVoucherStatus::Cancelled || $this->type->isRemito()) {
             return '0.00';
         }
 
@@ -257,6 +276,10 @@ class SupplierVoucher extends Model
 
     public function isOverdue(?Carbon $referenceDate = null): bool
     {
+        if ($this->type->isRemito()) {
+            return false;
+        }
+
         return $this->due_date !== null
             && $this->due_date->isBefore($referenceDate ?? today())
             && $this->status !== SupplierVoucherStatus::Cancelled

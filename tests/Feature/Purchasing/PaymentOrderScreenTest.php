@@ -1,6 +1,9 @@
 <?php
 
 use App\Data\Purchasing\PaymentOrderData;
+use App\Enums\Purchasing\SupplierVoucherLetter;
+use App\Enums\Purchasing\SupplierVoucherStatus;
+use App\Enums\Purchasing\SupplierVoucherType;
 use App\Models\Purchasing\PaymentOrder;
 use App\Models\Purchasing\Supplier;
 use App\Models\Purchasing\SupplierVoucher;
@@ -55,13 +58,22 @@ test('the invoices endpoint returns only that supplier invoices with a pending b
         'supplier_id' => $supplier->id,
         'total_amount' => '2000.00',
     ]);
+    $remito = SupplierVoucher::factory()->create([
+        'supplier_id' => $supplier->id,
+        'type' => SupplierVoucherType::Remito,
+        'letter' => SupplierVoucherLetter::R,
+        'status' => SupplierVoucherStatus::Confirmed,
+        'due_date' => null,
+        'total_amount' => '0.00',
+    ]);
 
     $this->actingAs(User::factory()->create())
         ->getJson(route('purchasing.payment-orders.suppliers.invoices', $supplier))
         ->assertOk()
         ->assertJsonCount(2)
         ->assertJsonFragment(['id' => $pending->id, 'outstanding_amount' => '10000.00'])
-        ->assertJsonFragment(['id' => $freeCreditNote->id, 'outstanding_amount' => '2000.00']);
+        ->assertJsonFragment(['id' => $freeCreditNote->id, 'outstanding_amount' => '2000.00'])
+        ->assertJsonMissing(['id' => $remito->id]);
 });
 
 test('store issues the order and flashes the PaymentOrderData for the success panel', function () {

@@ -2,6 +2,7 @@
 
 namespace App\Actions\Purchasing;
 
+use App\Actions\Inventory\ReverseStockMovementForVoucher;
 use App\Enums\Purchasing\SupplierVoucherStatus;
 use App\Models\Purchasing\PurchaseOrder;
 use App\Models\Purchasing\SupplierVoucher;
@@ -14,6 +15,7 @@ class AnnulSupplierVoucher
     public function __construct(
         private EvaluatePurchaseOrderFulfillment $evaluateFulfillment,
         private UpdateLastPurchaseCost $updateLastPurchaseCost,
+        private ReverseStockMovementForVoucher $reverseStockMovement,
     ) {}
 
     public function handle(SupplierVoucher $supplierVoucher, string $reason, ?int $userId = null): SupplierVoucher
@@ -24,7 +26,9 @@ class AnnulSupplierVoucher
             throw ValidationException::withMessages(['reason' => 'El motivo de anulación es obligatorio.']);
         }
 
-        return DB::transaction(function () use ($supplierVoucher, $trimmedReason, $userId): SupplierVoucher {
+        $actualUserId = (int) ($userId ?? auth()->id());
+
+        return DB::transaction(function () use ($supplierVoucher, $trimmedReason, $actualUserId): SupplierVoucher {
             $voucher = SupplierVoucher::query()->lockForUpdate()->findOrFail($supplierVoucher->id);
 
             if ($voucher->status === SupplierVoucherStatus::Cancelled) {
@@ -37,10 +41,12 @@ class AnnulSupplierVoucher
                 ]);
             }
 
+            $this->reverseStockMovement->handle($voucher, $actualUserId, $trimmedReason);
+
             $voucher->update([
                 'status' => SupplierVoucherStatus::Cancelled,
                 'annulled_at' => now(),
-                'annulled_by' => $userId ?? auth()->id(),
+                'annulled_by' => $actualUserId,
                 'annulment_reason' => $trimmedReason,
             ]);
 
