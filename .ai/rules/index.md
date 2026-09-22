@@ -4,6 +4,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 
 | Applies to | Rule file |
 | --- | --- |
+| app/Actions/Pricing/** | .ai/rules/actions-pricing.md |
 | app/Actions/Purchasing/** | .ai/rules/actions-purchasing.md |
 | app/** | .ai/rules/app.md |
 | app/Models/Catalog/**, app/Actions/Catalog/**, database/seeders/Catalog/**, resources/js/pages/catalog/** | .ai/rules/catalog.md |

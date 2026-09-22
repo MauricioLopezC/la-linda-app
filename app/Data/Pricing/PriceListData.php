@@ -38,8 +38,9 @@ class PriceListData extends Data
             is_active: $priceList->is_active,
             validity_status: $priceList->validityStatus()->value,
             validity_status_label: $priceList->validityStatus()->label(),
-            // Always 0 until HU-012 adds price_list_items and a real items() relation to count.
-            articles_with_price_count: 0,
+            // Prefer the eager withCount('items') the listing does, and only fall back to a query
+            // for the single-list renders that have no aggregate loaded.
+            articles_with_price_count: (int) ($priceList->getAttribute('items_count') ?? $priceList->items()->count()),
         );
     }
 }

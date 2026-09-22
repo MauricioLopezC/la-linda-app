@@ -43,6 +43,15 @@ canal. No lleva `channel`: el precio preferencial de un cliente es el mismo comp
 por la tienda online. Varias listas particulares pueden convivir entre sí y con las de canal sobre
 el mismo periodo, porque no se resuelven por canal sino por asignación explícita.
 
+### Precio de lista (`PriceListItem`)
+El precio de venta de **un** artículo en **una** lista (`price_list_items`, HU-012). La unicidad es
+por lista, así que el mismo artículo puede valer distinto en mostrador, en online y en una lista
+particular sin conflicto. Un artículo "sin precio" en una lista es la **ausencia de fila**, no un
+precio en cero: el precio siempre es mayor a cero.
+
+Solo se puede tarifar un artículo activo. El artículo que se desactiva *después* de haber sido
+tarifado conserva su fila para que el precio obsoleto se pueda quitar, pero no se puede editar.
+
 ### Estado vs. vigencia de una lista
 Son dos cosas independientes. El **estado** (`is_active`) es una decisión manual: la lista se usa o
 no se usa. La **vigencia** es calculada a partir de las fechas y la fecha actual: `Vigente`,

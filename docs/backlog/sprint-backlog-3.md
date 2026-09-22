@@ -190,12 +190,33 @@ Lógica de negocio encapsulada en `app/Actions/{Module}`, respuestas tipadas en 
 - [ ] Tests de solapamiento de vigencias, reactivación, sucesión de listas y protección de la cobertura general.
 
 ### HU-012 — Definir precio de venta de artículos en lista (8 SP)
-- [ ] Crear migración y modelo `price_list_items` (`price_list_id`, `article_id`, `price` con 2 decimales $> 0$).
-- [ ] Validar unicidad `UNIQUE(price_list_id, article_id)`.
-- [ ] Permitir fijar precios únicamente a artículos en estado `activo`.
-- [ ] Pantalla ágil para asignar/editar precios por lista con buscador rápido y filtro de artículos sin precio.
-- [ ] Permitir convivencia de precios distintos para un mismo artículo en listas distintas.
-- [ ] Tests de persistencia, unicidad y validación de precios $> 0$.
+- [x] Crear migración y modelo `price_list_items` (`price_list_id`, `article_id`, `price` con 2 decimales $> 0$).
+- [x] Validar unicidad `UNIQUE(price_list_id, article_id)`.
+- [x] Permitir fijar precios únicamente a artículos en estado `activo`.
+- [x] Pantalla ágil para asignar/editar precios por lista con buscador rápido, **filtro por categoría** y filtro de artículos sin precio.
+- [x] Permitir quitar el precio de un artículo de la lista.
+- [x] Conectar el conteo `articles_with_price_count` que HU-011 dejó fijo en 0.
+- [x] Permitir convivencia de precios distintos para un mismo artículo en listas distintas.
+- [x] Tests de persistencia, unicidad y validación de precios $> 0$.
+
+**Decisiones de alcance tomadas en la implementación:**
+- La pantalla es una página de detalle (`pricing/price-lists/{price_list}`) con filtros y paginación
+  del lado del servidor, no un diálogo: el catálogo no escala al filtrado en cliente de HU-011.
+- El query base son **Artículos** con LEFT JOIN a `price_list_items`, no al revés: un artículo sin
+  precio es la ausencia de fila, así que el filtro "sin precio" solo es alcanzable partiendo del
+  catálogo.
+- Un artículo desactivado *después* de tener precio conserva su fila (badge "Artículo inactivo",
+  solo se puede quitar). Si no, el precio quedaría invisible y HU-056 lo seguiría resolviendo.
+- Se permite cargar precios en listas vencidas, futuras e inactivas sin bloqueo de servidor:
+  preparar una lista `futura` es el flujo de sucesión de canal que describe el glosario.
+- "Carga masiva" se implementó como **carga ágil**: edición inline de varias filas y un guardado
+  batch de lo modificado. La importación CSV y el aumento por porcentaje son HU-029, fuera del sprint.
+
+**Pendiente de definición del PO (no bloquea HU-012):** si `price` es precio final con IVA incluido
+o neto. No cambia el esquema, pero HU-041 (cálculo de IVA y totales) necesita la respuesta.
+
+**Candidato a backlog:** "copiar precios desde otra lista". Sin eso, crear la lista sucesora de un
+canal obliga a recargar todos los precios a mano.
 
 ### HU-022 — Asignar una lista de precios a un cliente (2 SP)
 - [ ] Agregar columna `price_list_id` (nullable, FK a `price_lists`) en `customers`.

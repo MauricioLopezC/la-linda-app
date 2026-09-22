@@ -1,5 +1,5 @@
-import { Head, router, useForm } from '@inertiajs/react';
-import { Pencil, Plus, Power, Search } from 'lucide-react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
+import { Pencil, Plus, Power, Search, Tags } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import {
@@ -39,7 +39,7 @@ import {
 } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { dashboard } from '@/routes';
-import { index } from '@/routes/pricing/price-lists';
+import { index, show } from '@/routes/pricing/price-lists';
 import type { BreadcrumbItem } from '@/types';
 
 type PriceList = App.Data.Pricing.PriceListData;
@@ -356,7 +356,12 @@ export default function PriceListsIndex({ priceLists = [] }: Props) {
                 paginatedPriceLists.map((priceList) => (
                   <TableRow key={priceList.id}>
                     <TableCell className="font-medium">
-                      {priceList.name}
+                      <Link
+                        href={show(priceList.id)}
+                        className="underline-offset-4 hover:underline"
+                      >
+                        {priceList.name}
+                      </Link>
                     </TableCell>
                     <TableCell>{priceList.scope_label}</TableCell>
                     <TableCell>
@@ -389,6 +394,17 @@ export default function PriceListsIndex({ priceLists = [] }: Props) {
                     </TableCell>
                     <TableCell>{priceList.articles_with_price_count}</TableCell>
                     <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        asChild
+                        aria-label={`Cargar precios de ${priceList.name}`}
+                        title="Cargar precios"
+                      >
+                        <Link href={show(priceList.id)}>
+                          <Tags className="size-4" />
+                        </Link>
+                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"
