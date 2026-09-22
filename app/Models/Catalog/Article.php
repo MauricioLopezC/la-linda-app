@@ -6,6 +6,7 @@ use App\Concerns\NormalizesUniqueAttributes;
 use App\Enums\Catalog\ArticleStatus;
 use App\Models\Inventory\StockBalance;
 use App\Models\Inventory\StockMovementItem;
+use App\Models\Pricing\PriceListItem;
 use App\Models\Purchasing\Supplier;
 use Database\Factories\Catalog\ArticleFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -128,6 +129,16 @@ class Article extends Model
     public function articleSuppliers(): HasMany
     {
         return $this->hasMany(ArticleSupplier::class);
+    }
+
+    /**
+     * Get the prices this article has across every price list (HU-012).
+     *
+     * @return HasMany<PriceListItem, $this>
+     */
+    public function priceListItems(): HasMany
+    {
+        return $this->hasMany(PriceListItem::class);
     }
 
     public function hasStockMovements(): bool
