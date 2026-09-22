@@ -548,6 +548,31 @@ def cmd_revisar(hu_id=None, resultado=None, motivo=None, board_id=None):
 
     ok, mensaje = t.resolver_revision(board_id, hu_id, aprobado, motivo)
     print(("✓ " if ok else "✗ ") + mensaje)
+    if ok:
+        try:
+            impacto = t.analizar_impacto_dependencias(board_id, hu_id, aprobado)
+            texto_impacto = t.formatear_impacto_dependencias(impacto)
+            if texto_impacto:
+                print("\n" + texto_impacto)
+        except Exception:
+            pass
+
+
+def cmd_dependencias(hu_id=None, board_id=None):
+    """Consulta qué historias dependen de una HU, cuáles quedan desbloqueadas y quién es su responsable."""
+    board_id = resolver_board_id(board_id)
+    if not hu_id:
+        if AGENTE_MODE:
+            necesita_input(
+                "¿De qué historia querés consultar las dependencias e impacto?",
+                [],
+                "hu_id",
+            )
+        hu_id = input("ID de la historia (ej. HU-012): ").strip().upper()
+
+    impacto = t.analizar_impacto_dependencias(board_id, hu_id, aprobado=True)
+    print(f"\n=== Dependencias e impacto de [{hu_id}] ===\n")
+    print(t.formatear_impacto_dependencias(impacto))
 
 
 # ── Menú interactivo principal ──────────────────────────────────────────────
@@ -561,6 +586,7 @@ MENU = [
     ("Marcar que empecé a desarrollar una historia → 'En progreso'", lambda: cmd_iniciar()),
     ("Marcar que terminé de desarrollar una historia → 'En Revisión'", lambda: cmd_finalizar()),
     ("Resolver una revisión/testing → 'Finalizado' o de vuelta a 'En progreso'", lambda: cmd_revisar()),
+    ("Consultar dependencias e impacto de una historia", lambda: cmd_dependencias()),
     ("Listar tableros disponibles", cmd_listar_tableros),
     ("Listar columnas de un tablero", lambda: cmd_listar_columnas()),
 ]
@@ -587,6 +613,7 @@ COMANDOS = {
     "iniciar": lambda args: cmd_iniciar(*args),
     "finalizar": lambda args: cmd_finalizar(*args),
     "revisar": lambda args: cmd_revisar(*args),
+    "dependencias": lambda args: cmd_dependencias(*args),
 }
 
 
