@@ -2,6 +2,7 @@
 
 namespace App\Actions\Purchasing;
 
+use App\Actions\Inventory\CreateStockMovementFromVoucher;
 use App\Concerns\ConvertsMoneyToCents;
 use App\Enums\Catalog\ArticleStatus;
 use App\Enums\Purchasing\SupplierVoucherLetter;
@@ -22,12 +23,15 @@ class CreateSupplierVoucher
         private AssociateCreditNoteToInvoice $associateCreditNote,
         private ImputeSupplierVoucherToPurchaseOrders $imputeToPurchaseOrders,
         private UpdateLastPurchaseCost $updateLastPurchaseCost,
+        private ResolveRemitoWarehouse $resolveWarehouse,
+        private CreateStockMovementFromVoucher $createStockMovement,
     ) {}
 
     /**
      * @param  array{
      *     supplier_id: int, type: string, letter: string, point_of_sale: string, number: string,
      *     issue_date: string, due_date: ?string, total_amount: string, notes: ?string,
+     *     warehouse_id?: ?int, user_id?: ?int,
      *     associated_invoice_id?: ?int, associated_amount?: ?string,
      *     items: array<int, array{article_id: ?int, description: string, quantity: string,
      *         unit_of_measure: string, unit_price: string, line_total: string, purchase_order_item_id?: ?int}>
@@ -47,10 +51,17 @@ class CreateSupplierVoucher
             $this->ensureArticlesRemainActive($data['items']);
 
             $type = SupplierVoucherType::from($data['type']);
+            $userId = (int) ($data['user_id'] ?? auth()->id());
+            $warehouseId = $this->resolveWarehouse->handle(
+                $type,
+                isset($data['warehouse_id']) ? (int) $data['warehouse_id'] : null,
+                $data['items']
+            );
             $totalAmount = $this->centsToMoney($this->moneyToCents($data['total_amount']));
 
             $voucher = SupplierVoucher::create([
                 'supplier_id' => $supplier->id,
+                'warehouse_id' => $warehouseId,
                 'type' => $type,
                 'letter' => SupplierVoucherLetter::from($data['letter']),
                 'point_of_sale' => $data['point_of_sale'],
@@ -83,13 +94,17 @@ class CreateSupplierVoucher
 
             $this->updateLastPurchaseCost->handle($voucher);
 
+            if ($type->generatesStockMovement()) {
+                $this->createStockMovement->handle($voucher, $userId);
+            }
+
             Log::info('Supplier voucher created', [
                 'supplier_voucher_id' => $voucher->id,
                 'supplier_id' => $supplier->id,
                 'fiscal_number' => $voucher->letter->value.' '.$voucher->point_of_sale.'-'.$voucher->number,
                 'items_count' => count($data['items']),
                 'imputations_count' => count($imputationsData),
-                'user_id' => auth()->id(),
+                'user_id' => $userId,
             ]);
 
             $associatedInvoiceId = $data['associated_invoice_id'] ?? null;
@@ -100,7 +115,7 @@ class CreateSupplierVoucher
                 $voucher->refresh();
             }
 
-            return $voucher->load(['supplier', 'items.article']);
+            return $voucher->load(['supplier', 'warehouse', 'items.article', 'stockMovement']);
         });
     }
 

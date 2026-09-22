@@ -24,12 +24,21 @@ class StockMovementDetailData extends Data
         public string $created_at,
         public string $created_at_formatted,
         public Collection $items,
+        public ?int $supplier_voucher_id,
+        public ?string $supplier_voucher_formatted_number,
+        public ?int $reversal_of_movement_id,
+        public ?int $reversal_movement_id,
     ) {}
 
     public static function fromModel(StockMovement $movement): self
     {
         $tz = (string) config('app.timezone', 'America/Argentina/Buenos_Aires');
         $created = $movement->created_at?->copy()->setTimezone($tz) ?? now()->setTimezone($tz);
+
+        $voucher = $movement->supplierVoucher ?? $movement->reversalOf?->supplierVoucher;
+        $voucherFormattedNumber = $voucher !== null
+            ? "{$voucher->letter->value} {$voucher->point_of_sale}-{$voucher->number}"
+            : null;
 
         return new self(
             id: $movement->id,
@@ -44,6 +53,10 @@ class StockMovementDetailData extends Data
             created_at: $created->toISOString(true),
             created_at_formatted: $created->format('d/m/Y H:i:s'),
             items: StockMovementItemDetailData::collect($movement->items),
+            supplier_voucher_id: $voucher?->id,
+            supplier_voucher_formatted_number: $voucherFormattedNumber,
+            reversal_of_movement_id: $movement->reversal_of_movement_id,
+            reversal_movement_id: $movement->reversal?->id,
         );
     }
 }

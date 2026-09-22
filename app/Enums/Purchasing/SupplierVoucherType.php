@@ -7,6 +7,7 @@ enum SupplierVoucherType: string
     case Invoice = 'factura';
     case CreditNote = 'nota_credito';
     case DebitNote = 'nota_debito';
+    case Remito = 'remito';
 
     public function label(): string
     {
@@ -14,6 +15,7 @@ enum SupplierVoucherType: string
             self::Invoice => 'Factura',
             self::CreditNote => 'Nota de crédito',
             self::DebitNote => 'Nota de débito',
+            self::Remito => 'Remito',
         };
     }
 
@@ -27,9 +29,19 @@ enum SupplierVoucherType: string
         return $this === self::CreditNote;
     }
 
+    public function isRemito(): bool
+    {
+        return $this === self::Remito;
+    }
+
+    public function generatesStockMovement(): bool
+    {
+        return $this === self::Remito;
+    }
+
     public function createsPayableBalance(): bool
     {
-        return $this !== self::CreditNote;
+        return $this !== self::CreditNote && $this !== self::Remito;
     }
 
     /** @return array<int, array{value: string, label: string}> */

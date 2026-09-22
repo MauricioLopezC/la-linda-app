@@ -1,5 +1,6 @@
 import { Head, Link, router } from '@inertiajs/react';
 import {
+  ArrowUpRight,
   FileText,
   FilterX,
   Package,
@@ -39,6 +40,7 @@ import {
 } from '@/components/ui/table';
 import { show as showAdjustment } from '@/routes/inventory/adjustments';
 import { index } from '@/routes/inventory/movements';
+import { show as showSupplierVoucher } from '@/routes/purchasing/vouchers';
 import type { BreadcrumbItem } from '@/types';
 
 type StockMovementList = App.Data.Inventory.StockMovementListData;
@@ -426,15 +428,30 @@ export default function StockMovementHistoryIndex({
                         <span className="text-sm text-muted-foreground">
                           {movement.notes || '-'}
                         </span>
-                        <Link
-                          href={showAdjustment({
-                            stock_movement: movement.id,
-                          })}
-                          className="dark:text-primary-400 flex items-center gap-1 text-xs text-primary-600 hover:underline"
-                        >
-                          <FileText className="size-3" />
-                          Ver comprobante #{movement.id}
-                        </Link>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Link
+                            href={showAdjustment({
+                              stock_movement: movement.id,
+                            })}
+                            className="dark:text-primary-400 flex items-center gap-1 text-xs text-primary-600 hover:underline"
+                          >
+                            <FileText className="size-3" />
+                            Ver comprobante #{movement.id}
+                          </Link>
+                          {movement.supplier_voucher_id && (
+                            <Link
+                              href={showSupplierVoucher({
+                                supplier_voucher: movement.supplier_voucher_id,
+                              })}
+                              className="flex items-center gap-1 text-xs text-blue-600 hover:underline dark:text-blue-400"
+                            >
+                              <ArrowUpRight className="size-3" />
+                              Remito{' '}
+                              {movement.supplier_voucher_formatted_number ??
+                                `#${movement.supplier_voucher_id}`}
+                            </Link>
+                          )}
+                        </div>
                       </div>
                     </TableCell>
                   </TableRow>

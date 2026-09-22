@@ -56,8 +56,10 @@ type Option = App.Data.Purchasing.SupplierVoucherOptionData;
 type Article = App.Data.Purchasing.PurchaseOrderArticleOptionData;
 type AssociableInvoice = App.Data.Purchasing.AssociableInvoiceOptionData;
 type ImputablePurchaseOrder = App.Data.Purchasing.PurchaseOrderImputableData;
+type Warehouse = App.Data.Purchasing.PurchaseOrderWarehouseOptionData;
 
 const CREDIT_NOTE_TYPE = 'nota_credito';
+const REMITO_TYPE = 'remito';
 
 /** Unit stored for concept lines (no catalog article): they only carry description + amount. */
 const CONCEPT_UNIT = '—';
@@ -84,6 +86,7 @@ type VoucherFormData = {
   number: string;
   issue_date: string;
   due_date: string;
+  warehouse_id: string;
   total_amount: string;
   notes: string;
   associated_invoice_id: string | null;
@@ -95,6 +98,7 @@ type Props = {
   suppliers: Supplier[];
   voucherTypes: Option[];
   letters: Option[];
+  warehouses: Warehouse[];
   today: string;
 };
 
@@ -180,6 +184,7 @@ export default function CreateSupplierVoucher({
   suppliers,
   voucherTypes,
   letters,
+  warehouses,
   today,
 }: Props) {
   const form = useForm<VoucherFormData>({
@@ -190,6 +195,7 @@ export default function CreateSupplierVoucher({
     number: '',
     issue_date: today,
     due_date: '',
+    warehouse_id: '',
     total_amount: '',
     notes: '',
     associated_invoice_id: null,
@@ -199,11 +205,40 @@ export default function CreateSupplierVoucher({
 
   const errors = form.errors as Record<string, string>;
   const isCreditNote = form.data.type === CREDIT_NOTE_TYPE;
+  const isRemito = form.data.type === REMITO_TYPE;
+
+  const hasImputedItems = useMemo(
+    () =>
+      form.data.items.some(
+        (item) =>
+          item.purchase_order_item_id !== null &&
+          item.purchase_order_item_id !== undefined,
+      ),
+    [form.data.items],
+  );
+
+  const availableLetters = useMemo(() => {
+    if (isRemito) {
+      return letters.filter((l) => ['R', 'X'].includes(l.value));
+    }
+
+    return letters.filter((l) => !['R', 'X'].includes(l.value));
+  }, [isRemito, letters]);
 
   const changeType = (value: string) => {
+    const nextIsRemito = value === REMITO_TYPE;
     form.setData((data) => ({
       ...data,
       type: value,
+      letter: nextIsRemito
+        ? ['R', 'X'].includes(data.letter)
+          ? data.letter
+          : 'R'
+        : ['R', 'X'].includes(data.letter)
+          ? 'A'
+          : data.letter,
+      due_date: nextIsRemito ? '' : data.due_date,
+      warehouse_id: nextIsRemito ? data.warehouse_id : '',
       ...(value === CREDIT_NOTE_TYPE
         ? {}
         : { associated_invoice_id: null, associated_amount: '' }),
@@ -317,7 +352,13 @@ export default function CreateSupplierVoucher({
     event.preventDefault();
     form.transform((data) => ({
       ...data,
-      total_amount: canonicalMoney(data.total_amount),
+      due_date: isRemito ? '' : data.due_date,
+      warehouse_id: isRemito ? data.warehouse_id : '',
+      total_amount: data.total_amount
+        ? canonicalMoney(data.total_amount)
+        : isRemito
+          ? '0.00'
+          : '',
       associated_invoice_id:
         data.type === CREDIT_NOTE_TYPE ? data.associated_invoice_id : null,
       associated_amount:
@@ -334,9 +375,21 @@ export default function CreateSupplierVoucher({
           unit_of_measure: isConceptRow ? CONCEPT_UNIT : item.unit_of_measure,
           quantity: isConceptRow ? '1' : canonicalMoney(item.quantity),
           unit_price: isConceptRow
+            ? item.line_total
+              ? canonicalMoney(item.line_total)
+              : isRemito
+                ? '0.00'
+                : ''
+            : item.unit_price
+              ? canonicalMoney(item.unit_price)
+              : isRemito
+                ? '0.00'
+                : '',
+          line_total: item.line_total
             ? canonicalMoney(item.line_total)
-            : canonicalMoney(item.unit_price),
-          line_total: canonicalMoney(item.line_total),
+            : isRemito
+              ? '0.00'
+              : '',
           purchase_order_item_id: item.purchase_order_item_id ?? null,
         };
       }),
@@ -421,7 +474,7 @@ export default function CreateSupplierVoucher({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {letters.map((option) => (
+                  {availableLetters.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
                     </SelectItem>
@@ -487,22 +540,78 @@ export default function CreateSupplierVoucher({
               <InputError message={errors.issue_date} />
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="due_date">Fecha de vencimiento</Label>
-              <Input
-                id="due_date"
-                type="date"
-                min={form.data.issue_date}
-                value={form.data.due_date}
-                onChange={(event) =>
-                  form.setData('due_date', event.target.value)
-                }
-              />
-              <InputError message={errors.due_date} />
-            </div>
+            {isRemito ? (
+              <div className="space-y-1.5">
+                <Label htmlFor="warehouse_id">Depósito de destino *</Label>
+                {hasImputedItems ? (
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <Input
+                        id="warehouse_id"
+                        disabled
+                        value={
+                          warehouses.find(
+                            (w) => String(w.id) === form.data.warehouse_id,
+                          )?.name ?? 'Depósito de la OC'
+                        }
+                        className="bg-muted"
+                      />
+                      <Badge
+                        variant="outline"
+                        className="shrink-0 border-blue-300 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300"
+                      >
+                        Derivado de la OC
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Se toma automáticamente de las órdenes de compra
+                      asociadas.
+                    </p>
+                  </div>
+                ) : (
+                  <Select
+                    value={form.data.warehouse_id}
+                    onValueChange={(value) =>
+                      form.setData('warehouse_id', value)
+                    }
+                  >
+                    <SelectTrigger id="warehouse_id" className="w-full">
+                      <SelectValue placeholder="Seleccionar depósito" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {warehouses.map((warehouse) => (
+                        <SelectItem
+                          key={warehouse.id}
+                          value={String(warehouse.id)}
+                        >
+                          {warehouse.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                <InputError message={errors.warehouse_id} />
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                <Label htmlFor="due_date">Fecha de vencimiento</Label>
+                <Input
+                  id="due_date"
+                  type="date"
+                  min={form.data.issue_date}
+                  value={form.data.due_date}
+                  onChange={(event) =>
+                    form.setData('due_date', event.target.value)
+                  }
+                />
+                <InputError message={errors.due_date} />
+              </div>
+            )}
 
             <div className="space-y-1.5">
-              <Label htmlFor="total_amount">Importe total transcripto *</Label>
+              <Label htmlFor="total_amount">
+                Importe total transcripto {isRemito ? '(opcional)' : '*'}
+              </Label>
               <Input
                 id="total_amount"
                 inputMode="decimal"
@@ -560,6 +669,11 @@ export default function CreateSupplierVoucher({
           <PurchaseOrderAssociation
             supplierId={form.data.supplier_id}
             currentItems={form.data.items}
+            isRemito={isRemito}
+            selectedWarehouseId={form.data.warehouse_id}
+            onSetWarehouse={(warehouseId) =>
+              form.setData('warehouse_id', warehouseId)
+            }
             onImportItems={(importedItems) => {
               const isOnlyOneEmpty =
                 form.data.items.length === 1 &&
@@ -582,8 +696,9 @@ export default function CreateSupplierVoucher({
             <div>
               <CardTitle>Ítems del documento</CardTitle>
               <p className="mt-1 text-sm text-muted-foreground">
-                Usá “Concepto sin artículo” para cargos, descuentos o ajustes:
-                ese tipo de renglón solo pide descripción e importe.
+                {isRemito
+                  ? 'El remito debe incluir al menos un artículo del catálogo para ingresar stock. Los importes son opcionales.'
+                  : 'Usá “Concepto sin artículo” para cargos, descuentos o ajustes: ese tipo de renglón solo pide descripción e importe.'}
               </p>
             </div>
             <Button
@@ -1182,10 +1297,16 @@ function ArticleSearch({
 function PurchaseOrderAssociation({
   supplierId,
   currentItems,
+  isRemito,
+  selectedWarehouseId,
+  onSetWarehouse,
   onImportItems,
 }: {
   supplierId: string;
   currentItems: VoucherItemForm[];
+  isRemito: boolean;
+  selectedWarehouseId: string;
+  onSetWarehouse: (warehouseId: string) => void;
   onImportItems: (items: VoucherItemForm[]) => void;
 }) {
   const [orders, setOrders] = useState<ImputablePurchaseOrder[]>([]);
@@ -1193,6 +1314,16 @@ function PurchaseOrderAssociation({
   const [hasLoaded, setHasLoaded] = useState(false);
   const [expandedOrders, setExpandedOrders] = useState<Record<number, boolean>>(
     {},
+  );
+
+  const hasImputedInItems = useMemo(
+    () =>
+      currentItems.some(
+        (ci) =>
+          ci.purchase_order_item_id !== null &&
+          ci.purchase_order_item_id !== undefined,
+      ),
+    [currentItems],
   );
 
   useEffect(() => {
@@ -1243,6 +1374,27 @@ function PurchaseOrderAssociation({
   };
 
   const importOrder = (order: ImputablePurchaseOrder) => {
+    if (isRemito) {
+      if (
+        hasImputedInItems &&
+        selectedWarehouseId !== '' &&
+        String(order.warehouse_id) !== selectedWarehouseId
+      ) {
+        toast.error(
+          `No se puede asociar esta orden: pertenece al depósito ${order.warehouse_name}, distinto al del remito.`,
+        );
+
+        return;
+      }
+
+      if (
+        !hasImputedInItems &&
+        selectedWarehouseId !== String(order.warehouse_id)
+      ) {
+        onSetWarehouse(String(order.warehouse_id));
+      }
+    }
+
     const newItems: VoucherItemForm[] = [];
     let alreadyImportedCount = 0;
 
@@ -1299,10 +1451,40 @@ function PurchaseOrderAssociation({
   };
 
   const importAllOrders = () => {
+    let targetOrders = orders;
+
+    if (isRemito) {
+      const targetWarehouseId =
+        hasImputedInItems && selectedWarehouseId !== ''
+          ? selectedWarehouseId
+          : orders.length > 0
+            ? String(orders[0].warehouse_id)
+            : '';
+
+      if (targetWarehouseId !== '') {
+        const matchingOrders = orders.filter(
+          (o) => String(o.warehouse_id) === targetWarehouseId,
+        );
+        const skippedCount = orders.length - matchingOrders.length;
+
+        if (skippedCount > 0) {
+          toast.warning(
+            `Se omitieron ${skippedCount} órdenes por pertenecer a un depósito distinto.`,
+          );
+        }
+
+        targetOrders = matchingOrders;
+
+        if (!hasImputedInItems) {
+          onSetWarehouse(targetWarehouseId);
+        }
+      }
+    }
+
     const allNewItems: VoucherItemForm[] = [];
     let totalImported = 0;
 
-    for (const order of orders) {
+    for (const order of targetOrders) {
       for (const item of order.items) {
         const isAlreadyIn =
           currentItems.some((ci) => ci.purchase_order_item_id === item.id) ||
@@ -1395,6 +1577,11 @@ function PurchaseOrderAssociation({
                   (ci) => ci.purchase_order_item_id === item.id,
                 ),
               );
+            const isWarehouseConflict =
+              isRemito &&
+              hasImputedInItems &&
+              selectedWarehouseId !== '' &&
+              String(order.warehouse_id) !== selectedWarehouseId;
 
             return (
               <div
@@ -1414,6 +1601,11 @@ function PurchaseOrderAssociation({
                     <span className="text-xs text-muted-foreground">
                       Depósito: {order.warehouse_name}
                     </span>
+                    {isWarehouseConflict && (
+                      <Badge variant="destructive" className="text-xs">
+                        Depósito incompatible
+                      </Badge>
+                    )}
                     <span className="text-muted-foreground">·</span>
                     <span className="font-mono text-xs font-semibold text-foreground">
                       {formatCurrency(order.total_amount)}
@@ -1450,11 +1642,15 @@ function PurchaseOrderAssociation({
                       type="button"
                       variant={allItemsImported ? 'secondary' : 'default'}
                       size="sm"
-                      disabled={allItemsImported}
+                      disabled={allItemsImported || isWarehouseConflict}
                       onClick={() => importOrder(order)}
                       className="text-xs"
                     >
-                      {allItemsImported ? 'Ya importada' : 'Importar a ítems'}
+                      {allItemsImported
+                        ? 'Ya importada'
+                        : isWarehouseConflict
+                          ? 'Depósito distinto'
+                          : 'Importar a ítems'}
                     </Button>
                   </div>
                 </div>

@@ -2,7 +2,9 @@ import { Head, Link, useForm } from '@inertiajs/react';
 import {
   AlertTriangle,
   ArrowLeft,
+  ArrowUpRight,
   Ban,
+  Boxes,
   CalendarClock,
   ReceiptText,
 } from 'lucide-react';
@@ -36,12 +38,14 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { formatCurrency, formatStockQuantity } from '@/lib/utils';
 import { dashboard } from '@/routes';
+import { show as showStockMovement } from '@/routes/inventory/adjustments';
 import { annul, index, show } from '@/routes/purchasing/vouchers';
 import type { BreadcrumbItem } from '@/types';
 
 type Voucher = App.Data.Purchasing.SupplierVoucherData;
 
 const statusClasses: Record<string, string> = {
+  confirmado: 'border-success-fg/30 bg-success-bg text-success-fg',
   pendiente: 'border-warning-fg/30 bg-warning-bg text-warning-fg',
   pagada_parcial: 'border-info-fg/30 bg-info-bg text-info-fg',
   pagada: 'border-success-fg/30 bg-success-bg text-success-fg',
@@ -162,6 +166,12 @@ export default function SupplierVoucherShow({ voucher }: { voucher: Voucher }) {
               label="Fecha de vencimiento"
               value={voucher.due_date_formatted ?? 'Sin vencimiento'}
             />
+            {voucher.warehouse_name && (
+              <ReadOnlyField
+                label="Depósito de destino"
+                value={voucher.warehouse_name}
+              />
+            )}
             <ReadOnlyField
               label="Importe total"
               value={formatCurrency(voucher.total_amount)}
@@ -181,6 +191,63 @@ export default function SupplierVoucherShow({ voucher }: { voucher: Voucher }) {
             </div>
           </CardContent>
         </Card>
+
+        {(voucher.stock_movement_id || voucher.reversal_stock_movement_id) && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Boxes className="size-5 text-blue-600 dark:text-blue-400" />
+                Movimientos de inventario asociados
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-wrap items-center gap-4">
+              {voucher.stock_movement_id && (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">
+                    Entrada automática:
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    asChild
+                    className="gap-1.5"
+                  >
+                    <Link
+                      href={showStockMovement({
+                        stock_movement: voucher.stock_movement_id,
+                      })}
+                    >
+                      Ver movimiento #{voucher.stock_movement_id}
+                      <ArrowUpRight className="size-3.5" />
+                    </Link>
+                  </Button>
+                </div>
+              )}
+              {voucher.reversal_stock_movement_id && (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">
+                    Reversa por anulación:
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    asChild
+                    className="gap-1.5 border-error-fg/30 text-error-fg"
+                  >
+                    <Link
+                      href={showStockMovement({
+                        stock_movement: voucher.reversal_stock_movement_id,
+                      })}
+                    >
+                      Ver reversa #{voucher.reversal_stock_movement_id}
+                      <ArrowUpRight className="size-3.5" />
+                    </Link>
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader>

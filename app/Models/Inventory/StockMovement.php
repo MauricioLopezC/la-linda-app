@@ -2,6 +2,7 @@
 
 namespace App\Models\Inventory;
 
+use App\Models\Purchasing\SupplierVoucher;
 use App\Models\User;
 use Database\Factories\Inventory\StockMovementFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -9,6 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 
 /**
@@ -20,11 +22,16 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property int $stock_movement_type_id
  * @property int $warehouse_id
+ * @property int|null $supplier_voucher_id
+ * @property int|null $reversal_of_movement_id
  * @property string|null $notes
  * @property int $user_id
  * @property Carbon|null $created_at
+ * @property SupplierVoucher|null $supplierVoucher
+ * @property StockMovement|null $reversalOf
+ * @property StockMovement|null $reversal
  */
-#[Fillable(['stock_movement_type_id', 'warehouse_id', 'notes', 'user_id'])]
+#[Fillable(['stock_movement_type_id', 'warehouse_id', 'supplier_voucher_id', 'reversal_of_movement_id', 'notes', 'user_id'])]
 class StockMovement extends Model
 {
     /** @use HasFactory<StockMovementFactory> */
@@ -85,5 +92,35 @@ class StockMovement extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Get the supplier voucher that originated this movement.
+     *
+     * @return BelongsTo<SupplierVoucher, $this>
+     */
+    public function supplierVoucher(): BelongsTo
+    {
+        return $this->belongsTo(SupplierVoucher::class);
+    }
+
+    /**
+     * Get the original movement this movement reverses.
+     *
+     * @return BelongsTo<StockMovement, $this>
+     */
+    public function reversalOf(): BelongsTo
+    {
+        return $this->belongsTo(StockMovement::class, 'reversal_of_movement_id');
+    }
+
+    /**
+     * Get the reversal movement for this movement.
+     *
+     * @return HasOne<StockMovement, $this>
+     */
+    public function reversal(): HasOne
+    {
+        return $this->hasOne(StockMovement::class, 'reversal_of_movement_id');
     }
 }

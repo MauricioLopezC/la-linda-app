@@ -33,6 +33,8 @@ class ConsultStockMovements
                 'warehouse.branch',
                 'user',
                 'items.article.unitOfMeasure',
+                'supplierVoucher',
+                'reversalOf.supplierVoucher',
             ])
             ->withCount('items')
             ->orderByDesc('created_at')

@@ -36,6 +36,8 @@ class StockMovementType extends Model
      */
     public const CODE_PURCHASE_ENTRY = 'purchase_entry';
 
+    public const CODE_PURCHASE_ENTRY_REVERSAL = 'purchase_entry_reversal';
+
     public const CODE_SALE_EXIT = 'sale_exit';
 
     public const CODE_CUSTOMER_RETURN = 'customer_return';
@@ -54,6 +56,7 @@ class StockMovementType extends Model
      */
     public const AUTOMATIC_CODES = [
         self::CODE_PURCHASE_ENTRY,
+        self::CODE_PURCHASE_ENTRY_REVERSAL,
         self::CODE_SALE_EXIT,
         self::CODE_CUSTOMER_RETURN,
         self::CODE_WAREHOUSE_TRANSFER_OUT,

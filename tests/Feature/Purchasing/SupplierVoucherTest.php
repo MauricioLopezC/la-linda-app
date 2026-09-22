@@ -71,8 +71,9 @@ test('creation page only loads active suppliers without preloading the article c
             ->has('suppliers', 1)
             ->where('suppliers.0.id', $activeSupplier->id)
             ->missing('articles')
-            ->has('voucherTypes', 3)
-            ->has('letters', 4));
+            ->has('voucherTypes', 4)
+            ->has('letters', 6)
+            ->has('warehouses'));
 });
 
 test('article search returns only matching active articles and limits the result set', function () {
@@ -427,7 +428,7 @@ test('database protects fiscal uniqueness and positive totals', function () {
         'point_of_sale' => '0002',
         'number' => '00000002',
         'issue_date' => today()->toDateString(),
-        'total_amount' => '0.00',
+        'total_amount' => '-10.00',
         'status' => SupplierVoucherStatus::Pending->value,
         'created_at' => now(),
         'updated_at' => now(),

@@ -16,6 +16,10 @@ class ResolveSupplierVoucherStatus
         string $totalAmount,
         string $pendingBalance,
     ): SupplierVoucherStatus {
+        if ($type->isRemito()) {
+            return SupplierVoucherStatus::Confirmed;
+        }
+
         $totalCents = $this->moneyToCents($totalAmount);
         $pendingCents = $this->moneyToCents($pendingBalance);
 

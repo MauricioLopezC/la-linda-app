@@ -41,6 +41,10 @@ class SupplierVoucherData extends Data
         public ?string $annulment_reason,
         public bool $can_annul,
         public bool $is_legacy_without_items,
+        public ?int $warehouse_id,
+        public ?string $warehouse_name,
+        public ?int $stock_movement_id,
+        public ?int $reversal_stock_movement_id,
         public array $items,
         public array $applications,
     ) {}
@@ -49,8 +53,10 @@ class SupplierVoucherData extends Data
     {
         $voucher->loadMissing([
             'supplier',
+            'warehouse',
             'items.article',
             'annulledByUser',
+            'stockMovement.reversal',
             'applicationsMade.targetVoucher',
             'applicationsMade.user',
             'applicationsReceived.sourceVoucher',
@@ -93,6 +99,10 @@ class SupplierVoucherData extends Data
             annulment_reason: $voucher->annulment_reason,
             can_annul: $voucher->canBeAnnulled(),
             is_legacy_without_items: $voucher->items->isEmpty(),
+            warehouse_id: $voucher->warehouse_id,
+            warehouse_name: $voucher->warehouse?->name,
+            stock_movement_id: $voucher->stockMovement?->id,
+            reversal_stock_movement_id: $voucher->stockMovement?->reversal?->id,
             items: SupplierVoucherItemData::collect($voucher->items)->all(),
             applications: $applications,
         );

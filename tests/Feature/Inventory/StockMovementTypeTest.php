@@ -4,6 +4,15 @@ use App\Models\Inventory\StockMovement;
 use App\Models\Inventory\StockMovementType;
 use App\Models\User;
 
+test('migrations provision the purchase entry reversal movement type', function () {
+    $this->assertDatabaseHas('stock_movement_types', [
+        'code' => StockMovementType::CODE_PURCHASE_ENTRY_REVERSAL,
+        'sign' => -1,
+        'is_system' => true,
+        'is_active' => true,
+    ]);
+});
+
 test('guests are redirected to login when accessing stock parameters', function () {
     $response = $this->get(route('inventory.parameters.index'));
 
