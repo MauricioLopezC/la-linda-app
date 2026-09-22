@@ -12,6 +12,8 @@ use App\Http\Controllers\Inventory\StockMovementHistoryController;
 use App\Http\Controllers\Inventory\StockParameterController;
 use App\Http\Controllers\Inventory\WarehouseController;
 use App\Http\Controllers\Organization\BranchController;
+use App\Http\Controllers\Pricing\PriceListController;
+use App\Http\Controllers\Pricing\PriceListItemController;
 use App\Http\Controllers\Pricing\VatRateController;
 use App\Http\Controllers\Purchasing\PaymentOrderController;
 use App\Http\Controllers\Purchasing\PurchaseOrderController;
@@ -106,6 +108,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/', [VatRateController::class, 'store'])->name('store');
         Route::put('{vat_rate}', [VatRateController::class, 'update'])->name('update');
         Route::patch('{vat_rate}/toggle', [VatRateController::class, 'toggleStatus'])->name('toggle');
+    });
+
+    Route::prefix('pricing/price-lists')->name('pricing.price-lists.')->group(function () {
+        Route::get('/', [PriceListController::class, 'index'])->name('index');
+        Route::post('/', [PriceListController::class, 'store'])->name('store');
+        Route::put('{price_list}', [PriceListController::class, 'update'])->name('update');
+        Route::patch('{price_list}/toggle', [PriceListController::class, 'toggleStatus'])->name('toggle');
+        Route::post('{price_list}/items', [PriceListItemController::class, 'store'])->name('items.store');
+        Route::delete('{price_list}/items/{article}', [PriceListItemController::class, 'destroy'])->name('items.destroy');
+        // Declared last so the literal segments above are not swallowed by the wildcard.
+        Route::get('{price_list}', [PriceListController::class, 'show'])->name('show');
     });
 
     Route::prefix('sales/payment-methods')->name('sales.payment-methods.')->group(function () {

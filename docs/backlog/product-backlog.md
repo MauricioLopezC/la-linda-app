@@ -321,18 +321,30 @@ independiente.
 
 **Criterios de aceptación**
 
-- **Datos:** nombre, canal asociado (mostrador, online o general), fecha de vigencia desde, fecha de vigencia hasta opcional, estado
+- **Datos:** nombre, tipo de lista (`de canal` o `particular`), canal asociado (mostrador, online o general; solo para las listas de canal), fecha de vigencia desde, fecha de vigencia hasta opcional, estado
 - **Validaciones:**
     - nombre único
+    - una lista de canal debe indicar su canal; una lista particular no lleva canal
     - la vigencia hasta no puede ser anterior a la vigencia desde
-    - no puede haber dos listas activas y vigentes para el mismo canal en el mismo periodo
-    - debe existir siempre al menos una lista general vigente
+    - no puede haber dos listas **de canal** activas para el mismo canal con periodos superpuestos; las listas particulares pueden superponerse entre sí y con las de canal
+    - el canal general no puede quedar descubierto: siempre tiene que haber una lista general activa que cubra desde hoy en adelante, sin fecha de fin o con una sucesora que arranque el día siguiente
     - no se puede dar de baja una lista utilizada en ventas registradas
-- **Comportamiento:** el listado muestra el estado de vigencia calculado a la fecha actual y la cantidad de artículos con precio asignado en cada lista
+- **Comportamiento:**
+    - el listado muestra el tipo, el estado de vigencia calculado a la fecha actual y la cantidad de artículos con precio asignado en cada lista
+    - para reemplazar la lista vigente de un canal se le pone fecha de fin a la actual y se crea la sucesora a partir del día siguiente
 
 > **Corrección (2026-08-22):** esta historia dependía de `HU-007`, pero ninguno de sus criterios
 > usa medios de pago ni alícuotas de IVA. Se corrige a "Depende de: nada" al revisar `HU-007` por
 > el pedido del PO de priorizar artículos y stock.
+
+> **Corrección (2026-09-21):** el criterio original ("no puede haber dos listas activas y vigentes
+> para el mismo canal en el mismo periodo") hacía inalcanzable el paso 1 de la cascada de `HU-056`
+> y el escenario de demo del Sprint 3: una lista preferencial como "Mayorista" no es un canal, pero
+> al obligarla a declarar uno chocaba siempre con la lista base de ese canal. Se separa el eje
+> **canal** ("¿por dónde se vende?") del eje **cliente** ("¿a quién se le vende?") con el campo
+> `tipo de lista`, y la regla de no superposición pasa a aplicar solo a las listas de canal.
+> También se refuerza la garantía de lista general, que antes se verificaba solo contra la fecha
+> actual y se podía romper sola al vencer.
 
 ## HU-012 - Definir el precio de venta de los artículos en una lista
 
@@ -581,7 +593,7 @@ independiente.
 
 - **Datos:** cliente, lista de precios asignada (opcional)
 - **Validaciones:**
-    - solo se pueden asignar listas en estado activo y vigentes
+    - solo se pueden asignar listas de tipo `particular` en estado activo y vigentes; las listas de canal son el precio base del canal y no se asignan a un cliente
     - un cliente tiene a lo sumo una lista asignada
     - si el cliente no tiene lista asignada se le aplicará la lista del canal de la operación
 - **Comportamiento:**
@@ -890,7 +902,7 @@ reimputación innecesarios.
 
 - **Datos:** para cada línea de venta se recibe artículo, cliente (o Consumidor Final) y canal (`mostrador` u `online`); el resultado es el precio unitario a cobrar junto con la lista de precios de origen
 - **Validaciones:**
-    - la resolución sigue una precedencia estricta: 1) lista particular asignada al cliente, si está activa y vigente; 2) lista vigente del canal de la operación (`mostrador` u `online`); 3) lista `general` vigente
+    - la resolución sigue una precedencia estricta: 1) lista `particular` asignada al cliente, si está activa y vigente; 2) lista de canal vigente para el canal de la operación (`mostrador` u `online`); 3) lista de canal `general` vigente, que `HU-011` garantiza que siempre existe
     - solo se consideran listas activas y vigentes a la fecha de la operación; una lista futura o vencida se descarta como si no existiera
     - si el artículo no tiene precio en ninguna lista aplicable según la cascada, la operación se rechaza con un error explícito; nunca se cobra a precio cero o estimado
 - **Comportamiento:**
