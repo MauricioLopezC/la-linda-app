@@ -12,6 +12,7 @@ use Database\Seeders\Inventory\StockMovementTypeSeeder;
 use Database\Seeders\Inventory\WarehouseSeeder;
 use Database\Seeders\Inventory\WarehouseStockSeeder;
 use Database\Seeders\Organization\BranchSeeder;
+use Database\Seeders\Pricing\PriceListSeeder;
 use Database\Seeders\Pricing\VatRateSeeder;
 use Database\Seeders\Purchasing\PurchaseOrderSeeder;
 use Database\Seeders\Purchasing\SupplierSeeder;
@@ -47,6 +48,7 @@ class DatabaseSeeder extends Seeder
             PointOfSaleSeeder::class,
             StockMovementTypeSeeder::class,
             VatRateSeeder::class,
+            PriceListSeeder::class,
             PaymentMethodSeeder::class,
             CustomerSeeder::class,
             SupplierSeeder::class,

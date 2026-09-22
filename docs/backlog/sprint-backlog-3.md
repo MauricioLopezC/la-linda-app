@@ -54,7 +54,7 @@
 | 6 | Ver cuánto dinero se pagó en un período y con qué medios | `HU-055` | Reporte de egresos reales del período con filtros y exportación |
 | 7 | Registrar clientes con CUIT y condición fiscal | `HU-021` | Validación AFIP/ARCA de CUIT y cliente default Consumidor Final |
 | 8 | Habilitar los puntos de venta para ventas de mostrador | `HU-051` | Reconexión en menú, validación por sucursal y depósito asignado |
-| 9 | Crear listas de precios diferenciadas por canal y vigencia | `HU-011` | Listas mostrador, web y general con control de no solapamiento |
+| 9 | Crear listas de precios diferenciadas por canal y vigencia | `HU-011` | Listas de canal (mostrador, web, general) con control de no solapamiento, más listas particulares para precios preferenciales |
 | 10 | Fijar los precios de venta de cada artículo en cada lista | `HU-012` | Carga masiva/ágil de precios unitarios mayores a cero |
 | 11 | Asignar precios preferenciales a clientes particulares | `HU-022` | Vínculo de lista de precios a cliente opcional |
 | 12 | Resolver automáticamente el precio a cobrar en mostrador y web | `HU-056` | Action transversal `ResolveArticlePrice` con cascada de precedencias |
@@ -183,11 +183,11 @@ Lógica de negocio encapsulada en `app/Actions/{Module}`, respuestas tipadas en 
 - [ ] Comprobar navegación y suite de tests de puntos de venta en verde.
 
 ### HU-011 — Administrar listas de precios (5 SP)
-- [ ] Crear migración y modelo `price_lists` (nombre único, canal: `mostrador`, `online`, `general`, vigencia desde/hasta, estado).
-- [ ] Validar que `valid_to >= valid_from` y que no haya dos listas vigentes solapadas para el mismo canal.
-- [ ] Garantizar la existencia de al menos una lista `general` activa y vigente en el sistema (seeder y validación).
-- [ ] Vista con cálculo de vigencia en tiempo real (`Vigente`, `Futura`, `Vencida`) y conteo de artículos con precio.
-- [ ] Tests de solapamiento de vigencias y protección de lista general.
+- [ ] Crear migración y modelo `price_lists` (nombre único, tipo: `canal` / `particular`, canal: `mostrador`, `online`, `general` —solo para tipo `canal`—, vigencia desde/hasta, estado).
+- [ ] Validar que `valid_to >= valid_from` y que no haya dos listas **de canal** activas solapadas para el mismo canal; las `particular` pueden solaparse libremente.
+- [ ] Garantizar que el canal `general` quede cubierto sin huecos desde hoy en adelante (seeder + validación sobre la cadena de listas generales activas).
+- [ ] Vista con selector de tipo, canal condicional, cálculo de vigencia en tiempo real (`Vigente`, `Futura`, `Vencida`) y conteo de artículos con precio.
+- [ ] Tests de solapamiento de vigencias, reactivación, sucesión de listas y protección de la cobertura general.
 
 ### HU-012 — Definir precio de venta de artículos en lista (8 SP)
 - [ ] Crear migración y modelo `price_list_items` (`price_list_id`, `article_id`, `price` con 2 decimales $> 0$).
@@ -199,7 +199,7 @@ Lógica de negocio encapsulada en `app/Actions/{Module}`, respuestas tipadas en 
 
 ### HU-022 — Asignar una lista de precios a un cliente (2 SP)
 - [ ] Agregar columna `price_list_id` (nullable, FK a `price_lists`) en `customers`.
-- [ ] Selector de listas en formulario de cliente (solo listas activas).
+- [ ] Selector de listas en formulario de cliente (solo listas de tipo `particular`, activas y vigentes).
 - [ ] Reflejar la lista asignada en la ficha y tabla de clientes.
 - [ ] Tests de asignación, nulabilidad y persistencia.
 
@@ -288,12 +288,15 @@ erDiagram
 |---|---|---|
 | id | bigint PK | |
 | name | varchar | único |
-| channel | varchar | `mostrador`, `online`, `general` |
+| name_normalized | varchar | único; comparación sin mayúsculas ni espacios externos |
+| scope | varchar | `canal` (precio base de un canal de venta) o `particular` (precio preferencial por cliente) |
+| channel | varchar | nullable; `mostrador`, `online`, `general`. Obligatorio si `scope = canal`, siempre null si `scope = particular` |
 | valid_from | date | obligatorio |
 | valid_to | date | nullable; $\ge$ valid_from |
 | is_active | boolean | default true |
 | description | text | nullable |
 | created_at / updated_at | timestamp | |
+*Restricciones de negocio:* dos listas con `scope = canal`, activas y del mismo `channel`, no pueden tener periodos superpuestos. El `channel = general` no puede quedar descubierto desde la fecha actual en adelante.
 
 ### `price_list_items` - HU-012
 | Columna | Tipo | Reglas |
@@ -316,8 +319,8 @@ erDiagram
 5. **Cuentas y Pagos:** Consultar la cuenta corriente del proveedor con su saldo pendiente; emitir un listado de pagos y egresos del período exportándolo a Excel.
 6. **Clientes:** Registrar un cliente Responsable Inscripto con CUIT validado y verificar la presencia del cliente protegido "Consumidor Final".
 7. **Puntos de Venta:** Acceder a Puntos de Venta desde el menú reconectado y constatar su asignación a sucursal y depósito.
-8. **Motor de Precios:** Cargar precios para un artículo en Lista General (\$200), Lista Mostrador (\$180) y Lista Mayorista (\$150).
-9. **Resolución de Precios:** Ejecutar simulación de venta comprobando que el cliente con lista asignada toma \$150, la venta de mostrador anónima toma \$180 y un artículo sin precio de mostrador toma los \$200 de la lista general.
+8. **Motor de Precios:** Cargar precios para un artículo en la Lista General (canal `general`, \$200), la Lista Mostrador (canal `mostrador`, \$180) y la Lista Mayorista (tipo `particular`, \$150), mostrando que la particular convive con las de canal sin que el sistema la rechace por superposición.
+9. **Resolución de Precios:** Ejecutar simulación de venta comprobando que el cliente con la Lista Mayorista asignada toma \$150, la venta de mostrador anónima toma \$180 y un artículo sin precio de mostrador toma los \$200 de la lista general.
 
 ---
 

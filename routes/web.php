@@ -12,6 +12,7 @@ use App\Http\Controllers\Inventory\StockMovementHistoryController;
 use App\Http\Controllers\Inventory\StockParameterController;
 use App\Http\Controllers\Inventory\WarehouseController;
 use App\Http\Controllers\Organization\BranchController;
+use App\Http\Controllers\Pricing\PriceListController;
 use App\Http\Controllers\Pricing\VatRateController;
 use App\Http\Controllers\Purchasing\PaymentOrderController;
 use App\Http\Controllers\Purchasing\PurchaseOrderController;
@@ -106,6 +107,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/', [VatRateController::class, 'store'])->name('store');
         Route::put('{vat_rate}', [VatRateController::class, 'update'])->name('update');
         Route::patch('{vat_rate}/toggle', [VatRateController::class, 'toggleStatus'])->name('toggle');
+    });
+
+    Route::prefix('pricing/price-lists')->name('pricing.price-lists.')->group(function () {
+        Route::get('/', [PriceListController::class, 'index'])->name('index');
+        Route::post('/', [PriceListController::class, 'store'])->name('store');
+        Route::put('{price_list}', [PriceListController::class, 'update'])->name('update');
+        Route::patch('{price_list}/toggle', [PriceListController::class, 'toggleStatus'])->name('toggle');
     });
 
     Route::prefix('sales/payment-methods')->name('sales.payment-methods.')->group(function () {
