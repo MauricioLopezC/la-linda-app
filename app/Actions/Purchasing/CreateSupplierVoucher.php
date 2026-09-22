@@ -21,6 +21,7 @@ class CreateSupplierVoucher
         private ResolveSupplierVoucherStatus $resolveStatus,
         private AssociateCreditNoteToInvoice $associateCreditNote,
         private ImputeSupplierVoucherToPurchaseOrders $imputeToPurchaseOrders,
+        private UpdateLastPurchaseCost $updateLastPurchaseCost,
     ) {}
 
     /**
@@ -79,6 +80,8 @@ class CreateSupplierVoucher
             if (! empty($imputationsData)) {
                 $this->imputeToPurchaseOrders->handle($voucher, $imputationsData);
             }
+
+            $this->updateLastPurchaseCost->handle($voucher);
 
             Log::info('Supplier voucher created', [
                 'supplier_voucher_id' => $voucher->id,

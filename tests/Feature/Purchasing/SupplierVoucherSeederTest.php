@@ -3,6 +3,7 @@
 use App\Enums\Purchasing\SupplierVoucherStatus;
 use App\Enums\Purchasing\SupplierVoucherType;
 use App\Models\Catalog\Article;
+use App\Models\Catalog\ArticleSupplier;
 use App\Models\Purchasing\SupplierVoucher;
 use App\Models\Purchasing\SupplierVoucherItem;
 use App\Models\User;
@@ -27,6 +28,18 @@ test('supplier voucher seeder creates representative idempotent demo data', func
     expect(SupplierVoucher::query()->get()->contains(
         fn (SupplierVoucher $voucher): bool => $voucher->isOverdue()
     ))->toBeTrue();
+
+    $invoices = SupplierVoucher::query()->where('type', SupplierVoucherType::Invoice)->with('items')->get();
+    foreach ($invoices as $invoice) {
+        foreach ($invoice->items as $item) {
+            $association = ArticleSupplier::query()
+                ->where('supplier_id', $invoice->supplier_id)
+                ->where('article_id', $item->article_id)
+                ->sole();
+
+            expect($association->last_cost)->toBe($item->unit_price);
+        }
+    }
 });
 
 test('the seeder demonstrates both a bound and a free credit note', function () {
