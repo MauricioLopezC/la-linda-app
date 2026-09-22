@@ -67,6 +67,7 @@ python trello_cli.py crear-columna "Nombre de la columna" [BOARD_ID]
 python trello_cli.py subir sprint-backlog-3.md 6a7676... product-backlog.md
 python trello_cli.py mover HU-037 "En progreso"
 python trello_cli.py asignar HU-037 Chiara
+python trello_cli.py dependencias HU-037
 python trello_cli.py sincronizar sprint-backlog-3.md 6a7676...
 ```
 
@@ -150,6 +151,17 @@ progreso"** y agrega el motivo como comentario en la tarjeta de Trello, para
 que quien retome la historia sepa qué corregir. Si se corre sin el segundo
 argumento (`python trello_cli.py revisar HU-037`), pregunta interactivamente
 — queda a criterio de la persona que está revisando, tal como se pidió.
+
+Al finalizar la revisión (sea `ok` o `rechazado`), el comando analiza
+automáticamente el grafo de dependencias del sprint backlog actual y muestra
+qué historias quedan desbloqueadas (listas para desarrollar) o frenadas, junto
+con el integrante responsable asignado a cada una.
+
+```
+python trello_cli.py dependencias HU-037
+```
+Permite consultar en cualquier momento el árbol de dependencias, desbloqueos y
+responsables de una historia de usuario sin modificar el estado en Trello.
 
 Los nombres de columna (`En progreso`, `En Revisión`, `Finalizado`) están
 definidos como constantes al principio de `trello_lib.py`

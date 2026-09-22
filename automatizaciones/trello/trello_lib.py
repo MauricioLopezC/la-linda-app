@@ -537,3 +537,233 @@ def agregar_comentario(card_id, texto):
     res = _post(f"https://api.trello.com/1/cards/{card_id}/actions/comments", text=texto)
     return res.status_code == 200
 
+
+# ── Análisis de dependencias e impacto en el sprint ───────────────────────
+
+def detectar_sprint_backlog_actual(backlog_dir=None):
+    """Localiza el archivo sprint-backlog-*.md con el número de sprint más alto
+    en docs/backlog/ (o backlog_dir)."""
+    if not backlog_dir:
+        candidatos_dir = [
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "docs", "backlog"),
+            os.path.join("docs", "backlog"),
+        ]
+        for c in candidatos_dir:
+            if os.path.isdir(c):
+                backlog_dir = c
+                break
+    if not backlog_dir or not os.path.isdir(backlog_dir):
+        return None
+
+    archivos = [
+        f for f in os.listdir(backlog_dir)
+        if re.match(r"^sprint-backlog-\d+\.md$", f)
+    ]
+    if not archivos:
+        return None
+
+    def _sprint_num(nombre):
+        m = re.search(r"\d+", nombre)
+        return int(m.group()) if m else 0
+
+    archivos.sort(key=_sprint_num, reverse=True)
+    return os.path.join(backlog_dir, archivos[0])
+
+
+def parse_lista_dependencias(depende_str):
+    """Parsea una cadena como 'HU-022, HU-012' o 'HU-011' devolviendo una lista de IDs."""
+    if not depende_str or depende_str.strip().lower() in ("nada", "ninguna", "ninguno", "-", ""):
+        return []
+    return [d.strip() for d in re.findall(r"(?:HU|EPIC)-\d+", depende_str)]
+
+
+def parse_frentes(filepath):
+    """Extrae qué HUs componen cada frente desde un sprint-backlog-N.md."""
+    if not filepath or not os.path.isfile(filepath):
+        return {}
+    with open(filepath, "r", encoding="utf-8") as f:
+        content = f.read()
+    frentes = {}
+    pattern = r"│\s*(FRENTE\s+\d+[^:│\n]*):\s*([^\n│]+)\s*│([\s\S]*?)(?=└|├|┌)"
+    for m in re.finditer(pattern, content):
+        nombre = f"{m.group(1).strip()}: {m.group(2).strip()}"
+        bloque = m.group(3)
+        hus = re.findall(r"(?:HU|EPIC)-\d+", bloque)
+        if hus:
+            frentes[nombre] = hus
+    return frentes
+
+
+def analizar_impacto_dependencias(board_id, hu_id, aprobado=True, sprint_backlog_path=None):
+    """Analiza el impacto de la revisión de hu_id en el grafo de dependencias
+    del sprint actual y en las tarjetas de Trello.
+    Devuelve un diccionario estructurado."""
+    sprint_path = sprint_backlog_path or detectar_sprint_backlog_actual()
+    if not sprint_path or not os.path.isfile(sprint_path):
+        return {
+            "hu_id": hu_id,
+            "error": "No se encontró el archivo del sprint backlog actual."
+        }
+
+    stories = parse_markdown(sprint_path)
+    asignaciones = cargar_asignaciones()
+    stories_by_id = {s["id"]: s for s in stories}
+
+    current_story = stories_by_id.get(hu_id, {
+        "id": hu_id,
+        "title": hu_id,
+        "owner": asignaciones.get(hu_id, "Sin asignar")
+    })
+
+    columnas = {c["id"]: c["name"] for c in listar_columnas(board_id)}
+    cards = get_cards_en_tablero(board_id)
+
+    # Estado de cada historia en Trello
+    hu_columna = {}
+    for c in cards:
+        for s_id in list(stories_by_id.keys()) + [hu_id]:
+            if c["name"].startswith(f"[{s_id}]") or c["name"].startswith(f"{s_id} "):
+                hu_columna[s_id] = columnas.get(c["idList"], "Desconocida")
+
+    # Si fue aprobado, en la simulación hu_id ya está en Finalizado
+    if aprobado:
+        hu_columna[hu_id] = COLUMNA_FINALIZADO
+
+    def _esta_cumplida(dep_id):
+        if dep_id == hu_id and aprobado:
+            return True
+        col = hu_columna.get(dep_id)
+        if col:
+            col_norm = col.strip().lower()
+            return col_norm in ("finalizado", "sprint 1", "sprint 2", "sprint 3")
+        # Si no tiene tarjeta en el tablero o no está en el sprint actual,
+        # es una dependencia de un sprint previo ya resuelta.
+        if dep_id not in stories_by_id:
+            return True
+        return False
+
+    totalmente_desbloqueadas = []
+    parcialmente_desbloqueadas = []
+    historias_bloqueadas_por_rechazo = []
+
+    for s in stories:
+        s_id = s["id"]
+        if s_id == hu_id:
+            continue
+        deps = parse_lista_dependencias(s.get("depende_de"))
+        if hu_id in deps:
+            owner = s.get("owner") or asignaciones.get(s_id, "Sin asignar")
+            col = hu_columna.get(s_id, "Hacer")
+            if aprobado:
+                faltantes = [d for d in deps if not _esta_cumplida(d)]
+                completadas = [d for d in deps if _esta_cumplida(d)]
+                if not faltantes:
+                    totalmente_desbloqueadas.append({
+                        "id": s_id,
+                        "title": s["title"],
+                        "owner": owner,
+                        "columna": col,
+                    })
+                else:
+                    parcialmente_desbloqueadas.append({
+                        "id": s_id,
+                        "title": s["title"],
+                        "owner": owner,
+                        "columna": col,
+                        "faltantes": faltantes,
+                        "completadas": completadas,
+                    })
+            else:
+                historias_bloqueadas_por_rechazo.append({
+                    "id": s_id,
+                    "title": s["title"],
+                    "owner": owner,
+                    "columna": col,
+                })
+
+    # Verificar si se completó algún frente o todo el sprint
+    frentes = parse_frentes(sprint_path)
+    frentes_completados = []
+    for f_nombre, f_hus in frentes.items():
+        if hu_id in f_hus:
+            if all(_esta_cumplida(h) for h in f_hus):
+                frentes_completados.append(f_nombre)
+
+    sprint_completo = all(_esta_cumplida(s["id"]) for s in stories)
+
+    return {
+        "hu_id": hu_id,
+        "titulo": current_story.get("title", hu_id),
+        "owner": current_story.get("owner") or asignaciones.get(hu_id, "Sin asignar"),
+        "aprobado": aprobado,
+        "sprint_archivo": os.path.basename(sprint_path),
+        "totalmente_desbloqueadas": totalmente_desbloqueadas,
+        "parcialmente_desbloqueadas": parcialmente_desbloqueadas,
+        "historias_bloqueadas": historias_bloqueadas_por_rechazo,
+        "es_terminal": aprobado and len(totalmente_desbloqueadas) == 0 and len(parcialmente_desbloqueadas) == 0,
+        "frentes_completados": frentes_completados,
+        "sprint_completo": sprint_completo,
+    }
+
+
+def formatear_impacto_dependencias(impacto):
+    """Devuelve un texto formateado en Markdown listo para imprimir o incluir en el informe."""
+    if not impacto or "error" in impacto:
+        return impacto.get("error", "No se pudo determinar el impacto.") if impacto else ""
+
+    lineas = []
+    hu_id = impacto["hu_id"]
+
+    if impacto["aprobado"]:
+        if impacto["totalmente_desbloqueadas"]:
+            lineas.append("🔓 **Historias desbloqueadas (listas para desarrollar):**")
+            for h in impacto["totalmente_desbloqueadas"]:
+                col_norm = h["columna"].strip().lower()
+                if col_norm in ("finalizado",):
+                    estado_nota = "*(Ya finalizada)*"
+                elif col_norm in ("en revisión", "en revision"):
+                    estado_nota = "*(Ya en revisión)*"
+                elif col_norm in ("en progreso",):
+                    estado_nota = "*(Ya iniciada en progreso en paralelo)*"
+                else:
+                    estado_nota = "👉 *¡Lista para comenzar su desarrollo!*"
+                lineas.append(
+                    f"- `[{h['id']}] {h['title']}` — Asignada a: **{h['owner']}** "
+                    f"(Columna actual: `{h['columna']}`). {estado_nota}"
+                )
+
+        if impacto["parcialmente_desbloqueadas"]:
+            lineas.append("⏳ **Desbloqueos parciales (avanzan pero esperan otras dependencias):**")
+            for h in impacto["parcialmente_desbloqueadas"]:
+                faltantes_str = ", ".join(f"`[{f}]`" for f in h["faltantes"])
+                completadas_str = ", ".join(f"`[{c}]` ✅" for c in h["completadas"])
+                lineas.append(
+                    f"- `[{h['id']}] {h['title']}` — Asignada a: **{h['owner']}** "
+                    f"(Listas: {completadas_str} | Aún espera: {faltantes_str})"
+                )
+
+        if impacto["es_terminal"]:
+            lineas.append("ℹ️ **Historia terminal en el sprint:** No desbloquea dependencias directas adicionales en este sprint.")
+
+        if impacto["frentes_completados"]:
+            for f in impacto["frentes_completados"]:
+                lineas.append(f"🎉 **¡Hito cumplido!** {f} completado al 100%.")
+
+        if impacto["sprint_completo"]:
+            lineas.append(f"🏆 **¡Sprint completo!** Todas las historias de {impacto['sprint_archivo']} están finalizadas.")
+
+    else:
+        lineas.append(f"👤 **Responsable de aplicar correcciones:** **{impacto['owner']}**")
+        if impacto["historias_bloqueadas"]:
+            lineas.append("⚠️ **Historias en espera de esta resolución (posible cuello de botella):**")
+            for h in impacto["historias_bloqueadas"]:
+                lineas.append(
+                    f"- `[{h['id']}] {h['title']}` — Asignada a: **{h['owner']}** "
+                    f"(Queda frenada hasta que `{hu_id}` sea aprobada)."
+                )
+        else:
+            lineas.append(f"ℹ️ Ninguna otra historia del sprint depende directamente de `{hu_id}`.")
+
+    return "\n".join(lineas)
+
+
