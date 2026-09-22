@@ -32,22 +32,9 @@ class UpdateArticleSupplier
             ]);
         }
 
-        // Cost validation: must be > 0 when informed
-        $lastCost = null;
-        if (isset($data['last_cost']) && $data['last_cost'] !== '') {
-            $numericCost = (float) $data['last_cost'];
-            if ($numericCost <= 0) {
-                throw ValidationException::withMessages([
-                    'last_cost' => 'El costo debe ser mayor a cero cuando se informa.',
-                ]);
-            }
-            $lastCost = $numericCost;
-        }
-
-        return DB::transaction(function () use ($association, $data, $lastCost): ArticleSupplier {
+        return DB::transaction(function () use ($association, $data): ArticleSupplier {
             $association->update([
                 'supplier_article_code' => trim($data['supplier_article_code']),
-                'last_cost' => $lastCost,
                 'notes' => isset($data['notes']) ? trim((string) $data['notes']) ?: null : null,
             ]);
 

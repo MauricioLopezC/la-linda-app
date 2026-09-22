@@ -5,6 +5,7 @@ use App\Enums\Purchasing\SupplierVoucherLetter;
 use App\Enums\Purchasing\SupplierVoucherStatus;
 use App\Enums\Purchasing\SupplierVoucherType;
 use App\Models\Catalog\Article;
+use App\Models\Catalog\ArticleSupplier;
 use App\Models\Purchasing\PaymentOrderItem;
 use App\Models\Purchasing\Supplier;
 use App\Models\Purchasing\SupplierVoucher;
@@ -117,6 +118,7 @@ test('user registers the transcribed total and complete historical lines', funct
     $user = User::factory()->create();
     $supplier = Supplier::factory()->create();
     $article = Article::factory()->create(['description' => 'Descripción actual']);
+    ArticleSupplier::factory()->create(['article_id' => $article->id, 'supplier_id' => $supplier->id]);
 
     $response = $this->actingAs($user)
         ->post(route('purchasing.vouchers.store'), validSupplierVoucherData($supplier, $article))

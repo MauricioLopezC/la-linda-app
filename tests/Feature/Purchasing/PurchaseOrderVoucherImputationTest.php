@@ -1,17 +1,21 @@
 <?php
 
+use App\Actions\Purchasing\ImputeSupplierVoucherToPurchaseOrders;
 use App\Enums\Purchasing\PurchaseOrderStatus;
 use App\Enums\Purchasing\SupplierVoucherLetter;
 use App\Enums\Purchasing\SupplierVoucherStatus;
 use App\Enums\Purchasing\SupplierVoucherType;
 use App\Models\Catalog\Article;
+use App\Models\Catalog\ArticleSupplier;
 use App\Models\Inventory\Warehouse;
 use App\Models\Purchasing\PurchaseOrder;
 use App\Models\Purchasing\PurchaseOrderItem;
 use App\Models\Purchasing\PurchaseOrderVoucherImputation;
 use App\Models\Purchasing\Supplier;
 use App\Models\Purchasing\SupplierVoucher;
+use App\Models\Purchasing\SupplierVoucherItem;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('user can impute a single purchase order item when registering a supplier voucher', function () {
@@ -19,6 +23,7 @@ test('user can impute a single purchase order item when registering a supplier v
     $supplier = Supplier::factory()->create();
     $warehouse = Warehouse::factory()->create();
     $article = Article::factory()->create();
+    ArticleSupplier::factory()->create(['article_id' => $article->id, 'supplier_id' => $supplier->id]);
 
     $order = PurchaseOrder::factory()->issued()->create([
         'supplier_id' => $supplier->id,
@@ -78,6 +83,7 @@ test('order with pending balance remains in emitida status until fully received'
     $supplier = Supplier::factory()->create();
     $warehouse = Warehouse::factory()->create();
     $article = Article::factory()->create();
+    ArticleSupplier::factory()->create(['article_id' => $article->id, 'supplier_id' => $supplier->id]);
 
     $order = PurchaseOrder::factory()->issued()->create([
         'supplier_id' => $supplier->id,
@@ -127,6 +133,7 @@ test('surplus / excess delivery is accepted and recorded in quantity_excess with
     $supplier = Supplier::factory()->create();
     $warehouse = Warehouse::factory()->create();
     $article = Article::factory()->create();
+    ArticleSupplier::factory()->create(['article_id' => $article->id, 'supplier_id' => $supplier->id]);
 
     $order = PurchaseOrder::factory()->issued()->create([
         'supplier_id' => $supplier->id,
@@ -186,6 +193,7 @@ test('multiple vouchers can partially impute the same purchase order line until 
     $supplier = Supplier::factory()->create();
     $warehouse = Warehouse::factory()->create();
     $article = Article::factory()->create();
+    ArticleSupplier::factory()->create(['article_id' => $article->id, 'supplier_id' => $supplier->id]);
 
     $order = PurchaseOrder::factory()->issued()->create([
         'supplier_id' => $supplier->id,
@@ -260,7 +268,9 @@ test('a single voucher can impute items from multiple purchase orders of the sam
     $supplier = Supplier::factory()->create();
     $warehouse = Warehouse::factory()->create();
     $articleA = Article::factory()->create();
+    ArticleSupplier::factory()->create(['article_id' => $articleA->id, 'supplier_id' => $supplier->id]);
     $articleB = Article::factory()->create();
+    ArticleSupplier::factory()->create(['article_id' => $articleB->id, 'supplier_id' => $supplier->id]);
 
     $order1 = PurchaseOrder::factory()->issued()->create([
         'supplier_id' => $supplier->id,
@@ -330,6 +340,7 @@ test('imputing an item from a different supplier fails validation', function () 
     $supplierB = Supplier::factory()->create();
     $warehouse = Warehouse::factory()->create();
     $article = Article::factory()->create();
+    ArticleSupplier::factory()->create(['article_id' => $article->id, 'supplier_id' => $supplierA->id]);
 
     $orderB = PurchaseOrder::factory()->issued()->create([
         'supplier_id' => $supplierB->id,
@@ -372,6 +383,7 @@ test('imputing an item from a draft purchase order fails validation', function (
     $supplier = Supplier::factory()->create();
     $warehouse = Warehouse::factory()->create();
     $article = Article::factory()->create();
+    ArticleSupplier::factory()->create(['article_id' => $article->id, 'supplier_id' => $supplier->id]);
 
     $draftOrder = PurchaseOrder::factory()->create([
         'supplier_id' => $supplier->id,
@@ -414,6 +426,7 @@ test('annulling a supplier voucher restores purchase order pending balance and r
     $supplier = Supplier::factory()->create();
     $warehouse = Warehouse::factory()->create();
     $article = Article::factory()->create();
+    ArticleSupplier::factory()->create(['article_id' => $article->id, 'supplier_id' => $supplier->id]);
 
     $order = PurchaseOrder::factory()->issued()->create([
         'supplier_id' => $supplier->id,
@@ -477,6 +490,7 @@ test('associable purchase orders endpoint returns only issued orders with pendin
     $supplierB = Supplier::factory()->create();
     $warehouse = Warehouse::factory()->create();
     $article = Article::factory()->create();
+    ArticleSupplier::factory()->create(['article_id' => $article->id, 'supplier_id' => $supplierA->id]);
 
     // Order 1: Issued with pending items for Supplier A (should be returned)
     $order1 = PurchaseOrder::factory()->issued()->create([
@@ -541,6 +555,7 @@ test('purchase order show page provides imputed vouchers and received breakdown 
     $supplier = Supplier::factory()->create();
     $warehouse = Warehouse::factory()->create();
     $article = Article::factory()->create();
+    ArticleSupplier::factory()->create(['article_id' => $article->id, 'supplier_id' => $supplier->id]);
 
     $order = PurchaseOrder::factory()->issued()->create([
         'supplier_id' => $supplier->id,
@@ -594,7 +609,9 @@ test('imputing an item with non-matching article_id fails validation', function 
     $supplier = Supplier::factory()->create();
     $warehouse = Warehouse::factory()->create();
     $articleA = Article::factory()->create(['description' => 'Artículo A']);
+    ArticleSupplier::factory()->create(['article_id' => $articleA->id, 'supplier_id' => $supplier->id]);
     $articleB = Article::factory()->create(['description' => 'Artículo B']);
+    ArticleSupplier::factory()->create(['article_id' => $articleB->id, 'supplier_id' => $supplier->id]);
 
     $order = PurchaseOrder::factory()->issued()->create([
         'supplier_id' => $supplier->id,
@@ -637,6 +654,7 @@ test('imputing an item with zero pending balance fails validation', function () 
     $supplier = Supplier::factory()->create();
     $warehouse = Warehouse::factory()->create();
     $article = Article::factory()->create();
+    ArticleSupplier::factory()->create(['article_id' => $article->id, 'supplier_id' => $supplier->id]);
 
     $order = PurchaseOrder::factory()->issued()->create([
         'supplier_id' => $supplier->id,
@@ -699,4 +717,68 @@ test('imputing an item with zero pending balance fails validation', function () 
     ]);
 
     $response->assertSessionHasErrors('items.0.purchase_order_item_id');
+});
+
+test('multiple voucher lines for one order item share the preloaded pending balance', function () {
+    $supplier = Supplier::factory()->create();
+    $article = Article::factory()->create();
+    $order = PurchaseOrder::factory()->issued()->create(['supplier_id' => $supplier->id]);
+    $poItem = PurchaseOrderItem::factory()->create([
+        'purchase_order_id' => $order->id,
+        'article_id' => $article->id,
+        'quantity' => '10.000',
+    ]);
+    $voucher = SupplierVoucher::factory()->invoice()->create(['supplier_id' => $supplier->id]);
+    $voucherItems = collect([1, 2])->map(fn (int $position) => SupplierVoucherItem::factory()->create([
+        'supplier_voucher_id' => $voucher->id,
+        'position' => $position,
+        'article_id' => $article->id,
+        'quantity' => '6.000',
+    ]));
+
+    app(ImputeSupplierVoucherToPurchaseOrders::class)->handle($voucher, $voucherItems->map(
+        fn (SupplierVoucherItem $item): array => ['item' => $item, 'purchase_order_item_id' => $poItem->id]
+    )->all());
+
+    $imputations = PurchaseOrderVoucherImputation::query()->orderBy('id')->get();
+    expect($imputations)->toHaveCount(2)
+        ->and($imputations[0]->quantity_received)->toBe('6.000')
+        ->and($imputations[0]->quantity_excess)->toBe('0.000')
+        ->and($imputations[1]->quantity_received)->toBe('4.000')
+        ->and($imputations[1]->quantity_excess)->toBe('2.000')
+        ->and($order->fresh()->status)->toBe(PurchaseOrderStatus::Fulfilled);
+});
+
+test('purchase order items are preloaded in one query before imputation', function () {
+    $supplier = Supplier::factory()->create();
+    $order = PurchaseOrder::factory()->issued()->create(['supplier_id' => $supplier->id]);
+    $articles = Article::factory()->count(3)->create();
+    $poItems = $articles->map(fn (Article $article) => PurchaseOrderItem::factory()->create([
+        'purchase_order_id' => $order->id,
+        'article_id' => $article->id,
+        'quantity' => '5.000',
+    ]));
+    $voucher = SupplierVoucher::factory()->invoice()->create(['supplier_id' => $supplier->id]);
+    $voucherItems = $articles->map(fn (Article $article, int $index) => SupplierVoucherItem::factory()->create([
+        'supplier_voucher_id' => $voucher->id,
+        'position' => $index + 1,
+        'article_id' => $article->id,
+        'quantity' => '2.000',
+    ]));
+
+    DB::enableQueryLog();
+    app(ImputeSupplierVoucherToPurchaseOrders::class)->handle($voucher, $voucherItems->map(
+        fn (SupplierVoucherItem $item, int $index): array => [
+            'item' => $item,
+            'purchase_order_item_id' => $poItems[$index]->id,
+        ]
+    )->all());
+    $queries = collect(DB::getQueryLog());
+    DB::disableQueryLog();
+
+    $batchedItemSelects = $queries->filter(fn (array $query): bool => str_contains(strtolower($query['query']), 'from "purchase_order_items"')
+        && str_contains(strtolower($query['query']), ' in ('));
+
+    expect($batchedItemSelects)->toHaveCount(1)
+        ->and(PurchaseOrderVoucherImputation::query()->count())->toBe(3);
 });

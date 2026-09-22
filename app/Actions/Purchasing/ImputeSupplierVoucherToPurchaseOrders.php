@@ -2,8 +2,7 @@
 
 namespace App\Actions\Purchasing;
 
-use App\Enums\Purchasing\PurchaseOrderStatus;
-use App\Models\Purchasing\PurchaseOrder;
+use App\Enums\Purchasing\SupplierVoucherStatus;
 use App\Models\Purchasing\PurchaseOrderItem;
 use App\Models\Purchasing\PurchaseOrderVoucherImputation;
 use App\Models\Purchasing\SupplierVoucher;
@@ -12,6 +11,8 @@ use Illuminate\Validation\ValidationException;
 
 class ImputeSupplierVoucherToPurchaseOrders
 {
+    public function __construct(private EvaluatePurchaseOrderFulfillment $evaluateFulfillment) {}
+
     /**
      * Imputes the lines of a supplier voucher to their matching purchase order items.
      *
@@ -23,6 +24,26 @@ class ImputeSupplierVoucherToPurchaseOrders
             return;
         }
 
+        $poItemIds = collect($imputationsData)
+            ->pluck('purchase_order_item_id')
+            ->unique()
+            ->sort()
+            ->values();
+        $poItems = PurchaseOrderItem::query()
+            ->with(['purchaseOrder', 'article'])
+            ->withSum([
+                'imputations as imputations_received_sum' => fn ($query) => $query
+                    ->whereHas('supplierVoucherItem.supplierVoucher', fn ($voucherQuery) => $voucherQuery
+                        ->where('status', '!=', SupplierVoucherStatus::Cancelled->value)),
+            ], 'quantity_received')
+            ->whereIn('id', $poItemIds)
+            ->orderBy('id')
+            ->lockForUpdate()
+            ->get()
+            ->keyBy('id');
+        $pendingQuantities = $poItems->mapWithKeys(
+            fn (PurchaseOrderItem $item): array => [$item->id => (float) $item->quantityPending()]
+        );
         $affectedOrders = [];
 
         foreach ($imputationsData as $data) {
@@ -31,10 +52,7 @@ class ImputeSupplierVoucherToPurchaseOrders
             $poItemId = $data['purchase_order_item_id'];
 
             /** @var PurchaseOrderItem|null $poItem */
-            $poItem = PurchaseOrderItem::query()
-                ->with(['purchaseOrder', 'article'])
-                ->lockForUpdate()
-                ->find($poItemId);
+            $poItem = $poItems->get($poItemId);
 
             if ($poItem === null) {
                 throw ValidationException::withMessages([
@@ -63,7 +81,7 @@ class ImputeSupplierVoucherToPurchaseOrders
             }
 
             $receivedQty = (float) $voucherItem->quantity;
-            $pendingQty = (float) $poItem->quantityPending();
+            $pendingQty = $pendingQuantities->get($poItem->id, 0.0);
 
             if ($pendingQty <= 0.0001) {
                 throw ValidationException::withMessages([
@@ -82,19 +100,10 @@ class ImputeSupplierVoucherToPurchaseOrders
                 'quantity_excess' => number_format($excessQty, 3, '.', ''),
             ]);
 
+            $pendingQuantities->put($poItem->id, max(0.0, $pendingQty - $appliedQty));
             $affectedOrders[$order->id] = $order;
         }
 
-        // Evaluar cumplimiento de las órdenes de compra afectadas (HU-038 preparation)
-        $ordersToEvaluate = PurchaseOrder::query()
-            ->whereIn('id', array_keys($affectedOrders))
-            ->with('items.imputations')
-            ->get();
-
-        foreach ($ordersToEvaluate as $order) {
-            if ($order->isFullyReceived()) {
-                $order->update(['status' => PurchaseOrderStatus::Fulfilled]);
-            }
-        }
+        $this->evaluateFulfillment->handleMany(array_keys($affectedOrders));
     }
 }

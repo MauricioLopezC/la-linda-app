@@ -19,7 +19,7 @@ class UpdateArticleSupplierRequest extends FormRequest
     {
         return [
             'supplier_article_code' => ['required', 'string', 'min:1', 'max:100'],
-            'last_cost' => ['nullable', 'numeric', 'gt:0'],
+            'last_cost' => ['prohibited'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ];
     }

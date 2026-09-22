@@ -58,13 +58,11 @@ export default function ManageSupplierArticlesDialog({
   const attachForm = useForm({
     article_id: '',
     supplier_article_code: '',
-    last_cost: '',
     notes: '',
   });
 
   const editForm = useForm({
     supplier_article_code: '',
-    last_cost: '',
     notes: '',
   });
 
@@ -100,7 +98,6 @@ export default function ManageSupplierArticlesDialog({
     setEditingItem(item);
     editForm.setData({
       supplier_article_code: item.supplier_article_code,
-      last_cost: item.last_cost ?? '',
       notes: item.notes ?? '',
     });
     editForm.clearErrors();
@@ -323,25 +320,6 @@ export default function ManageSupplierArticlesDialog({
                     />
                   </div>
 
-                  <div className="sm:col-span-2">
-                    <Label htmlFor="attach-art-cost" className="text-xs">
-                      Último costo ($)
-                    </Label>
-                    <Input
-                      id="attach-art-cost"
-                      type="number"
-                      step="0.01"
-                      min="0.01"
-                      placeholder="0.00"
-                      className="mt-1"
-                      value={attachForm.data.last_cost}
-                      onChange={(e) =>
-                        attachForm.setData('last_cost', e.target.value)
-                      }
-                    />
-                    <InputError message={attachForm.errors.last_cost} />
-                  </div>
-
                   <div className="sm:col-span-3">
                     <Label htmlFor="attach-art-notes" className="text-xs">
                       Observaciones
@@ -425,24 +403,6 @@ export default function ManageSupplierArticlesDialog({
                   required
                 />
                 <InputError message={editForm.errors.supplier_article_code} />
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="edit-art-last-cost">
-                  Último costo de compra conocido ($)
-                </Label>
-                <Input
-                  id="edit-art-last-cost"
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  placeholder="0.00"
-                  value={editForm.data.last_cost}
-                  onChange={(e) =>
-                    editForm.setData('last_cost', e.target.value)
-                  }
-                />
-                <InputError message={editForm.errors.last_cost} />
               </div>
 
               <div className="grid gap-2">
