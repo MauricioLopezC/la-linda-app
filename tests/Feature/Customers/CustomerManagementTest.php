@@ -4,6 +4,7 @@ use App\Enums\Customers\CustomerIdType;
 use App\Enums\Customers\CustomerTaxCondition;
 use App\Enums\Customers\PersonType;
 use App\Models\Customers\Customer;
+use App\Models\Pricing\PriceList;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -365,3 +366,132 @@ test('invalid phone formats are rejected for Argentina standard', function (stri
     'letters' => ['+54 9 abc 1234567'],
     'too short' => ['123'],
 ]);
+
+/*
+|--------------------------------------------------------------------------
+| HU-022: Asignar una lista de precios a un cliente
+|--------------------------------------------------------------------------
+*/
+
+test('user can assign a valid particular price list when creating a customer', function () {
+    $user = User::factory()->create();
+    $priceList = PriceList::factory()->particular()->create(['name' => 'Mayorista VIP']);
+
+    $response = $this->actingAs($user)->post(route('customers.store'), [
+        'person_type' => PersonType::Fisica->value,
+        'name' => 'Juan Mayorista',
+        'tax_condition' => CustomerTaxCondition::ConsumidorFinal->value,
+        'id_type' => CustomerIdType::SinIdentificar->value,
+        'price_list_id' => $priceList->id,
+    ]);
+
+    $response->assertRedirect()->assertSessionHasNoErrors();
+
+    $this->assertDatabaseHas('customers', [
+        'name' => 'Juan Mayorista',
+        'price_list_id' => $priceList->id,
+    ]);
+});
+
+test('user can assign and update a particular price list on an existing customer', function () {
+    $user = User::factory()->create();
+    $customer = Customer::factory()->consumidorFinal()->create(['name' => 'Cliente Base']);
+    $priceList = PriceList::factory()->particular()->create(['name' => 'Lista Preferencial A']);
+
+    $response = $this->actingAs($user)->put(route('customers.update', $customer), [
+        'person_type' => $customer->person_type->value,
+        'name' => $customer->name,
+        'tax_condition' => $customer->tax_condition->value,
+        'id_type' => $customer->id_type->value,
+        'price_list_id' => $priceList->id,
+    ]);
+
+    $response->assertRedirect()->assertSessionHasNoErrors();
+
+    expect($customer->fresh()->price_list_id)->toBe($priceList->id);
+
+    // Can also clear the assignment
+    $this->actingAs($user)->put(route('customers.update', $customer), [
+        'person_type' => $customer->person_type->value,
+        'name' => $customer->name,
+        'tax_condition' => $customer->tax_condition->value,
+        'id_type' => $customer->id_type->value,
+        'price_list_id' => null,
+    ])->assertRedirect()->assertSessionHasNoErrors();
+
+    expect($customer->fresh()->price_list_id)->toBeNull();
+});
+
+test('cannot assign a channel price list to a customer', function () {
+    $user = User::factory()->create();
+    $channelList = PriceList::factory()->forChannel('mostrador')->create(['name' => 'Lista Mostrador Base']);
+
+    $this->actingAs($user)->post(route('customers.store'), [
+        'person_type' => PersonType::Fisica->value,
+        'name' => 'Cliente Invalido',
+        'tax_condition' => CustomerTaxCondition::ConsumidorFinal->value,
+        'id_type' => CustomerIdType::SinIdentificar->value,
+        'price_list_id' => $channelList->id,
+    ])->assertSessionHasErrors(['price_list_id']);
+});
+
+test('cannot assign an inactive particular price list to a customer', function () {
+    $user = User::factory()->create();
+    $inactiveList = PriceList::factory()->particular()->inactive()->create(['name' => 'Lista Inactiva']);
+
+    $this->actingAs($user)->post(route('customers.store'), [
+        'person_type' => PersonType::Fisica->value,
+        'name' => 'Cliente Invalido',
+        'tax_condition' => CustomerTaxCondition::ConsumidorFinal->value,
+        'id_type' => CustomerIdType::SinIdentificar->value,
+        'price_list_id' => $inactiveList->id,
+    ])->assertSessionHasErrors(['price_list_id']);
+});
+
+test('cannot assign an expired particular price list to a customer', function () {
+    $user = User::factory()->create();
+    $expiredList = PriceList::factory()->particular()->vencida()->create(['name' => 'Lista Vencida']);
+
+    $this->actingAs($user)->post(route('customers.store'), [
+        'person_type' => PersonType::Fisica->value,
+        'name' => 'Cliente Invalido',
+        'tax_condition' => CustomerTaxCondition::ConsumidorFinal->value,
+        'id_type' => CustomerIdType::SinIdentificar->value,
+        'price_list_id' => $expiredList->id,
+    ])->assertSessionHasErrors(['price_list_id']);
+});
+
+test('default customer consumidor final cannot be assigned a price list because it is protected', function () {
+    $user = User::factory()->create();
+    $defaultCustomer = Customer::factory()->defaultCustomer()->create();
+    $particularList = PriceList::factory()->particular()->create();
+
+    $this->actingAs($user)->put(route('customers.update', $defaultCustomer), [
+        'person_type' => $defaultCustomer->person_type->value,
+        'name' => 'Nuevo Nombre',
+        'tax_condition' => $defaultCustomer->tax_condition->value,
+        'id_type' => $defaultCustomer->id_type->value,
+        'price_list_id' => $particularList->id,
+    ])->assertSessionHasErrors(['customer']);
+});
+
+test('customer index provides available price lists and customer price list name', function () {
+    $user = User::factory()->create();
+    $particularList = PriceList::factory()->particular()->create(['name' => 'Lista Mayoristas']);
+    $channelList = PriceList::factory()->forChannel('mostrador')->create(['name' => 'Mostrador']);
+    $expiredList = PriceList::factory()->particular()->vencida()->create(['name' => 'Lista Vieja']);
+
+    $customer = Customer::factory()->consumidorFinal()->create([
+        'name' => 'Carlos Cliente',
+        'price_list_id' => $particularList->id,
+    ]);
+
+    $this->actingAs($user)->get(route('customers.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('customers/index')
+            ->has('availablePriceLists', 1)
+            ->where('availablePriceLists.0.id', $particularList->id)
+            ->where('customers.0.price_list_name', 'Lista Mayoristas')
+        );
+});

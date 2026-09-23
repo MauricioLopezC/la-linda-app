@@ -219,10 +219,10 @@ o neto. No cambia el esquema, pero HU-041 (cálculo de IVA y totales) necesita l
 canal obliga a recargar todos los precios a mano.
 
 ### HU-022 — Asignar una lista de precios a un cliente (2 SP)
-- [ ] Agregar columna `price_list_id` (nullable, FK a `price_lists`) en `customers`.
-- [ ] Selector de listas en formulario de cliente (solo listas de tipo `particular`, activas y vigentes).
-- [ ] Reflejar la lista asignada en la ficha y tabla de clientes.
-- [ ] Tests de asignación, nulabilidad y persistencia.
+- [x] Agregar columna `price_list_id` (nullable, FK a `price_lists`) en `customers`.
+- [x] Selector de listas en formulario de cliente (solo listas de tipo `particular`, activas y vigentes).
+- [x] Reflejar la lista asignada en la ficha y tabla de clientes.
+- [x] Tests de asignación, nulabilidad y persistencia.
 
 ### HU-056 — Resolver el precio de venta según cliente y canal (8 SP)
 - [ ] Crear Action invocable `App\Actions\Pricing\ResolveArticlePrice`.

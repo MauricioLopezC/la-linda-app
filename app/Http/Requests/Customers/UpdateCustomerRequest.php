@@ -100,6 +100,7 @@ class UpdateCustomerRequest extends FormRequest
                 },
             ],
             'id_number' => $idNumberRules,
+            'price_list_id' => ['nullable', 'integer', Rule::exists('price_lists', 'id')],
             'address' => ['nullable', 'string', 'max:255'],
             'phone' => [
                 'nullable',
