@@ -7,13 +7,16 @@ use App\Actions\Customers\DeleteCustomer;
 use App\Actions\Customers\ToggleCustomerStatus;
 use App\Actions\Customers\UpdateCustomer;
 use App\Data\Customers\CustomerData;
+use App\Data\Pricing\PriceListData;
 use App\Enums\Customers\CustomerIdType;
 use App\Enums\Customers\CustomerTaxCondition;
 use App\Enums\Customers\PersonType;
+use App\Enums\Pricing\PriceListScope;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Customers\StoreCustomerRequest;
 use App\Http\Requests\Customers\UpdateCustomerRequest;
 use App\Models\Customers\Customer;
+use App\Models\Pricing\PriceList;
 use App\Rules\Customers\ValidCuit;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -26,6 +29,7 @@ class CustomerController extends Controller
     public function index(Request $request): Response
     {
         $customers = Customer::query()
+            ->with('priceList')
             ->when($request->filled('search'), function (Builder $query) use ($request) {
                 $search = trim((string) $request->input('search'));
                 $cleanSearch = ValidCuit::sanitize($search);
@@ -57,11 +61,20 @@ class CustomerController extends Controller
             ->orderBy('name')
             ->get();
 
+        /** Listas particulares activas y vigentes disponibles para asignar a clientes (HU-022). */
+        $availablePriceLists = PriceList::query()
+            ->where('scope', PriceListScope::Particular)
+            ->active()
+            ->currentlyValid()
+            ->orderBy('name')
+            ->get();
+
         return Inertia::render('customers/index', [
             'customers' => CustomerData::collect($customers),
             'taxConditions' => CustomerTaxCondition::toOptions(),
             'personTypes' => PersonType::toOptions(),
             'idTypes' => CustomerIdType::toOptions(),
+            'availablePriceLists' => PriceListData::collect($availablePriceLists),
             'filters' => [
                 'search' => (string) $request->input('search', ''),
                 'tax_condition' => (string) $request->input('tax_condition', 'all'),
