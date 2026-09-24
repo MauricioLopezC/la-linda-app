@@ -4,6 +4,7 @@ namespace App\Actions\Customers;
 
 use App\Enums\Customers\CustomerIdType;
 use App\Enums\Pricing\PriceListScope;
+use App\Enums\Pricing\PriceListValidityStatus;
 use App\Models\Customers\Customer;
 use App\Models\Pricing\PriceList;
 use App\Rules\Customers\ValidCuit;
@@ -87,9 +88,15 @@ class CreateCustomer
             ]);
         }
 
-        if ($priceList->validityStatus()->value === 'vencida') {
+        if ($priceList->validityStatus() === PriceListValidityStatus::Vencida) {
             throw ValidationException::withMessages([
                 'price_list_id' => 'La lista de precios seleccionada está vencida.',
+            ]);
+        }
+
+        if ($priceList->validityStatus() === PriceListValidityStatus::Futura) {
+            throw ValidationException::withMessages([
+                'price_list_id' => 'La lista de precios seleccionada aún no está vigente.',
             ]);
         }
     }

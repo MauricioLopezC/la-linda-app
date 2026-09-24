@@ -495,3 +495,30 @@ test('customer index provides available price lists and customer price list name
             ->where('customers.0.price_list_name', 'Lista Mayoristas')
         );
 });
+
+test('cannot assign a future particular price list to a customer on create', function () {
+    $user = User::factory()->create();
+    $futureList = PriceList::factory()->particular()->futura()->create(['name' => 'Lista Futura']);
+
+    $this->actingAs($user)->post(route('customers.store'), [
+        'person_type' => PersonType::Fisica->value,
+        'name' => 'Cliente Invalido',
+        'tax_condition' => CustomerTaxCondition::ConsumidorFinal->value,
+        'id_type' => CustomerIdType::SinIdentificar->value,
+        'price_list_id' => $futureList->id,
+    ])->assertSessionHasErrors(['price_list_id']);
+});
+
+test('cannot assign a future particular price list to a customer on update', function () {
+    $user = User::factory()->create();
+    $customer = Customer::factory()->consumidorFinal()->create(['name' => 'Cliente Existente']);
+    $futureList = PriceList::factory()->particular()->futura()->create(['name' => 'Lista Futura Edicion']);
+
+    $this->actingAs($user)->put(route('customers.update', $customer), [
+        'person_type' => $customer->person_type->value,
+        'name' => $customer->name,
+        'tax_condition' => $customer->tax_condition->value,
+        'id_type' => $customer->id_type->value,
+        'price_list_id' => $futureList->id,
+    ])->assertSessionHasErrors(['price_list_id']);
+});
