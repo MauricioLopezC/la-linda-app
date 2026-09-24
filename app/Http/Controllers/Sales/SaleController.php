@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Sales;
 
 use App\Actions\Sales\AddArticleToSale;
+use App\Actions\Sales\ChangeSaleCustomer;
 use App\Actions\Sales\DiscardSale;
 use App\Actions\Sales\OpenSale;
 use App\Actions\Sales\RemoveSaleItem;
@@ -16,6 +17,7 @@ use App\Enums\Sales\SaleStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Sales\StoreSaleItemRequest;
 use App\Http\Requests\Sales\StoreSaleRequest;
+use App\Http\Requests\Sales\UpdateSaleCustomerRequest;
 use App\Http\Requests\Sales\UpdateSaleItemRequest;
 use App\Models\Catalog\Article;
 use App\Models\Customers\Customer;
@@ -108,6 +110,7 @@ class SaleController extends Controller
     {
         return Inertia::render('sales/sales/show', [
             'sale' => SaleData::fromModel($sale),
+            'customers' => SaleCustomerOptionData::collect($this->activeCustomers()),
         ]);
     }
 
@@ -139,6 +142,16 @@ class SaleController extends Controller
         $action->handle($item);
 
         return back();
+    }
+
+    /**
+     * Change the sale's customer, re-pricing its lines.
+     */
+    public function updateCustomer(UpdateSaleCustomerRequest $request, Sale $sale, ChangeSaleCustomer $action): RedirectResponse
+    {
+        $action->handle($sale, Customer::findOrFail((int) $request->validated('customer_id')));
+
+        return back()->with('success', 'Cliente actualizado y precios recalculados.');
     }
 
     /**

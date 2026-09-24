@@ -136,6 +136,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('{sale}/items', [SaleController::class, 'storeItem'])->name('items.store');
         Route::patch('{sale}/items/{item}', [SaleController::class, 'updateItem'])->name('items.update')->scopeBindings();
         Route::delete('{sale}/items/{item}', [SaleController::class, 'destroyItem'])->name('items.destroy')->scopeBindings();
+        Route::patch('{sale}/customer', [SaleController::class, 'updateCustomer'])->name('customer.update');
         Route::post('{sale}/discard', [SaleController::class, 'discard'])->name('discard');
         // Declared last so the literal segments above are not swallowed by the wildcard.
         Route::get('{sale}', [SaleController::class, 'show'])->name('show');

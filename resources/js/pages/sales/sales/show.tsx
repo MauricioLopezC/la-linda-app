@@ -35,6 +35,13 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   Table,
   TableBody,
   TableCell,
@@ -46,6 +53,7 @@ import {
 import { formatCurrency } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import { discard, index, searchArticles } from '@/routes/sales/sales';
+import { update as updateCustomer } from '@/routes/sales/sales/customer';
 import {
   destroy as destroyItem,
   store as storeItem,
@@ -56,9 +64,11 @@ import type { BreadcrumbItem } from '@/types';
 type Sale = App.Data.Sales.SaleData;
 type SaleItem = App.Data.Sales.SaleItemData;
 type ArticleOption = App.Data.Sales.SaleArticleOptionData;
+type CustomerOption = App.Data.Sales.SaleCustomerOptionData;
 
 type Props = {
   sale: Sale;
+  customers: CustomerOption[];
 };
 
 const saleStatusClasses: Record<string, string> = {
@@ -91,7 +101,7 @@ function formatQuantity(quantity: string, allowsDecimal: boolean): string {
   });
 }
 
-export default function SaleShow({ sale }: Props) {
+export default function SaleShow({ sale, customers = [] }: Props) {
   const [code, setCode] = useState('');
   const [codeError, setCodeError] = useState<string | undefined>();
   const [isAdding, setIsAdding] = useState(false);
@@ -129,6 +139,23 @@ export default function SaleShow({ sale }: Props) {
     }
 
     addArticle({ code: code.trim() });
+  };
+
+  const handleChangeCustomer = (customerId: string) => {
+    if (Number(customerId) === sale.customer_id) {
+      return;
+    }
+
+    router.patch(
+      updateCustomer.url(sale.id),
+      { customer_id: customerId },
+      {
+        preserveScroll: true,
+        onSuccess: () =>
+          toast.success('Cliente actualizado y precios recalculados'),
+        onError: toastFirstError,
+      },
+    );
   };
 
   const handleDiscard = () => {
@@ -175,7 +202,29 @@ export default function SaleShow({ sale }: Props) {
           <InfoField label="Depósito" value={sale.warehouse_name} />
           <InfoField label="Vendedor" value={sale.user_name ?? '—'} />
           <div className="space-y-1.5">
-            <InfoField label="Cliente" value={sale.customer_name} />
+            <Label>Cliente</Label>
+            {sale.is_open ? (
+              <Select
+                value={String(sale.customer_id)}
+                onValueChange={handleChangeCustomer}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {customers.map((customer) => (
+                    <SelectItem key={customer.id} value={String(customer.id)}>
+                      {customer.name}
+                      {customer.price_list_name
+                        ? ` · ${customer.price_list_name}`
+                        : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <p className="text-sm font-medium">{sale.customer_name}</p>
+            )}
             {sale.customer_price_list_name && (
               <p className="text-xs text-muted-foreground">
                 Lista asignada: {sale.customer_price_list_name}

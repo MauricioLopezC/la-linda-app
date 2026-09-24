@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Catalog\Article;
+use App\Models\Customers\Customer;
 use App\Models\Sales\Sale;
 use App\Models\Sales\SaleItem;
 use App\Models\User;
@@ -27,9 +28,10 @@ test('the sales index lists sales with their totals and line counts', function (
             ->has('customers'));
 });
 
-test('the sale screen shows the header and the lines', function () {
+test('the sale screen shows the header, the lines and the customers to choose from', function () {
     $sale = Sale::factory()->create();
     SaleItem::factory()->create(['sale_id' => $sale->id]);
+    Customer::factory()->count(2)->create();
 
     $this->actingAs(User::factory()->create())
         ->get(route('sales.sales.show', $sale))
@@ -39,7 +41,8 @@ test('the sale screen shows the header and the lines', function () {
             ->where('sale.id', $sale->id)
             ->where('sale.channel_label', 'Mostrador')
             ->where('sale.is_open', true)
-            ->has('sale.items', 1));
+            ->has('sale.items', 1)
+            ->has('customers', 3));
 });
 
 test('article search matches description, internal code and barcode', function () {
