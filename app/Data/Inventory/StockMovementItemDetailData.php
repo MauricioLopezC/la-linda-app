@@ -18,16 +18,10 @@ class StockMovementItemDetailData extends Data
         public string $unit_of_measure_name,
         public string $unit_of_measure_abbreviation,
         public string $quantity,
-        public ?string $system_quantity,
-        public string $final_quantity,
     ) {}
 
     public static function fromModel(StockMovementItem $item): self
     {
-        $sysQty = $item->system_quantity !== null ? (float) $item->system_quantity : 0.0;
-        $delta = (float) $item->quantity;
-        $final = round($sysQty + $delta, 3);
-
         return new self(
             id: $item->id,
             article_id: $item->article_id,
@@ -38,9 +32,7 @@ class StockMovementItemDetailData extends Data
             brand_name: $item->article->brand?->name,
             unit_of_measure_name: $item->article->unitOfMeasure->name,
             unit_of_measure_abbreviation: $item->article->unitOfMeasure->abbreviation,
-            quantity: sprintf('%.3f', $delta),
-            system_quantity: $item->system_quantity !== null ? sprintf('%.3f', $sysQty) : null,
-            final_quantity: sprintf('%.3f', $final),
+            quantity: sprintf('%.3f', (float) $item->quantity),
         );
     }
 }
