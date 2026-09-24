@@ -55,6 +55,7 @@ import { index } from '@/routes/customers';
 import type { BreadcrumbItem } from '@/types';
 
 type Customer = App.Data.Customers.CustomerData;
+type PriceList = App.Data.Pricing.PriceListData;
 
 type Option = {
   value: string;
@@ -66,6 +67,7 @@ type Props = {
   taxConditions: Option[];
   personTypes: Option[];
   idTypes: Option[];
+  availablePriceLists: PriceList[];
   filters: {
     search: string;
     tax_condition: string;
@@ -80,6 +82,7 @@ type CustomerFormData = {
   id_type: string;
   id_number: string;
   tax_condition: string;
+  price_list_id: string;
   address: string;
   phone: string;
   email: string;
@@ -91,6 +94,7 @@ export default function CustomersIndex({
   taxConditions = [],
   personTypes = [],
   idTypes = [],
+  availablePriceLists = [],
   filters,
 }: Props) {
   const [searchTerm, setSearchTerm] = useState(filters.search ?? '');
@@ -114,6 +118,7 @@ export default function CustomersIndex({
     id_type: 'sin_identificar',
     id_number: '',
     tax_condition: 'consumidor_final',
+    price_list_id: '',
     address: '',
     phone: '',
     email: '',
@@ -126,6 +131,7 @@ export default function CustomersIndex({
     id_type: 'cuit',
     id_number: '',
     tax_condition: 'responsable_inscripto',
+    price_list_id: '',
     address: '',
     phone: '',
     email: '',
@@ -199,6 +205,7 @@ export default function CustomersIndex({
       id_type: 'sin_identificar',
       id_number: '',
       tax_condition: 'consumidor_final',
+      price_list_id: '',
       address: '',
       phone: '',
       email: '',
@@ -276,6 +283,9 @@ export default function CustomersIndex({
       id_type: customer.id_type,
       id_number: customer.id_number_raw ?? '',
       tax_condition: customer.tax_condition,
+      price_list_id: customer.price_list_id
+        ? String(customer.price_list_id)
+        : '',
       address: customer.address ?? '',
       phone: customer.phone ?? '',
       email: customer.email ?? '',
@@ -573,6 +583,14 @@ export default function CustomersIndex({
                             >
                               <ShieldCheck className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
                               Por defecto (Mostrador)
+                            </Badge>
+                          )}
+                          {customer.price_list_name && (
+                            <Badge
+                              variant="outline"
+                              className="border-indigo-200 bg-indigo-50 text-xs text-indigo-700 dark:border-indigo-800 dark:bg-indigo-950 dark:text-indigo-300"
+                            >
+                              {customer.price_list_name}
                             </Badge>
                           )}
                         </div>
@@ -920,6 +938,40 @@ export default function CustomersIndex({
               </div>
             </div>
 
+            {/* Lista de Precios Particular (HU-022) */}
+            <div className="flex flex-col gap-2">
+              <Label
+                htmlFor="create-price-list"
+                className="flex h-5 items-center justify-between"
+              >
+                <span>Lista de Precios Asignada</span>
+                <span className="text-xs font-normal text-muted-foreground">
+                  (opcional)
+                </span>
+              </Label>
+              <Select
+                value={createForm.data.price_list_id || 'none'}
+                onValueChange={(val) =>
+                  createForm.setData('price_list_id', val === 'none' ? '' : val)
+                }
+              >
+                <SelectTrigger id="create-price-list">
+                  <SelectValue placeholder="Sin lista particular asignada" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">
+                    Sin lista particular (aplica lista del canal)
+                  </SelectItem>
+                  {availablePriceLists.map((list) => (
+                    <SelectItem key={list.id} value={String(list.id)}>
+                      {list.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <InputError message={createForm.errors.price_list_id} />
+            </div>
+
             {/* Activo Checkbox */}
             <div className="flex items-center gap-2 pt-2">
               <Checkbox
@@ -1167,6 +1219,40 @@ export default function CustomersIndex({
                   />
                   <InputError message={editForm.errors.email} />
                 </div>
+              </div>
+
+              {/* Lista de Precios Particular (HU-022) */}
+              <div className="flex flex-col gap-2">
+                <Label
+                  htmlFor="edit-price-list"
+                  className="flex h-5 items-center justify-between"
+                >
+                  <span>Lista de Precios Asignada</span>
+                  <span className="text-xs font-normal text-muted-foreground">
+                    (opcional)
+                  </span>
+                </Label>
+                <Select
+                  value={editForm.data.price_list_id || 'none'}
+                  onValueChange={(val) =>
+                    editForm.setData('price_list_id', val === 'none' ? '' : val)
+                  }
+                >
+                  <SelectTrigger id="edit-price-list">
+                    <SelectValue placeholder="Sin lista particular asignada" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">
+                      Sin lista particular (aplica lista del canal)
+                    </SelectItem>
+                    {availablePriceLists.map((list) => (
+                      <SelectItem key={list.id} value={String(list.id)}>
+                        {list.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <InputError message={editForm.errors.price_list_id} />
               </div>
 
               {/* Activo Checkbox */}

@@ -6,12 +6,14 @@ use App\Concerns\NormalizesUniqueAttributes;
 use App\Enums\Customers\CustomerIdType;
 use App\Enums\Customers\CustomerTaxCondition;
 use App\Enums\Customers\PersonType;
+use App\Models\Pricing\PriceList;
 use App\Rules\Customers\ValidCuit;
 use Database\Factories\Customers\CustomerFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -24,6 +26,7 @@ use Illuminate\Support\Facades\Schema;
  * @property CustomerIdType $id_type
  * @property string|null $id_number
  * @property CustomerTaxCondition $tax_condition
+ * @property int|null $price_list_id
  * @property string|null $address
  * @property string|null $phone
  * @property string|null $email
@@ -31,6 +34,7 @@ use Illuminate\Support\Facades\Schema;
  * @property bool $is_default
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
+ * @property-read PriceList|null $priceList
  */
 #[Fillable([
     'person_type',
@@ -38,6 +42,7 @@ use Illuminate\Support\Facades\Schema;
     'id_type',
     'id_number',
     'tax_condition',
+    'price_list_id',
     'address',
     'phone',
     'email',
@@ -121,6 +126,16 @@ class Customer extends Model
         }
 
         return false;
+    }
+
+    /**
+     * The preferential price list assigned to this customer (HU-022).
+     *
+     * @return BelongsTo<PriceList, $this>
+     */
+    public function priceList(): BelongsTo
+    {
+        return $this->belongsTo(PriceList::class);
     }
 
     /**
