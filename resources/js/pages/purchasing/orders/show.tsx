@@ -59,6 +59,48 @@ const statusClasses: Record<string, string> = {
     'border-rose-300 bg-rose-50 text-rose-800 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300',
 };
 
+function CoveredQuantityCell({
+  quantity,
+  excess,
+}: {
+  quantity: string;
+  excess: string;
+}) {
+  return (
+    <TableCell className="text-right font-mono text-emerald-700 dark:text-emerald-400">
+      {quantity}
+      {Number(excess) > 0 && (
+        <span className="ml-1 text-xs font-semibold text-amber-600 dark:text-amber-400">
+          +{excess}
+        </span>
+      )}
+    </TableCell>
+  );
+}
+
+function PendingQuantityCell({
+  pending,
+  doneLabel,
+}: {
+  pending: string;
+  doneLabel: string;
+}) {
+  return (
+    <TableCell className="text-right font-mono">
+      {Number(pending) <= 0.0001 ? (
+        <Badge
+          variant="outline"
+          className="border-emerald-300 bg-emerald-50 px-1.5 py-0 text-[10px] text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
+        >
+          {doneLabel}
+        </Badge>
+      ) : (
+        <span className="font-semibold text-foreground">{pending}</span>
+      )}
+    </TableCell>
+  );
+}
+
 export default function PurchaseOrderShow({ order }: Props) {
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [isIssuing, setIsIssuing] = useState(false);
@@ -330,10 +372,13 @@ export default function PurchaseOrderShow({ order }: Props) {
                         Recibido
                       </TableHead>
                       <TableHead className="w-24 text-right">
-                        Excedente
+                        Pend. recibir
                       </TableHead>
                       <TableHead className="w-24 text-right">
-                        Pendiente
+                        Facturado
+                      </TableHead>
+                      <TableHead className="w-24 text-right">
+                        Pend. facturar
                       </TableHead>
                     </>
                   ) : (
@@ -352,7 +397,7 @@ export default function PurchaseOrderShow({ order }: Props) {
                       colSpan={
                         order.status === 'emitida' ||
                         order.status === 'cumplida'
-                          ? 10
+                          ? 11
                           : 7
                       }
                       className="py-8 text-center text-muted-foreground"
@@ -381,32 +426,22 @@ export default function PurchaseOrderShow({ order }: Props) {
                           <TableCell className="text-right font-mono">
                             {item.quantity}
                           </TableCell>
-                          <TableCell className="text-right font-mono text-emerald-700 dark:text-emerald-400">
-                            {item.quantity_received}
-                          </TableCell>
-                          <TableCell className="text-right font-mono">
-                            {Number(item.quantity_excess) > 0 ? (
-                              <span className="font-semibold text-amber-600 dark:text-amber-400">
-                                +{item.quantity_excess}
-                              </span>
-                            ) : (
-                              <span className="text-muted-foreground">—</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right font-mono">
-                            {Number(item.quantity_pending) <= 0.0001 ? (
-                              <Badge
-                                variant="outline"
-                                className="border-emerald-300 bg-emerald-50 px-1.5 py-0 text-[10px] text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
-                              >
-                                Cumplido
-                              </Badge>
-                            ) : (
-                              <span className="font-semibold text-foreground">
-                                {item.quantity_pending}
-                              </span>
-                            )}
-                          </TableCell>
+                          <CoveredQuantityCell
+                            quantity={item.quantity_received}
+                            excess={item.quantity_excess_received}
+                          />
+                          <PendingQuantityCell
+                            pending={item.quantity_pending_to_receive}
+                            doneLabel="Recibido"
+                          />
+                          <CoveredQuantityCell
+                            quantity={item.quantity_invoiced}
+                            excess={item.quantity_excess_invoiced}
+                          />
+                          <PendingQuantityCell
+                            pending={item.quantity_pending_to_invoice}
+                            doneLabel="Facturado"
+                          />
                         </>
                       ) : (
                         <TableCell className="text-right font-mono">
@@ -471,8 +506,9 @@ export default function PurchaseOrderShow({ order }: Props) {
                     Comprobantes imputados
                   </CardTitle>
                   <p className="mt-0.5 text-xs text-muted-foreground">
-                    Facturas, remitos o notas de débito del proveedor que
-                    entregaron mercadería asociada a esta orden.
+                    Los remitos registran lo recibido y las facturas lo
+                    facturado. La orden se cumple cuando cada renglón está
+                    recibido y facturado por completo.
                   </p>
                 </div>
                 <span className="rounded bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground">
@@ -491,7 +527,7 @@ export default function PurchaseOrderShow({ order }: Props) {
                     <TableHead className="w-32">Tipo</TableHead>
                     <TableHead className="w-32">Fecha emisión</TableHead>
                     <TableHead className="w-32 text-right">
-                      Cant. recibida
+                      Cant. imputada
                     </TableHead>
                     <TableHead className="w-32 text-right">Excedente</TableHead>
                     <TableHead className="w-36 text-right">
@@ -532,7 +568,7 @@ export default function PurchaseOrderShow({ order }: Props) {
                           {voucher.issue_date_formatted}
                         </TableCell>
                         <TableCell className="text-right font-mono text-xs font-medium">
-                          {voucher.quantity_received}
+                          {voucher.quantity_applied}
                         </TableCell>
                         <TableCell className="text-right font-mono text-xs">
                           {Number(voucher.quantity_excess) > 0 ? (

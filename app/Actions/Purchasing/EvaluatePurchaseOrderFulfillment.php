@@ -18,11 +18,12 @@ class EvaluatePurchaseOrderFulfillment
             return $purchaseOrder;
         }
 
-        $isFullyReceived = $purchaseOrder->isFullyReceived();
+        $purchaseOrder->setRelation('items', $purchaseOrder->items()->getQuery()->withImputedQuantities()->get());
+        $isCovered = $purchaseOrder->isFullyReceivedAndInvoiced();
 
-        if ($purchaseOrder->isIssued() && $isFullyReceived) {
+        if ($purchaseOrder->isIssued() && $isCovered) {
             $purchaseOrder->update(['status' => PurchaseOrderStatus::Fulfilled]);
-        } elseif ($purchaseOrder->isFulfilled() && ! $isFullyReceived) {
+        } elseif ($purchaseOrder->isFulfilled() && ! $isCovered) {
             $purchaseOrder->update(['status' => PurchaseOrderStatus::Issued]);
         } else {
             return $purchaseOrder;

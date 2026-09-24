@@ -721,6 +721,12 @@ proveedor y reconocer la deuda o el crédito correspondiente.
 
 > **Regla de negocio / pesables y excedentes:** cuando el proveedor entrega una cantidad superior a la pendiente de la OC (frecuente en carnicería, fiambrería y productos pesables al no poder fraccionar medias reses o piezas exactas), el sistema permite aceptar el excedente. La cantidad imputada salda el renglón de la OC hasta cubrir su saldo pendiente (sin superar el límite de la orden para preservar el presupuesto contractual), y la diferencia se registra como excedente aceptado (`quantity_excess`). Tanto la cantidad imputada como el excedente ingresan al stock físico real y se totalizan en el comprobante a pagar al proveedor.
 
+> **Corrección del PO (2026-09-24):** solo las facturas y los remitos se imputan a órdenes de
+> compra; las NC y ND no. Cada renglón de la OC lleva dos pendientes independientes: a recibir
+> (lo saldan los remitos) y a facturar (lo saldan las facturas), para que la factura y el remito
+> de una misma OC puedan registrarse en cualquier orden sin bloquearse. El excedente de pesables
+> se registra por separado en cada circuito.
+
 ## HU-038 - Actualizar el último costo y cerrar la orden cubierta
 
 **Tipo:** Historia · **Módulo:** CMP · **Estimación:** 3 SP · **Estado:** Pendiente · **Sprint:** 3 · **Alcance:** `CMP-05` · **Depende de:** HU-037, HU-015
@@ -735,6 +741,11 @@ proveedor y reconocer la deuda o el crédito correspondiente.
     - al registrar el comprobante se actualiza el último costo de compra de cada artículo para ese proveedor
     - la orden pasa a estado cumplida cuando todas sus líneas quedan totalmente cubiertas
     - una orden cubierta solo parcialmente permanece emitida, con su pendiente actualizado
+
+> **Corrección del PO (2026-09-24):** la orden pasa a `cumplida` solo cuando todas sus líneas
+> quedan recibidas por remitos **y** facturadas por facturas (doble condición). Con uno solo de los
+> dos circuitos completo permanece emitida, y la consulta de la OC muestra por renglón lo pedido,
+> recibido y facturado con sus pendientes.
 
 ## HU-026 - Ingresar el stock a partir del comprobante recibido
 

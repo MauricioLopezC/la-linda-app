@@ -15,6 +15,7 @@ use App\Models\Purchasing\Supplier;
 use App\Models\Purchasing\SupplierVoucher;
 use App\Models\Purchasing\SupplierVoucherItem;
 use App\Models\User;
+use Database\Seeders\Inventory\StockMovementTypeSeeder;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -68,17 +69,20 @@ test('user can impute a single purchase order item when registering a supplier v
 
     $imputation = PurchaseOrderVoucherImputation::first();
     expect($imputation->purchase_order_item_id)->toBe($poItem->id)
-        ->and((float) $imputation->quantity_received)->toEqualWithDelta(10.0, 0.001)
+        ->and((float) $imputation->quantity_applied)->toEqualWithDelta(10.0, 0.001)
         ->and((float) $imputation->quantity_excess)->toEqualWithDelta(0.0, 0.001);
 
+    // An invoice only bills the line: the order stays issued until a remito receives it
     $order->refresh();
-    expect($order->status)->toBe(PurchaseOrderStatus::Fulfilled)
-        ->and($poItem->quantityReceived())->toBe('10.000')
-        ->and($poItem->quantityPending())->toBe('0.000')
-        ->and($poItem->isFullyReceived())->toBeTrue();
+    expect($order->status)->toBe(PurchaseOrderStatus::Issued)
+        ->and($poItem->quantityInvoiced())->toBe('10.000')
+        ->and($poItem->quantityPendingToInvoice())->toBe('0.000')
+        ->and($poItem->isFullyInvoiced())->toBeTrue()
+        ->and($poItem->quantityReceived())->toBe('0.000')
+        ->and($poItem->quantityPendingToReceive())->toBe('10.000');
 });
 
-test('order with pending balance remains in emitida status until fully received', function () {
+test('order with pending balance to invoice remains in emitida status', function () {
     $user = User::factory()->create();
     $supplier = Supplier::factory()->create();
     $warehouse = Warehouse::factory()->create();
@@ -123,9 +127,9 @@ test('order with pending balance remains in emitida status until fully received'
 
     $order->refresh();
     expect($order->status)->toBe(PurchaseOrderStatus::Issued)
-        ->and($poItem->quantityReceived())->toBe('4.000')
-        ->and($poItem->quantityPending())->toBe('6.000')
-        ->and($poItem->isFullyReceived())->toBeFalse();
+        ->and($poItem->quantityInvoiced())->toBe('4.000')
+        ->and($poItem->quantityPendingToInvoice())->toBe('6.000')
+        ->and($poItem->isFullyInvoiced())->toBeFalse();
 });
 
 test('surplus / excess delivery is accepted and recorded in quantity_excess without capping inventory', function () {
@@ -173,22 +177,22 @@ test('surplus / excess delivery is accepted and recorded in quantity_excess with
     ])->assertSessionHasNoErrors()->assertRedirect();
 
     $imputation = PurchaseOrderVoucherImputation::first();
-    expect((float) $imputation->quantity_received)->toEqualWithDelta(100.0, 0.001)
+    expect((float) $imputation->quantity_applied)->toEqualWithDelta(100.0, 0.001)
         ->and((float) $imputation->quantity_excess)->toEqualWithDelta(4.250, 0.001);
 
     $order->refresh();
-    expect($order->status)->toBe(PurchaseOrderStatus::Fulfilled)
-        ->and($poItem->quantityReceived())->toBe('100.000')
-        ->and($poItem->quantityExcess())->toBe('4.250')
-        ->and($poItem->quantityPending())->toBe('0.000')
-        ->and($poItem->isFullyReceived())->toBeTrue();
+    expect($order->status)->toBe(PurchaseOrderStatus::Issued)
+        ->and($poItem->quantityInvoiced())->toBe('100.000')
+        ->and($poItem->quantityExcessInvoiced())->toBe('4.250')
+        ->and($poItem->quantityPendingToInvoice())->toBe('0.000')
+        ->and($poItem->isFullyInvoiced())->toBeTrue();
 
     // The voucher item should reflect the full 104.250 billed
     $voucher = SupplierVoucher::first();
     expect((float) $voucher->items->first()->quantity)->toEqualWithDelta(104.250, 0.001);
 });
 
-test('multiple vouchers can partially impute the same purchase order line until fulfilled', function () {
+test('multiple vouchers can partially impute the same purchase order line until fully invoiced', function () {
     $user = User::factory()->create();
     $supplier = Supplier::factory()->create();
     $warehouse = Warehouse::factory()->create();
@@ -256,11 +260,9 @@ test('multiple vouchers can partially impute the same purchase order line until 
         ],
     ])->assertSessionHasNoErrors()->assertRedirect();
 
-    $order->refresh();
-    expect($order->status)->toBe(PurchaseOrderStatus::Fulfilled)
-        ->and($poItem->quantityReceived())->toBe('20.000')
-        ->and($poItem->quantityExcess())->toBe('2.000')
-        ->and($poItem->quantityPending())->toBe('0.000');
+    expect($poItem->quantityInvoiced())->toBe('20.000')
+        ->and($poItem->quantityExcessInvoiced())->toBe('2.000')
+        ->and($poItem->quantityPendingToInvoice())->toBe('0.000');
 });
 
 test('a single voucher can impute items from multiple purchase orders of the same supplier', function () {
@@ -330,8 +332,10 @@ test('a single voucher can impute items from multiple purchase orders of the sam
         ],
     ])->assertSessionHasNoErrors()->assertRedirect();
 
-    expect($order1->fresh()->status)->toBe(PurchaseOrderStatus::Fulfilled)
-        ->and($order2->fresh()->status)->toBe(PurchaseOrderStatus::Fulfilled);
+    expect($item1->isFullyInvoiced())->toBeTrue()
+        ->and($item2->isFullyInvoiced())->toBeTrue()
+        ->and($order1->fresh()->status)->toBe(PurchaseOrderStatus::Issued)
+        ->and($order2->fresh()->status)->toBe(PurchaseOrderStatus::Issued);
 });
 
 test('imputing an item from a different supplier fails validation', function () {
@@ -463,6 +467,26 @@ test('annulling a supplier voucher restores purchase order pending balance and r
         ],
     ]);
 
+    // The remito receives the goods, completing both tracks
+    $this->seed(StockMovementTypeSeeder::class);
+    $this->actingAs($user)->post(route('purchasing.vouchers.store'), [
+        'supplier_id' => $supplier->id,
+        'type' => SupplierVoucherType::Remito->value,
+        'letter' => SupplierVoucherLetter::R->value,
+        'point_of_sale' => '1',
+        'number' => '110',
+        'issue_date' => today()->toDateString(),
+        'items' => [
+            [
+                'article_id' => $article->id,
+                'description' => $article->description,
+                'quantity' => '10,000',
+                'unit_of_measure' => 'un',
+                'purchase_order_item_id' => $poItem->id,
+            ],
+        ],
+    ])->assertSessionHasNoErrors()->assertRedirect();
+
     $order->refresh();
     expect($order->status)->toBe(PurchaseOrderStatus::Fulfilled);
 
@@ -476,12 +500,12 @@ test('annulling a supplier voucher restores purchase order pending balance and r
     $voucher->refresh();
     expect($voucher->status)->toBe(SupplierVoucherStatus::Cancelled);
 
-    // Order should revert back to Issued, with 10 pending again!
+    // Order reverts to Issued with 10 pending to invoice; the reception is untouched
     $order->refresh();
     expect($order->status)->toBe(PurchaseOrderStatus::Issued)
-        ->and($poItem->quantityReceived())->toBe('0.000')
-        ->and($poItem->quantityPending())->toBe('10.000')
-        ->and($poItem->isFullyReceived())->toBeFalse();
+        ->and($poItem->quantityInvoiced())->toBe('0.000')
+        ->and($poItem->quantityPendingToInvoice())->toBe('10.000')
+        ->and($poItem->quantityReceived())->toBe('10.000');
 });
 
 test('associable purchase orders endpoint returns only issued orders with pending items for the given supplier', function () {
@@ -542,7 +566,10 @@ test('associable purchase orders endpoint returns only issued orders with pendin
     ]);
 
     $response = $this->actingAs($user)->getJson(
-        route('purchasing.vouchers.associable-purchase-orders', ['supplier_id' => $supplierA->id])
+        route('purchasing.vouchers.associable-purchase-orders', [
+            'supplier_id' => $supplierA->id,
+            'type' => SupplierVoucherType::Invoice->value,
+        ])
     );
 
     $response->assertOk()
@@ -598,9 +625,12 @@ test('purchase order show page provides imputed vouchers and received breakdown 
         ->assertInertia(fn (Assert $page) => $page
             ->component('purchasing/orders/show')
             ->has('order.imputed_vouchers', 1)
-            ->where('order.imputed_vouchers.0.quantity_received', '6.000')
-            ->where('order.items.0.quantity_received', '6.000')
-            ->where('order.items.0.quantity_pending', '4.000')
+            ->where('order.imputed_vouchers.0.quantity_applied', '6.000')
+            ->where('order.imputed_vouchers.0.type', SupplierVoucherType::Invoice->value)
+            ->where('order.items.0.quantity_invoiced', '6.000')
+            ->where('order.items.0.quantity_pending_to_invoice', '4.000')
+            ->where('order.items.0.quantity_received', '0.000')
+            ->where('order.items.0.quantity_pending_to_receive', '10.000')
         );
 });
 
@@ -691,9 +721,9 @@ test('imputing an item with zero pending balance fails validation', function () 
         ],
     ])->assertSessionHasNoErrors()->assertRedirect();
 
-    expect($order->fresh()->status)->toBe(PurchaseOrderStatus::Fulfilled);
+    expect($poItem->isFullyInvoiced())->toBeTrue();
 
-    // Attempt to impute again to the already fulfilled line
+    // Attempt to invoice again the already invoiced line
     $response = $this->actingAs($user)->post(route('purchasing.vouchers.store'), [
         'supplier_id' => $supplier->id,
         'type' => SupplierVoucherType::Invoice->value,
@@ -742,11 +772,11 @@ test('multiple voucher lines for one order item share the preloaded pending bala
 
     $imputations = PurchaseOrderVoucherImputation::query()->orderBy('id')->get();
     expect($imputations)->toHaveCount(2)
-        ->and($imputations[0]->quantity_received)->toBe('6.000')
+        ->and($imputations[0]->quantity_applied)->toBe('6.000')
         ->and($imputations[0]->quantity_excess)->toBe('0.000')
-        ->and($imputations[1]->quantity_received)->toBe('4.000')
+        ->and($imputations[1]->quantity_applied)->toBe('4.000')
         ->and($imputations[1]->quantity_excess)->toBe('2.000')
-        ->and($order->fresh()->status)->toBe(PurchaseOrderStatus::Fulfilled);
+        ->and($poItem->quantityInvoiced())->toBe('10.000');
 });
 
 test('purchase order items are preloaded in one query before imputation', function () {

@@ -25,14 +25,16 @@
 2. **Imputación de comprobantes a Órdenes de Compra (HU-037)**:
    - La imputación a una o varias OC es **opcional** en el comprobante (se admiten facturas o remitos libres de gastos o compras directas sin OC).
    - Relación N:N: Un comprobante puede imputar renglones de varias OCs del mismo proveedor en estado `emitida`; una OC puede recibir múltiples entregas parciales.
-   - La cantidad imputada a la orden salda el pendiente de cada renglón de la OC hasta cubrirlo (sin sobrepasarlo para preservar el presupuesto de la orden).
+   - Solo se imputan a OC las **facturas** y los **remitos**; las NC y ND ajustan importes, no cantidades pedidas, y no se imputan a OC.
+   - Cada renglón de OC lleva dos pendientes independientes: **a recibir** (lo saldan los remitos) y **a facturar** (lo saldan las facturas). La factura y el remito de una misma OC pueden llegar en cualquier orden sin bloquearse entre sí.
+   - La cantidad imputada salda el pendiente de su circuito hasta cubrirlo (sin sobrepasarlo para preservar el presupuesto de la orden).
    - **Manejo de excedentes (pesables / carnicería):** Si el proveedor envía mercadería de más y recepción la acepta (ej. kilos adicionales en medias reses), el sobrante se registra explícitamente como excedente aceptado (`quantity_excess`). Tanto lo imputado a la OC como el excedente ingresan en su totalidad al stock físico real y se liquidan en el comprobante fiscal a pagar.
 3. **Stock inmutable y anulación inversa (HU-026)**:
-   - El movimiento de stock de ingreso se genera automáticamente al confirmar el comprobante de recepción (Remito o Factura que acompaña mercadería).
+   - El movimiento de stock de ingreso se genera automáticamente al registrar un **Remito**; la factura no mueve stock.
    - Los movimientos de stock son inmutables. Si un comprobante se anula, se genera automáticamente un movimiento inverso compensatorio de egreso con auditoría; nunca se borra el registro histórico original.
 4. **Actualización de costo y cierre de OC (HU-038)**:
    - Solo los comprobantes valorizados (Facturas) con precio unitario $> 0$ actualizan el `last_cost` en la relación artículo-proveedor (`article_supplier`).
-   - Cuando todos los renglones de una OC tienen saldo pendiente igual a cero, la OC pasa automáticamente a estado `cumplida`.
+   - La OC pasa automáticamente a estado `cumplida` cuando **todos** sus renglones quedan recibidos **y** facturados por completo (doble condición). Con uno solo de los dos circuitos completo permanece `emitida`; anular un remito o una factura que la había cumplido la devuelve a `emitida`.
 5. **Cliente genérico inmutable (HU-021)**:
    - Se crea vía seeder el cliente "Consumidor Final" (identificador fijo, condición fiscal Consumidor Final, no eliminable ni editable en su condición base).
 6. **Inclusión obligatoria de HU-012 para sostener Precios**:
@@ -138,7 +140,7 @@ Lógica de negocio encapsulada en `app/Actions/{Module}`, respuestas tipadas en 
 ### HU-038 — Actualizar último costo y cerrar orden cubierta (3 SP)
 - [ ] Crear Action `UpdateLastPurchaseCost` que actualice `article_supplier.last_cost` al imputar facturas valorizadas con precio unitario.
 - [ ] Crear Action `EvaluatePurchaseOrderFulfillment` que calcule el saldo pendiente de todas las líneas de la OC.
-- [ ] Pasar automáticamente la OC a estado `cumplida` si todas sus líneas tienen pendiente cero.
+- [ ] Pasar automáticamente la OC a estado `cumplida` si todas sus líneas tienen pendiente cero a recibir y a facturar.
 - [ ] Mantener la OC en `emitida` si la cobertura es parcial.
 - [ ] Si se anula un comprobante que cumplió la OC, retornar la OC a `emitida`.
 - [ ] Tests de actualización de costos, transición de estados e inversión por anulación.
@@ -278,8 +280,8 @@ erDiagram
 | id | bigint PK | |
 | purchase_order_item_id | FK → purchase_order_items | obligatorio |
 | supplier_voucher_item_id | FK → supplier_voucher_items | obligatorio |
-| quantity_received | decimal(12,3) | mayor a cero; cantidad que salda la OC ($\le$ pendiente de la OC) |
-| quantity_excess | decimal(12,3) | default 0; mayor o igual a cero; excedente aceptado en recepción |
+| quantity_applied | decimal(12,3) | mayor a cero; cantidad que salda la OC ($\le$ pendiente de la OC). Cuenta como recibida si el comprobante es remito y como facturada si es factura |
+| quantity_excess | decimal(12,3) | default 0; mayor o igual a cero; excedente aceptado (recibido o facturado según el tipo de comprobante) |
 | created_at | timestamp | inmutable |
 
 ### `supplier_vouchers` (Adaptación HU-026 / Remito)
@@ -334,8 +336,8 @@ erDiagram
 ## Demostración de cierre del Sprint 3 (Sprint Review)
 
 1. **Catálogo y Proveedor:** Asociar dos proveedores a un artículo con códigos y costos distintos.
-2. **OC e Imputación:** Emitir una OC por 100 unidades; cargar un comprobante imputado por 60 unidades y comprobar que la OC muestra 60 recibidas y 40 pendientes.
-3. **Remito y Stock:** Registrar un Remito por las 40 unidades restantes; verificar el ingreso automático a existencias (`stock_balances`) y que la OC pasa a `cumplida`.
+2. **OC y Factura:** Emitir una OC por 100 unidades; cargar la factura del proveedor imputada por las 100 unidades y comprobar que la OC muestra 100 facturadas, 100 pendientes de recibir y sigue `emitida`.
+3. **Remito y Stock:** Registrar un Remito imputado por 60 unidades y luego otro por las 40 restantes; verificar el ingreso automático a existencias (`stock_balances`) y que la OC pasa a `cumplida` recién con el segundo remito.
 4. **Costo Automático:** Comprobar que el `last_cost` del artículo se actualizó con el precio pactado.
 5. **Cuentas y Pagos:** Consultar la cuenta corriente del proveedor con su saldo pendiente; emitir un listado de pagos y egresos del período exportándolo a Excel.
 6. **Clientes:** Registrar un cliente Responsable Inscripto con CUIT validado y verificar la presencia del cliente protegido "Consumidor Final".

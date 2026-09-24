@@ -5,6 +5,7 @@ namespace Database\Factories\Purchasing;
 use App\Enums\Purchasing\SupplierVoucherLetter;
 use App\Enums\Purchasing\SupplierVoucherStatus;
 use App\Enums\Purchasing\SupplierVoucherType;
+use App\Models\Inventory\Warehouse;
 use App\Models\Purchasing\Supplier;
 use App\Models\Purchasing\SupplierVoucher;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -57,6 +58,18 @@ class SupplierVoucherFactory extends Factory
         return $this->state(fn (): array => [
             'type' => SupplierVoucherType::DebitNote,
             'status' => SupplierVoucherStatus::Pending,
+        ]);
+    }
+
+    public function remito(): static
+    {
+        return $this->state(fn (): array => [
+            'type' => SupplierVoucherType::Remito,
+            'letter' => SupplierVoucherLetter::R,
+            'status' => SupplierVoucherStatus::Confirmed,
+            'due_date' => null,
+            'total_amount' => '0.00',
+            'warehouse_id' => Warehouse::factory(),
         ]);
     }
 

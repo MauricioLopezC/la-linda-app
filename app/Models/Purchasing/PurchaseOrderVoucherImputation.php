@@ -10,10 +10,13 @@ use Illuminate\Support\Carbon;
 /**
  * Imputation linking a supplier voucher item with a purchase order item (HU-037).
  *
+ * `quantity_applied` counts as received when the voucher is a remito and as invoiced when it is
+ * an invoice; the voucher type is the only thing telling both tracks apart.
+ *
  * @property int $id
  * @property int $purchase_order_item_id
  * @property int $supplier_voucher_item_id
- * @property string $quantity_received
+ * @property string $quantity_applied
  * @property string $quantity_excess
  * @property Carbon $created_at
  * @property PurchaseOrderItem $purchaseOrderItem
@@ -22,7 +25,7 @@ use Illuminate\Support\Carbon;
 #[Fillable([
     'purchase_order_item_id',
     'supplier_voucher_item_id',
-    'quantity_received',
+    'quantity_applied',
     'quantity_excess',
 ])]
 class PurchaseOrderVoucherImputation extends Model
@@ -33,7 +36,7 @@ class PurchaseOrderVoucherImputation extends Model
     protected function casts(): array
     {
         return [
-            'quantity_received' => 'decimal:3',
+            'quantity_applied' => 'decimal:3',
             'quantity_excess' => 'decimal:3',
             'created_at' => 'datetime',
         ];
