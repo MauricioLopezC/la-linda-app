@@ -6,6 +6,7 @@ use App\Enums\Customers\CustomerIdType;
 use App\Enums\Customers\CustomerTaxCondition;
 use App\Enums\Customers\PersonType;
 use App\Models\Customers\Customer;
+use App\Models\Pricing\PriceList;
 use Illuminate\Database\Seeder;
 
 class CustomerSeeder extends Seeder
@@ -89,6 +90,16 @@ class CustomerSeeder extends Seeder
                 ['id_number' => $customerData['id_number']],
                 $customerData
             );
+        }
+
+        // 3. La distribuidora compra con la lista particular "Mayorista" (HU-022), para
+        //    mostrar el paso 1 de la cascada de precios en la venta de mostrador.
+        $mayorista = PriceList::query()->where('name_normalized', 'mayorista')->first();
+
+        if ($mayorista !== null) {
+            Customer::query()
+                ->where('id_number', '30500858628')
+                ->update(['price_list_id' => $mayorista->id]);
         }
     }
 }

@@ -13,6 +13,7 @@ use Database\Seeders\Inventory\StockMovementTypeSeeder;
 use Database\Seeders\Inventory\WarehouseSeeder;
 use Database\Seeders\Inventory\WarehouseStockSeeder;
 use Database\Seeders\Organization\BranchSeeder;
+use Database\Seeders\Pricing\PriceListItemSeeder;
 use Database\Seeders\Pricing\PriceListSeeder;
 use Database\Seeders\Pricing\VatRateSeeder;
 use Database\Seeders\Purchasing\PurchaseOrderSeeder;
@@ -55,6 +56,7 @@ class DatabaseSeeder extends Seeder
             SupplierSeeder::class,
             ArticleSeeder::class,
             ArticleSupplierSeeder::class,
+            PriceListItemSeeder::class,
             SupplierVoucherSeeder::class,
             PurchaseOrderSeeder::class,
             WarehouseStockSeeder::class,
