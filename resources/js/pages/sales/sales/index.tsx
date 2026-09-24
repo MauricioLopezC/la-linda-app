@@ -216,6 +216,7 @@ export default function SalesIndex({
                 <TableHead>Punto de venta</TableHead>
                 <TableHead>Cliente</TableHead>
                 <TableHead>Vendedor</TableHead>
+                <TableHead className="text-right">Líneas</TableHead>
                 <TableHead className="text-right">Total</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
@@ -225,7 +226,7 @@ export default function SalesIndex({
               {sales.data.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={8}
+                    colSpan={9}
                     className="py-10 text-center text-muted-foreground"
                   >
                     No hay ventas para los filtros seleccionados.
@@ -241,6 +242,9 @@ export default function SalesIndex({
                     </TableCell>
                     <TableCell>{sale.customer_name}</TableCell>
                     <TableCell>{sale.user_name ?? '—'}</TableCell>
+                    <TableCell className="text-right">
+                      {sale.items_count}
+                    </TableCell>
                     <TableCell className="text-right font-medium">
                       {formatCurrency(sale.total_amount)}
                     </TableCell>

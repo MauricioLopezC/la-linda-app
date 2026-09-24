@@ -3,10 +3,14 @@
 namespace App\Data\Sales;
 
 use App\Models\Sales\Sale;
+use App\Models\Sales\SaleItem;
 use Spatie\LaravelData\Data;
 
 class SaleData extends Data
 {
+    /**
+     * @param  array<int, SaleItemData>  $items
+     */
     public function __construct(
         public int $id,
         public int $point_of_sale_id,
@@ -25,6 +29,7 @@ class SaleData extends Data
         public string $status_label,
         public bool $is_open,
         public string $total_amount,
+        public array $items,
     ) {}
 
     public static function fromModel(Sale $sale): self
@@ -33,6 +38,9 @@ class SaleData extends Data
             'pointOfSale.warehouse.branch',
             'customer.priceList',
             'user',
+            'items' => fn ($query) => $query->orderBy('id'),
+            'items.article.unitOfMeasure',
+            'items.priceList',
         ]);
 
         return new self(
@@ -53,6 +61,10 @@ class SaleData extends Data
             status_label: $sale->status->label(),
             is_open: $sale->isOpen(),
             total_amount: $sale->total_amount,
+            items: $sale->items
+                ->map(fn (SaleItem $item): SaleItemData => SaleItemData::fromModel($item))
+                ->values()
+                ->all(),
         );
     }
 }

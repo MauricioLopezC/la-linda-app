@@ -2,6 +2,7 @@
 
 namespace App\Models\Sales;
 
+use App\Concerns\ConvertsMoneyToCents;
 use App\Enums\Sales\SaleChannel;
 use App\Enums\Sales\SaleStatus;
 use App\Models\Customers\Customer;
@@ -9,9 +10,11 @@ use App\Models\User;
 use Database\Factories\Sales\SaleFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 /**
@@ -32,6 +35,7 @@ use Illuminate\Support\Carbon;
  * @property PointOfSale $pointOfSale
  * @property Customer $customer
  * @property User|null $user
+ * @property Collection<int, SaleItem> $items
  */
 #[Fillable([
     'point_of_sale_id',
@@ -44,6 +48,8 @@ use Illuminate\Support\Carbon;
 ])]
 class Sale extends Model
 {
+    use ConvertsMoneyToCents;
+
     /** @use HasFactory<SaleFactory> */
     use HasFactory;
 
@@ -83,6 +89,12 @@ class Sale extends Model
         return $this->belongsTo(User::class);
     }
 
+    /** @return HasMany<SaleItem, $this> */
+    public function items(): HasMany
+    {
+        return $this->hasMany(SaleItem::class);
+    }
+
     /**
      * @param  Builder<Sale>  $query
      */
@@ -92,10 +104,25 @@ class Sale extends Model
     }
 
     /**
-     * Only an open sale accepts changes.
+     * Only an open sale accepts changes to its lines or its customer.
      */
     public function isOpen(): bool
     {
         return $this->status === SaleStatus::Open;
+    }
+
+    /**
+     * Recompute total_amount as the sum of the line totals, in cents to avoid float drift.
+     *
+     * List prices are final prices with VAT included, so the total needs no VAT breakdown
+     * (that is HU-057).
+     */
+    public function recalculateTotal(): void
+    {
+        $totalCents = $this->items()
+            ->pluck('line_total')
+            ->sum(fn (string $lineTotal): int => $this->moneyToCents($lineTotal));
+
+        $this->update(['total_amount' => $this->centsToMoney($totalCents)]);
     }
 }

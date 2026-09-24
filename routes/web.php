@@ -132,6 +132,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::prefix('sales/sales')->name('sales.sales.')->group(function () {
         Route::get('/', [SaleController::class, 'index'])->name('index');
         Route::post('/', [SaleController::class, 'store'])->name('store');
+        Route::get('search-articles', [SaleController::class, 'searchArticles'])->name('search-articles');
+        Route::post('{sale}/items', [SaleController::class, 'storeItem'])->name('items.store');
+        Route::patch('{sale}/items/{item}', [SaleController::class, 'updateItem'])->name('items.update')->scopeBindings();
+        Route::delete('{sale}/items/{item}', [SaleController::class, 'destroyItem'])->name('items.destroy')->scopeBindings();
         Route::post('{sale}/discard', [SaleController::class, 'discard'])->name('discard');
         // Declared last so the literal segments above are not swallowed by the wildcard.
         Route::get('{sale}', [SaleController::class, 'show'])->name('show');

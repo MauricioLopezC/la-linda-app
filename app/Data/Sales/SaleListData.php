@@ -16,11 +16,12 @@ class SaleListData extends Data
         public ?string $user_name,
         public string $status,
         public string $status_label,
+        public int $items_count,
         public string $total_amount,
     ) {}
 
     /**
-     * Expects pointOfSale.warehouse.branch, customer and user loaded.
+     * Expects pointOfSale.warehouse.branch, customer and user loaded, and items_count.
      */
     public static function fromModel(Sale $sale): self
     {
@@ -33,6 +34,7 @@ class SaleListData extends Data
             user_name: $sale->user?->name,
             status: $sale->status->value,
             status_label: $sale->status->label(),
+            items_count: (int) $sale->getAttribute('items_count'),
             total_amount: $sale->total_amount,
         );
     }

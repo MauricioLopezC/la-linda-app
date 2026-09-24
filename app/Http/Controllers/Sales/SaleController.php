@@ -2,20 +2,29 @@
 
 namespace App\Http\Controllers\Sales;
 
+use App\Actions\Sales\AddArticleToSale;
 use App\Actions\Sales\DiscardSale;
 use App\Actions\Sales\OpenSale;
+use App\Actions\Sales\RemoveSaleItem;
+use App\Actions\Sales\UpdateSaleItemQuantity;
 use App\Data\Sales\PointOfSaleData;
+use App\Data\Sales\SaleArticleOptionData;
 use App\Data\Sales\SaleCustomerOptionData;
 use App\Data\Sales\SaleData;
 use App\Data\Sales\SaleListData;
 use App\Enums\Sales\SaleStatus;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Sales\StoreSaleItemRequest;
 use App\Http\Requests\Sales\StoreSaleRequest;
+use App\Http\Requests\Sales\UpdateSaleItemRequest;
+use App\Models\Catalog\Article;
 use App\Models\Customers\Customer;
 use App\Models\Sales\PointOfSale;
 use App\Models\Sales\Sale;
+use App\Models\Sales\SaleItem;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -30,6 +39,7 @@ class SaleController extends Controller
     {
         $sales = Sale::query()
             ->with(['pointOfSale.warehouse.branch', 'customer', 'user'])
+            ->withCount('items')
             ->when($request->filled('status') && $request->input('status') !== 'all', function (Builder $query) use ($request) {
                 $query->where('status', $request->input('status'));
             })
@@ -70,6 +80,28 @@ class SaleController extends Controller
     }
 
     /**
+     * Search active articles by internal code, barcode or description.
+     */
+    public function searchArticles(Request $request): JsonResponse
+    {
+        $search = trim((string) $request->query('search', ''));
+        $query = Article::query()->active()->with('unitOfMeasure');
+
+        if ($search !== '') {
+            $lower = mb_strtolower($search);
+            $query->where(function (Builder $q) use ($lower) {
+                $q->whereRaw('LOWER(description) LIKE ?', ["%{$lower}%"])
+                    ->orWhereRaw('LOWER(internal_code) LIKE ?', ["%{$lower}%"])
+                    ->orWhereRaw('LOWER(barcode) LIKE ?', ["%{$lower}%"]);
+            });
+        }
+
+        $articles = $query->orderBy('description')->limit(20)->get();
+
+        return response()->json(SaleArticleOptionData::collect($articles));
+    }
+
+    /**
      * Display the sale screen.
      */
     public function show(Sale $sale): Response
@@ -77,6 +109,36 @@ class SaleController extends Controller
         return Inertia::render('sales/sales/show', [
             'sale' => SaleData::fromModel($sale),
         ]);
+    }
+
+    /**
+     * Add an article to the sale, by id or by scanned code.
+     */
+    public function storeItem(StoreSaleItemRequest $request, Sale $sale, AddArticleToSale $action): RedirectResponse
+    {
+        $action->handle($sale, $request->validated());
+
+        return back();
+    }
+
+    /**
+     * Change the quantity of a sale line.
+     */
+    public function updateItem(UpdateSaleItemRequest $request, Sale $sale, SaleItem $item, UpdateSaleItemQuantity $action): RedirectResponse
+    {
+        $action->handle($item, (float) $request->validated('quantity'));
+
+        return back();
+    }
+
+    /**
+     * Remove a line from the sale.
+     */
+    public function destroyItem(Sale $sale, SaleItem $item, RemoveSaleItem $action): RedirectResponse
+    {
+        $action->handle($item);
+
+        return back();
     }
 
     /**
