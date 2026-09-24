@@ -289,12 +289,6 @@ export default function ShowStockAdjustment({ movement }: Props) {
                     <TableHead className="w-[80px]">Código</TableHead>
                     <TableHead>Artículo / Categoría</TableHead>
                     <TableHead className="w-[100px]">Unidad</TableHead>
-                    <TableHead className="w-[130px] text-right">
-                      Stock Anterior
-                    </TableHead>
-                    <TableHead className="w-[130px] text-right">
-                      Stock Resultante
-                    </TableHead>
                     <TableHead className="w-[150px] text-right">
                       Ajuste Aplicado
                     </TableHead>
@@ -303,11 +297,6 @@ export default function ShowStockAdjustment({ movement }: Props) {
                 <TableBody>
                   {movement.items.map((item) => {
                     const delta = parseFloat(item.quantity);
-                    const finalQty = parseFloat(item.final_quantity);
-                    const sysQty =
-                      item.system_quantity !== null
-                        ? parseFloat(item.system_quantity)
-                        : finalQty - delta;
 
                     return (
                       <TableRow key={item.id}>
@@ -325,18 +314,6 @@ export default function ShowStockAdjustment({ movement }: Props) {
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground">
                           {item.unit_of_measure_name}
-                        </TableCell>
-                        <TableCell className="text-right font-mono text-sm text-muted-foreground">
-                          {formatStockQuantity(
-                            sysQty,
-                            item.unit_of_measure_name,
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right font-mono text-sm font-semibold">
-                          {formatStockQuantity(
-                            finalQty,
-                            item.unit_of_measure_name,
-                          )}
                         </TableCell>
                         <TableCell className="text-right font-mono text-sm">
                           {delta > 0.0001 ? (

@@ -261,7 +261,12 @@ class StoreSupplierVoucherRequest extends FormRequest
             ],
             'items' => ['required', 'array', 'min:1'],
             'items.*' => ['required', 'array:article_id,purchase_order_item_id,description,quantity,unit_of_measure,unit_price,line_total'],
-            'items.*.purchase_order_item_id' => ['nullable', 'integer', 'exists:purchase_order_items,id'],
+            'items.*.purchase_order_item_id' => [
+                'nullable',
+                'prohibited_unless:type,'.SupplierVoucherType::Invoice->value.','.SupplierVoucherType::Remito->value,
+                'integer',
+                'exists:purchase_order_items,id',
+            ],
             'items.*.article_id' => [
                 'nullable',
                 'integer',
@@ -329,6 +334,7 @@ class StoreSupplierVoucherRequest extends FormRequest
             'letter.in' => 'La letra no es válida para el tipo de comprobante seleccionado.',
             'items.required' => 'El comprobante debe contener al menos un ítem.',
             'items.min' => 'El comprobante debe contener al menos un ítem.',
+            'items.*.purchase_order_item_id.prohibited_unless' => 'Solo las facturas y los remitos pueden imputarse a una orden de compra.',
             'items.*.article_id.exists' => 'El artículo del ítem :position no existe o está inactivo.',
             'associated_invoice_id.prohibited_unless' => 'Solo una nota de crédito puede asociarse a una factura.',
             'associated_amount.prohibited_unless' => 'Solo una nota de crédito puede aplicar un importe a una factura.',
@@ -368,12 +374,15 @@ class StoreSupplierVoucherRequest extends FormRequest
                 ->unique()
                 ->all();
 
-            if (empty($poItemIds)) {
+            $voucherType = is_string($type) ? SupplierVoucherType::tryFrom($type) : null;
+
+            if (empty($poItemIds) || $voucherType === null || ! $voucherType->canImputeToPurchaseOrder()) {
                 return;
             }
 
             $poItems = PurchaseOrderItem::query()
                 ->with(['purchaseOrder', 'article'])
+                ->withImputedQuantities()
                 ->whereKey($poItemIds)
                 ->get()
                 ->keyBy('id');
@@ -434,11 +443,12 @@ class StoreSupplierVoucherRequest extends FormRequest
                     );
                 }
 
-                // Rechazo preventivo de saldo cero
-                if ((float) $poItem->quantityPending() <= 0.0001) {
+                // Rechazo preventivo de saldo cero en el circuito que cubre el comprobante
+                if ((float) $poItem->quantityPendingFor($voucherType) <= 0.0001) {
+                    $coverage = $voucherType->isRemito() ? 'recibido' : 'facturado';
                     $validator->errors()->add(
                         "items.{$index}.purchase_order_item_id",
-                        "El renglón de la orden de compra #{$purchaseOrder->order_number} ya se encuentra cubierto en su totalidad."
+                        "El renglón de la orden de compra #{$purchaseOrder->order_number} ya se encuentra {$coverage} en su totalidad."
                     );
                 }
             }

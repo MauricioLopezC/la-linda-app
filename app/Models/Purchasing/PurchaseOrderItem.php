@@ -4,14 +4,17 @@ namespace App\Models\Purchasing;
 
 use App\Concerns\ConvertsMoneyToCents;
 use App\Enums\Purchasing\SupplierVoucherStatus;
+use App\Enums\Purchasing\SupplierVoucherType;
 use App\Models\Catalog\Article;
 use Database\Factories\Purchasing\PurchaseOrderItemFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
+use LogicException;
 
 /**
  * @property int $id
@@ -67,47 +70,122 @@ class PurchaseOrderItem extends Model
         return $this->hasMany(PurchaseOrderVoucherImputation::class);
     }
 
+    /**
+     * Attach the received / invoiced sums as subselects so listing many lines avoids N+1.
+     * The quantity methods below detect these attributes on their own.
+     *
+     * @param  Builder<PurchaseOrderItem>  $query
+     */
+    public function scopeWithImputedQuantities(Builder $query): void
+    {
+        $sums = fn (string $column): array => collect([SupplierVoucherType::Remito, SupplierVoucherType::Invoice])
+            ->mapWithKeys(fn (SupplierVoucherType $type): array => [
+                'imputations as '.self::aggregateAttribute($type, $column) => fn (Builder $imputations): Builder => self::constrainToLiveVouchersOfType($imputations, $type),
+            ])
+            ->all();
+
+        $query->withSum($sums('quantity_applied'), 'quantity_applied')
+            ->withSum($sums('quantity_excess'), 'quantity_excess');
+    }
+
+    /** Quantity covered by remitos, capped at the ordered quantity. */
     public function quantityReceived(): string
     {
-        if (isset($this->attributes['imputations_received_sum'])) {
-            return number_format((float) $this->attributes['imputations_received_sum'], 3, '.', '');
-        }
-
-        $sum = $this->imputations()
-            ->whereHas('supplierVoucherItem.supplierVoucher', function ($query) {
-                $query->where('status', '!=', SupplierVoucherStatus::Cancelled->value);
-            })
-            ->sum('quantity_received');
-
-        return number_format((float) $sum, 3, '.', '');
+        return $this->imputedQuantity(SupplierVoucherType::Remito, 'quantity_applied');
     }
 
-    public function quantityExcess(): string
+    /** Quantity covered by invoices, capped at the ordered quantity. */
+    public function quantityInvoiced(): string
     {
-        if (isset($this->attributes['imputations_excess_sum'])) {
-            return number_format((float) $this->attributes['imputations_excess_sum'], 3, '.', '');
-        }
-
-        $sum = $this->imputations()
-            ->whereHas('supplierVoucherItem.supplierVoucher', function ($query) {
-                $query->where('status', '!=', SupplierVoucherStatus::Cancelled->value);
-            })
-            ->sum('quantity_excess');
-
-        return number_format((float) $sum, 3, '.', '');
+        return $this->imputedQuantity(SupplierVoucherType::Invoice, 'quantity_applied');
     }
 
-    public function quantityPending(): string
+    /** Quantity received beyond the ordered one (accepted surplus of weighed goods). */
+    public function quantityExcessReceived(): string
     {
-        $received = (float) $this->quantityReceived();
-        $requested = (float) $this->quantity;
-        $pending = max(0.0, $requested - $received);
+        return $this->imputedQuantity(SupplierVoucherType::Remito, 'quantity_excess');
+    }
 
-        return number_format($pending, 3, '.', '');
+    /** Quantity invoiced beyond the ordered one (accepted surplus of weighed goods). */
+    public function quantityExcessInvoiced(): string
+    {
+        return $this->imputedQuantity(SupplierVoucherType::Invoice, 'quantity_excess');
+    }
+
+    public function quantityPendingToReceive(): string
+    {
+        return $this->pendingQuantity($this->quantityReceived());
+    }
+
+    public function quantityPendingToInvoice(): string
+    {
+        return $this->pendingQuantity($this->quantityInvoiced());
+    }
+
+    /**
+     * Pending quantity of the track a voucher of the given type covers: remitos receive,
+     * invoices bill.
+     */
+    public function quantityPendingFor(SupplierVoucherType $type): string
+    {
+        return match ($type) {
+            SupplierVoucherType::Remito => $this->quantityPendingToReceive(),
+            SupplierVoucherType::Invoice => $this->quantityPendingToInvoice(),
+            default => throw new LogicException("Los comprobantes de tipo {$type->label()} no se imputan a órdenes de compra."),
+        };
     }
 
     public function isFullyReceived(): bool
     {
-        return (float) $this->quantityPending() <= 0.0001;
+        return (float) $this->quantityPendingToReceive() <= 0.0001;
+    }
+
+    public function isFullyInvoiced(): bool
+    {
+        return (float) $this->quantityPendingToInvoice() <= 0.0001;
+    }
+
+    /**
+     * @param  Builder<PurchaseOrderVoucherImputation>  $imputations
+     * @return Builder<PurchaseOrderVoucherImputation>
+     */
+    private static function constrainToLiveVouchersOfType(Builder $imputations, SupplierVoucherType $type): Builder
+    {
+        return $imputations->whereHas('supplierVoucherItem.supplierVoucher', fn (Builder $vouchers): Builder => $vouchers
+            ->where('type', $type->value)
+            ->where('status', '!=', SupplierVoucherStatus::Cancelled->value));
+    }
+
+    private static function aggregateAttribute(SupplierVoucherType $type, string $column): string
+    {
+        $track = $type === SupplierVoucherType::Remito ? 'received' : 'invoiced';
+
+        return "{$track}_{$column}_sum";
+    }
+
+    private function imputedQuantity(SupplierVoucherType $type, string $column): string
+    {
+        $aggregate = self::aggregateAttribute($type, $column);
+
+        if (array_key_exists($aggregate, $this->attributes)) {
+            $sum = (float) $this->attributes[$aggregate];
+        } elseif ($this->relationLoaded('imputations')) {
+            $sum = $this->imputations
+                ->filter(function (PurchaseOrderVoucherImputation $imputation) use ($type): bool {
+                    $voucher = $imputation->supplierVoucherItem->supplierVoucher;
+
+                    return $voucher->type === $type && $voucher->status !== SupplierVoucherStatus::Cancelled;
+                })
+                ->sum(fn (PurchaseOrderVoucherImputation $imputation): float => (float) $imputation->{$column});
+        } else {
+            $sum = (float) self::constrainToLiveVouchersOfType($this->imputations()->getQuery(), $type)->sum($column);
+        }
+
+        return number_format($sum, 3, '.', '');
+    }
+
+    private function pendingQuantity(string $covered): string
+    {
+        return number_format(max(0.0, (float) $this->quantity - (float) $covered), 3, '.', '');
     }
 }

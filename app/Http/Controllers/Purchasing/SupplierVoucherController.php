@@ -146,11 +146,14 @@ class SupplierVoucherController extends Controller
     }
 
     /**
-     * Purchase orders eligible for imputation to a new supplier voucher (HU-037):
-     * same supplier, issued status, with at least one item with pending quantity > 0.
+     * Purchase orders eligible for imputation to a new supplier voucher (HU-037): same supplier,
+     * issued status, with at least one item still pending in the track the voucher type covers
+     * (to receive for a remito, to invoice for an invoice).
      */
     public function associablePurchaseOrders(AssociablePurchaseOrdersRequest $request): JsonResponse
     {
+        $type = $request->voucherType();
+
         $orders = PurchaseOrder::query()
             ->where('supplier_id', $request->validated('supplier_id'))
             ->issued()
@@ -162,8 +165,8 @@ class SupplierVoucherController extends Controller
             ->orderByDesc('issue_date')
             ->orderByDesc('id')
             ->get()
-            ->filter(fn (PurchaseOrder $order): bool => $order->hasPendingItems())
-            ->map(fn (PurchaseOrder $order): array => PurchaseOrderImputableData::fromModel($order)->toArray())
+            ->filter(fn (PurchaseOrder $order): bool => $order->hasPendingItemsFor($type))
+            ->map(fn (PurchaseOrder $order): array => PurchaseOrderImputableData::fromModel($order, $type)->toArray())
             ->values();
 
         return response()->json($orders);

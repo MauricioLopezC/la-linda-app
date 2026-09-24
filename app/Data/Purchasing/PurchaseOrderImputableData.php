@@ -2,6 +2,7 @@
 
 namespace App\Data\Purchasing;
 
+use App\Enums\Purchasing\SupplierVoucherType;
 use App\Models\Purchasing\PurchaseOrder;
 use App\Models\Purchasing\PurchaseOrderItem;
 use Spatie\LaravelData\Data;
@@ -22,11 +23,11 @@ class PurchaseOrderImputableData extends Data
         public array $items,
     ) {}
 
-    public static function fromModel(PurchaseOrder $order): self
+    public static function fromModel(PurchaseOrder $order, SupplierVoucherType $type): self
     {
         $imputableItems = $order->items
-            ->filter(fn (PurchaseOrderItem $item): bool => (float) $item->quantityPending() > 0.0001)
-            ->map(fn (PurchaseOrderItem $item): PurchaseOrderImputableItemData => PurchaseOrderImputableItemData::fromModel($item))
+            ->filter(fn (PurchaseOrderItem $item): bool => (float) $item->quantityPendingFor($type) > 0.0001)
+            ->map(fn (PurchaseOrderItem $item): PurchaseOrderImputableItemData => PurchaseOrderImputableItemData::fromModel($item, $type))
             ->values()
             ->all();
 

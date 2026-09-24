@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Purchasing;
 
+use App\Enums\Purchasing\SupplierVoucherType;
 use App\Models\Purchasing\Supplier;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Foundation\Http\FormRequest;
@@ -25,6 +26,24 @@ class AssociablePurchaseOrdersRequest extends FormRequest
                     fn (Builder $query): Builder => $query->where('is_active', true)
                 ),
             ],
+            'type' => [
+                'required',
+                Rule::in([SupplierVoucherType::Invoice->value, SupplierVoucherType::Remito->value]),
+            ],
         ];
+    }
+
+    /** @return array<string, string> */
+    public function attributes(): array
+    {
+        return [
+            'supplier_id' => 'proveedor',
+            'type' => 'tipo de comprobante',
+        ];
+    }
+
+    public function voucherType(): SupplierVoucherType
+    {
+        return SupplierVoucherType::from((string) $this->validated('type'));
     }
 }

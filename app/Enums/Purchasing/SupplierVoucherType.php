@@ -39,6 +39,15 @@ enum SupplierVoucherType: string
         return $this === self::Remito;
     }
 
+    /**
+     * Only invoices and remitos cover purchase order lines: the invoice bills them and the
+     * remito receives them. Credit and debit notes adjust amounts, never ordered quantities.
+     */
+    public function canImputeToPurchaseOrder(): bool
+    {
+        return $this === self::Invoice || $this === self::Remito;
+    }
+
     public function createsPayableBalance(): bool
     {
         return $this !== self::CreditNote && $this !== self::Remito;

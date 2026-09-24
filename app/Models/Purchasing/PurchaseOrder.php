@@ -4,6 +4,7 @@ namespace App\Models\Purchasing;
 
 use App\Concerns\ConvertsMoneyToCents;
 use App\Enums\Purchasing\PurchaseOrderStatus;
+use App\Enums\Purchasing\SupplierVoucherType;
 use App\Models\Inventory\Warehouse;
 use App\Models\User;
 use Database\Factories\Purchasing\PurchaseOrderFactory;
@@ -152,18 +153,26 @@ class PurchaseOrder extends Model
         $query->where('status', PurchaseOrderStatus::Issued);
     }
 
-    public function isFullyReceived(): bool
+    /**
+     * An order is fulfilled once every line has been both received (remitos) and invoiced
+     * (invoices) in full; either track alone leaves it issued.
+     */
+    public function isFullyReceivedAndInvoiced(): bool
     {
         if ($this->items->isEmpty()) {
             return false;
         }
 
-        return $this->items->every(fn (PurchaseOrderItem $item): bool => $item->isFullyReceived());
+        return $this->items->every(
+            fn (PurchaseOrderItem $item): bool => $item->isFullyReceived() && $item->isFullyInvoiced()
+        );
     }
 
-    public function hasPendingItems(): bool
+    public function hasPendingItemsFor(SupplierVoucherType $type): bool
     {
-        return $this->items->contains(fn (PurchaseOrderItem $item): bool => (float) $item->quantityPending() > 0.0001);
+        return $this->items->contains(
+            fn (PurchaseOrderItem $item): bool => (float) $item->quantityPendingFor($type) > 0.0001
+        );
     }
 
     /**

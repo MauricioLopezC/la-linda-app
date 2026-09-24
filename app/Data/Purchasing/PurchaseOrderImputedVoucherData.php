@@ -17,7 +17,7 @@ class PurchaseOrderImputedVoucherData extends Data
         public string $status,
         public string $status_label,
         public string $total_amount,
-        public string $quantity_received,
+        public string $quantity_applied,
         public string $quantity_excess,
     ) {}
 
@@ -29,7 +29,7 @@ class PurchaseOrderImputedVoucherData extends Data
             ->flatMap(fn ($item) => $item->imputations)
             ->filter(fn ($imp) => $orderItemIds->contains($imp->purchase_order_item_id));
 
-        $receivedSum = $imputations->sum(fn ($imp) => (float) $imp->quantity_received);
+        $appliedSum = $imputations->sum(fn ($imp) => (float) $imp->quantity_applied);
         $excessSum = $imputations->sum(fn ($imp) => (float) $imp->quantity_excess);
 
         return new self(
@@ -41,7 +41,7 @@ class PurchaseOrderImputedVoucherData extends Data
             status: $voucher->status->value,
             status_label: $voucher->status->label(),
             total_amount: (string) $voucher->total_amount,
-            quantity_received: number_format($receivedSum, 3, '.', ''),
+            quantity_applied: number_format($appliedSum, 3, '.', ''),
             quantity_excess: number_format($excessSum, 3, '.', ''),
         );
     }

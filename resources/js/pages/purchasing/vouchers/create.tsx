@@ -58,6 +58,7 @@ type AssociableInvoice = App.Data.Purchasing.AssociableInvoiceOptionData;
 type ImputablePurchaseOrder = App.Data.Purchasing.PurchaseOrderImputableData;
 type Warehouse = App.Data.Purchasing.PurchaseOrderWarehouseOptionData;
 
+const INVOICE_TYPE = 'factura';
 const CREDIT_NOTE_TYPE = 'nota_credito';
 const REMITO_TYPE = 'remito';
 
@@ -206,6 +207,8 @@ export default function CreateSupplierVoucher({
   const errors = form.errors as Record<string, string>;
   const isCreditNote = form.data.type === CREDIT_NOTE_TYPE;
   const isRemito = form.data.type === REMITO_TYPE;
+  // Only invoices (bill) and remitos (receive) cover purchase order lines.
+  const canImputeToPurchaseOrder = form.data.type === INVOICE_TYPE || isRemito;
 
   const hasImputedItems = useMemo(
     () =>
@@ -242,6 +245,17 @@ export default function CreateSupplierVoucher({
       ...(value === CREDIT_NOTE_TYPE
         ? {}
         : { associated_invoice_id: null, associated_amount: '' }),
+      // Each type covers a different pending quantity of the order (or none),
+      // so lines linked under the previous type are unlinked.
+      items:
+        value === data.type
+          ? data.items
+          : data.items.map((item) => ({
+              ...item,
+              purchase_order_item_id: null,
+              purchase_order_number: null,
+              pending_quantity: null,
+            })),
     }));
   };
 
@@ -665,9 +679,10 @@ export default function CreateSupplierVoucher({
           />
         )}
 
-        {form.data.supplier_id && form.data.type !== CREDIT_NOTE_TYPE && (
+        {form.data.supplier_id && canImputeToPurchaseOrder && (
           <PurchaseOrderAssociation
             supplierId={form.data.supplier_id}
+            voucherType={form.data.type}
             currentItems={form.data.items}
             isRemito={isRemito}
             selectedWarehouseId={form.data.warehouse_id}
@@ -732,7 +747,9 @@ export default function CreateSupplierVoucher({
                           Imputando a {item.purchase_order_number}
                         </Badge>
                         <span className="text-muted-foreground">
-                          Saldo pendiente en OC:{' '}
+                          {isRemito
+                            ? 'Pendiente de recibir en OC:'
+                            : 'Pendiente de facturar en OC:'}{' '}
                           <strong className="font-semibold text-foreground">
                             {item.pending_quantity}
                           </strong>{' '}
@@ -755,9 +772,10 @@ export default function CreateSupplierVoucher({
                               className="border-amber-400 bg-amber-50 text-amber-900 dark:border-amber-700 dark:bg-amber-950/60 dark:text-amber-200"
                             >
                               <AlertCircle className="mr-1 size-3 text-amber-600 dark:text-amber-400" />
-                              Excedente: +{excess} {item.unit_of_measure} (se
-                              ingresará al inventario y se facturará; la OC
-                              quedará cumplida)
+                              Excedente: +{excess} {item.unit_of_measure}{' '}
+                              {isRemito
+                                ? '(se ingresará al inventario como excedente aceptado)'
+                                : '(se facturará como excedente aceptado)'}
                             </Badge>
                           );
                         }
@@ -1296,6 +1314,7 @@ function ArticleSearch({
 
 function PurchaseOrderAssociation({
   supplierId,
+  voucherType,
   currentItems,
   isRemito,
   selectedWarehouseId,
@@ -1303,6 +1322,7 @@ function PurchaseOrderAssociation({
   onImportItems,
 }: {
   supplierId: string;
+  voucherType: string;
   currentItems: VoucherItemForm[];
   isRemito: boolean;
   selectedWarehouseId: string;
@@ -1337,7 +1357,7 @@ function PurchaseOrderAssociation({
 
       fetch(
         searchAssociablePurchaseOrders.url({
-          query: { supplier_id: supplierId },
+          query: { supplier_id: supplierId, type: voucherType },
         }),
         {
           headers: { Accept: 'application/json' },
@@ -1363,7 +1383,7 @@ function PurchaseOrderAssociation({
       window.clearTimeout(timer);
       abortController.abort();
     };
-  }, [supplierId]);
+  }, [supplierId, voucherType]);
 
   if (supplierId === '' || (!isLoading && hasLoaded && orders.length === 0)) {
     return null;
@@ -1539,12 +1559,15 @@ function PurchaseOrderAssociation({
           <div className="flex items-center gap-2">
             <PackageCheck className="size-5 text-blue-600 dark:text-blue-400" />
             <CardTitle className="text-base">
-              Órdenes de compra pendientes de entrega (opcional)
+              {isRemito
+                ? 'Órdenes de compra pendientes de recibir (opcional)'
+                : 'Órdenes de compra pendientes de facturar (opcional)'}
             </CardTitle>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            Podés imputar la recepción de mercadería a una o varias órdenes
-            emitidas para este proveedor.
+            {isRemito
+              ? 'Podés imputar la recepción de mercadería a una o varias órdenes emitidas para este proveedor.'
+              : 'Podés imputar la factura a una o varias órdenes emitidas para este proveedor.'}
           </p>
         </div>
         {!isLoading && orders.length > 0 && (
@@ -1669,7 +1692,7 @@ function PurchaseOrderAssociation({
                             Pedido
                           </th>
                           <th className="pb-1.5 text-right font-medium">
-                            Recibido
+                            {isRemito ? 'Recibido' : 'Facturado'}
                           </th>
                           <th className="pb-1.5 text-right font-medium">
                             Pendiente
@@ -1695,7 +1718,7 @@ function PurchaseOrderAssociation({
                               {item.quantity_requested}
                             </td>
                             <td className="py-1.5 text-right font-mono">
-                              {item.quantity_received}
+                              {item.quantity_covered}
                             </td>
                             <td className="py-1.5 text-right font-mono font-semibold text-blue-600 dark:text-blue-400">
                               {item.quantity_pending}

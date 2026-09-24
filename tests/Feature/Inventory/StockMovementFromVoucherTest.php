@@ -303,7 +303,12 @@ test('stock movements history and detail pages display voucher and reversal navi
         ->assertInertia(fn (Assert $page) => $page
             ->component('inventory/adjustments/show')
             ->where('movement.supplier_voucher_id', $voucher->id)
-            ->where('movement.supplier_voucher_formatted_number', 'R 0001-00000013'));
+            ->where('movement.supplier_voucher_formatted_number', 'R 0001-00000013')
+            ->has('movement.items.0', fn (Assert $item) => $item
+                ->has('quantity')
+                ->missing('system_quantity')
+                ->missing('final_quantity')
+                ->etc()));
 
     // Annul voucher and verify reversal navigation
     $this->actingAs($user)->post(route('purchasing.vouchers.annul', $voucher), [

@@ -2,6 +2,7 @@
 
 namespace App\Data\Purchasing;
 
+use App\Enums\Purchasing\SupplierVoucherType;
 use App\Models\Purchasing\PurchaseOrderItem;
 use Spatie\LaravelData\Data;
 
@@ -17,11 +18,15 @@ class PurchaseOrderImputableItemData extends Data
         public string $unit_of_measure,
         public string $unit_price,
         public string $quantity_requested,
-        public string $quantity_received,
+        public string $quantity_covered,
         public string $quantity_pending,
     ) {}
 
-    public static function fromModel(PurchaseOrderItem $item): self
+    /**
+     * Covered / pending quantities belong to the track the voucher type fills: received for a
+     * remito, invoiced for an invoice.
+     */
+    public static function fromModel(PurchaseOrderItem $item, SupplierVoucherType $type): self
     {
         return new self(
             id: $item->id,
@@ -33,8 +38,8 @@ class PurchaseOrderImputableItemData extends Data
             unit_of_measure: $item->article->unitOfMeasure->abbreviation ?? $item->article->unitOfMeasure->name ?? 'u',
             unit_price: (string) $item->unit_price,
             quantity_requested: (string) $item->quantity,
-            quantity_received: $item->quantityReceived(),
-            quantity_pending: $item->quantityPending(),
+            quantity_covered: $type->isRemito() ? $item->quantityReceived() : $item->quantityInvoiced(),
+            quantity_pending: $item->quantityPendingFor($type),
         );
     }
 }
