@@ -177,9 +177,10 @@ tiene). Después de agregarlos: `npm run types:generate`.
 
 ### Frontend (`resources/js/pages/sales/sales/`)
 
-- `index.tsx`: listado de ventas con badge de estado y un botón "Abrir venta" que abre un diálogo
-  para elegir punto de venta y cliente (Consumidor Final por defecto). El canal no se muestra
-  como opción: es siempre Mostrador.
+- `index.tsx`: listado de ventas con badge de estado y un botón "Abrir venta". La venta arranca
+  siempre con Consumidor Final (el cliente se cambia desde `show.tsx`); si hay un solo punto de
+  venta activo se abre directo, y si hay varios, un diálogo pide solo el punto de venta. El canal
+  no se muestra como opción: es siempre Mostrador.
 - `show.tsx`: la pantalla de venta.
   - **Cabecera:** sucursal, punto de venta, canal (solo lectura), vendedor, fecha y hora, y selector de cliente
     que llama a `PATCH customer`.

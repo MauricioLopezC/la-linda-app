@@ -61,7 +61,6 @@ class SaleController extends Controller
         return Inertia::render('sales/sales/index', [
             'sales' => SaleListData::collect($sales),
             'pointsOfSale' => PointOfSaleData::collect($pointsOfSale),
-            'customers' => SaleCustomerOptionData::collect($this->activeCustomers()),
             'statuses' => SaleStatus::toOptions(),
             'filters' => [
                 'status' => (string) $request->input('status', 'all'),

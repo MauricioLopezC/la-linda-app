@@ -25,7 +25,7 @@ test('the sales index lists sales with their totals and line counts', function (
             ->where('sales.data.0.items_count', 2)
             ->where('sales.data.0.total_amount', '150.00')
             ->has('pointsOfSale')
-            ->has('customers'));
+            ->missing('customers'));
 });
 
 test('the sale screen shows the header, the lines and the customers to choose from', function () {

@@ -39,7 +39,6 @@ import type { BreadcrumbItem } from '@/types';
 
 type Sale = App.Data.Sales.SaleListData;
 type PointOfSale = App.Data.Sales.PointOfSaleData;
-type CustomerOption = App.Data.Sales.SaleCustomerOptionData;
 type StatusOption = { value: string; label: string };
 
 type PaginationProps = {
@@ -53,7 +52,6 @@ type PaginationProps = {
 type Props = {
   sales: PaginationProps;
   pointsOfSale: PointOfSale[];
-  customers: CustomerOption[];
   statuses: StatusOption[];
   filters: {
     status: string;
@@ -72,7 +70,6 @@ const saleStatusClasses: Record<string, string> = {
 export default function SalesIndex({
   sales,
   pointsOfSale = [],
-  customers = [],
   statuses = [],
   filters,
 }: Props) {
@@ -84,11 +81,9 @@ export default function SalesIndex({
   const [isOpenDialogVisible, setIsOpenDialogVisible] = useState(false);
 
   const activePointsOfSale = pointsOfSale.filter((pos) => pos.is_active);
-  const defaultCustomer = customers.find((customer) => customer.is_default);
 
   const openSaleForm = useForm({
     point_of_sale_id: '',
-    customer_id: defaultCustomer ? String(defaultCustomer.id) : '',
   });
 
   const visit = (query: Record<string, string | number | undefined>) => {
@@ -111,21 +106,29 @@ export default function SalesIndex({
     visit({});
   };
 
-  const handleShowOpenDialog = () => {
-    openSaleForm.setData({
-      point_of_sale_id:
-        activePointsOfSale.length === 1 ? String(activePointsOfSale[0].id) : '',
-      customer_id: defaultCustomer ? String(defaultCustomer.id) : '',
+  const openSale = (selectedPointOfSaleId: string) => {
+    openSaleForm.transform(() => ({ point_of_sale_id: selectedPointOfSaleId }));
+    openSaleForm.post(store.url(), {
+      onError: () => toast.error('No se pudo abrir la venta'),
     });
+  };
+
+  const handleOpenSaleClick = () => {
     openSaleForm.clearErrors();
+
+    if (activePointsOfSale.length === 1) {
+      openSale(String(activePointsOfSale[0].id));
+
+      return;
+    }
+
+    openSaleForm.setData('point_of_sale_id', '');
     setIsOpenDialogVisible(true);
   };
 
   const handleOpenSale = (e: React.FormEvent) => {
     e.preventDefault();
-    openSaleForm.post(store.url(), {
-      onError: () => toast.error('No se pudo abrir la venta'),
-    });
+    openSale(openSaleForm.data.point_of_sale_id);
   };
 
   return (
@@ -139,8 +142,10 @@ export default function SalesIndex({
             description="Ventas de mostrador abiertas y descartadas."
           />
           <Button
-            onClick={handleShowOpenDialog}
-            disabled={activePointsOfSale.length === 0}
+            onClick={handleOpenSaleClick}
+            disabled={
+              activePointsOfSale.length === 0 || openSaleForm.processing
+            }
           >
             <Plus className="mr-1.5 size-4" />
             Abrir venta
@@ -287,8 +292,8 @@ export default function SalesIndex({
             <DialogHeader>
               <DialogTitle>Abrir venta de mostrador</DialogTitle>
               <DialogDescription>
-                La venta arranca con el cliente elegido y se puede cambiar
-                después desde la pantalla de venta.
+                La venta arranca con Consumidor Final; el cliente se puede
+                cambiar después desde la pantalla de venta.
               </DialogDescription>
             </DialogHeader>
 
@@ -313,31 +318,6 @@ export default function SalesIndex({
                 </SelectContent>
               </Select>
               <InputError message={openSaleForm.errors.point_of_sale_id} />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>Cliente</Label>
-              <Select
-                value={openSaleForm.data.customer_id}
-                onValueChange={(value) =>
-                  openSaleForm.setData('customer_id', value)
-                }
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Seleccioná un cliente" />
-                </SelectTrigger>
-                <SelectContent>
-                  {customers.map((customer) => (
-                    <SelectItem key={customer.id} value={String(customer.id)}>
-                      {customer.name}
-                      {customer.price_list_name
-                        ? ` · ${customer.price_list_name}`
-                        : ''}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <InputError message={openSaleForm.errors.customer_id} />
             </div>
 
             <p className="text-sm text-muted-foreground">
