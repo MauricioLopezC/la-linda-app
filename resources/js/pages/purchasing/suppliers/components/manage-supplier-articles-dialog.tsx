@@ -1,6 +1,14 @@
 import { router, useForm } from '@inertiajs/react';
-import { Package, Pencil, Plus, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import {
+  Check,
+  ChevronsUpDown,
+  Package,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+} from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import {
   destroyForSupplier,
@@ -9,6 +17,13 @@ import {
 } from '@/actions/App/Http/Controllers/Catalog/ArticleSupplierController';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
+import {
+  Command,
+  CommandEmpty,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
 import {
   Dialog,
   DialogContent,
@@ -20,12 +35,10 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import {
   Table,
   TableBody,
@@ -34,7 +47,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { formatCurrency } from '@/lib/utils';
+import { cn, formatCurrency } from '@/lib/utils';
 
 type Article = App.Data.Catalog.ArticleData;
 type ArticleSupplier = App.Data.Catalog.ArticleSupplierData;
@@ -47,6 +60,30 @@ type Props = {
   availableArticles: Article[];
 };
 
+/**
+ * Lowercases and strips accents so "almibar" matches "Almíbar".
+ */
+function normalizeForSearch(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
+function matchesSearch(
+  normalizedSearch: string,
+  fields: Array<string | null | undefined>,
+): boolean {
+  if (normalizedSearch === '') {
+    return true;
+  }
+
+  return fields.some(
+    (field) => field && normalizeForSearch(field).includes(normalizedSearch),
+  );
+}
+
 export default function ManageSupplierArticlesDialog({
   supplier,
   open,
@@ -54,6 +91,9 @@ export default function ManageSupplierArticlesDialog({
   availableArticles = [],
 }: Props) {
   const [editingItem, setEditingItem] = useState<ArticleSupplier | null>(null);
+  const [associatedSearch, setAssociatedSearch] = useState('');
+  const [articlePickerOpen, setArticlePickerOpen] = useState(false);
+  const [articlePickerSearch, setArticlePickerSearch] = useState('');
 
   const attachForm = useForm({
     article_id: '',
@@ -66,17 +106,72 @@ export default function ManageSupplierArticlesDialog({
     notes: '',
   });
 
+  const associatedArticles = useMemo(
+    () => supplier?.articles ?? [],
+    [supplier],
+  );
+
+  const filteredAssociatedArticles = useMemo(() => {
+    const normalizedSearch = normalizeForSearch(associatedSearch);
+
+    return associatedArticles.filter((item) =>
+      matchesSearch(normalizedSearch, [
+        item.article_description,
+        item.article_internal_code,
+        item.article_barcode,
+        item.supplier_article_code,
+        item.notes,
+      ]),
+    );
+  }, [associatedArticles, associatedSearch]);
+
+  const eligibleArticles = useMemo(() => {
+    const associatedArticleIds = new Set(
+      associatedArticles.map((item) => item.article_id),
+    );
+
+    return availableArticles.filter(
+      (article) => !associatedArticleIds.has(article.id),
+    );
+  }, [associatedArticles, availableArticles]);
+
+  const filteredEligibleArticles = useMemo(() => {
+    const normalizedSearch = normalizeForSearch(articlePickerSearch);
+
+    return eligibleArticles.filter((article) =>
+      matchesSearch(normalizedSearch, [
+        article.description,
+        article.internal_code,
+        article.barcode,
+      ]),
+    );
+  }, [eligibleArticles, articlePickerSearch]);
+
   if (!supplier) {
     return null;
   }
 
-  const associatedArticleIds = new Set(
-    supplier.articles.map((item) => item.article_id),
+  const selectedArticle = eligibleArticles.find(
+    (article) => String(article.id) === attachForm.data.article_id,
   );
 
-  const eligibleArticles = availableArticles.filter(
-    (article) => !associatedArticleIds.has(article.id),
-  );
+  const handleOpenChange = (isOpen: boolean) => {
+    if (!isOpen) {
+      setAssociatedSearch('');
+      setArticlePickerSearch('');
+      attachForm.reset();
+      attachForm.clearErrors();
+    }
+
+    onOpenChange(isOpen);
+  };
+
+  const handleSelectArticle = (article: Article) => {
+    attachForm.setData('article_id', String(article.id));
+    attachForm.clearErrors('article_id');
+    setArticlePickerOpen(false);
+    setArticlePickerSearch('');
+  };
 
   const handleAttachSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -158,11 +253,11 @@ export default function ManageSupplierArticlesDialog({
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
-          <DialogHeader>
-            <div className="flex items-center gap-2">
-              <Package className="size-5 text-primary" />
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogContent className="flex max-h-[90vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-5xl">
+          <DialogHeader className="border-b px-6 pt-6 pb-4">
+            <div className="flex items-center gap-2 pr-6">
+              <Package className="size-5 shrink-0 text-primary" />
               <DialogTitle>Artículos de: {supplier.business_name}</DialogTitle>
             </div>
             <DialogDescription>
@@ -172,88 +267,7 @@ export default function ManageSupplierArticlesDialog({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-6 py-2">
-            {/* Associated Articles List */}
-            <div>
-              <h4 className="mb-2 text-sm font-semibold">
-                Artículos asociados ({supplier.articles.length})
-              </h4>
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Artículo</TableHead>
-                      <TableHead>Código en Proveedor</TableHead>
-                      <TableHead>Último Costo</TableHead>
-                      <TableHead>Observaciones</TableHead>
-                      <TableHead className="text-right">Acciones</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {supplier.articles.length === 0 ? (
-                      <TableRow>
-                        <TableCell
-                          colSpan={5}
-                          className="py-8 text-center text-sm text-muted-foreground"
-                        >
-                          Este proveedor no tiene artículos asociados
-                          actualmente.
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      supplier.articles.map((item) => (
-                        <TableRow key={item.id}>
-                          <TableCell>
-                            <div className="font-medium">
-                              {item.article_description}
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              Cód. Int: {item.article_internal_code}
-                              {item.article_barcode
-                                ? ` | Barra: ${item.article_barcode}`
-                                : ''}
-                            </div>
-                          </TableCell>
-                          <TableCell className="font-mono text-sm font-medium">
-                            {item.supplier_article_code}
-                          </TableCell>
-                          <TableCell>
-                            {item.last_cost !== null
-                              ? formatCurrency(item.last_cost)
-                              : '—'}
-                          </TableCell>
-                          <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">
-                            {item.notes ?? '—'}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleOpenEdit(item)}
-                                aria-label={`Editar código en proveedor para ${item.article_description}`}
-                              >
-                                <Pencil className="size-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleDetach(item)}
-                                aria-label={`Desasociar ${item.article_description}`}
-                                className="text-destructive hover:text-destructive"
-                              >
-                                <Trash2 className="size-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
-
+          <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-6 py-4">
             {/* Attach Form */}
             <div className="rounded-lg border bg-muted/30 p-4">
               <h4 className="mb-3 flex items-center gap-1.5 text-sm font-semibold">
@@ -269,33 +283,95 @@ export default function ManageSupplierArticlesDialog({
               ) : (
                 <form
                   onSubmit={handleAttachSubmit}
-                  className="grid gap-4 sm:grid-cols-12"
+                  className="grid gap-4 sm:grid-cols-12 sm:items-start"
                 >
-                  <div className="sm:col-span-4">
+                  <div className="min-w-0 sm:col-span-5">
                     <Label htmlFor="attach-article-id" className="text-xs">
                       Artículo *
                     </Label>
-                    <Select
-                      value={attachForm.data.article_id}
-                      onValueChange={(val) =>
-                        attachForm.setData('article_id', val)
-                      }
+                    <Popover
+                      modal
+                      open={articlePickerOpen}
+                      onOpenChange={(isOpen) => {
+                        setArticlePickerOpen(isOpen);
+
+                        if (!isOpen) {
+                          setArticlePickerSearch('');
+                        }
+                      }}
                     >
-                      <SelectTrigger id="attach-article-id" className="mt-1">
-                        <SelectValue placeholder="Seleccionar artículo..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {eligibleArticles.map((art) => (
-                          <SelectItem key={art.id} value={String(art.id)}>
-                            {art.description} ({art.internal_code})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      <PopoverTrigger asChild>
+                        <Button
+                          id="attach-article-id"
+                          type="button"
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={articlePickerOpen}
+                          className="mt-1 w-full justify-between font-normal"
+                        >
+                          <span
+                            className={cn(
+                              'truncate',
+                              !selectedArticle && 'text-muted-foreground',
+                            )}
+                          >
+                            {selectedArticle
+                              ? `${selectedArticle.description} (${selectedArticle.internal_code})`
+                              : 'Buscar artículo...'}
+                          </span>
+                          <ChevronsUpDown className="size-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        className="w-[var(--radix-popover-trigger-width)] min-w-[20rem] p-0"
+                        align="start"
+                      >
+                        <Command shouldFilter={false}>
+                          <CommandInput
+                            value={articlePickerSearch}
+                            onValueChange={setArticlePickerSearch}
+                            placeholder="Buscar por descripción, código o barras"
+                          />
+                          <CommandList>
+                            <CommandEmpty>
+                              No se encontraron artículos sin asociar.
+                            </CommandEmpty>
+                            {filteredEligibleArticles.map((article) => (
+                              <CommandItem
+                                key={article.id}
+                                value={String(article.id)}
+                                onSelect={() => handleSelectArticle(article)}
+                              >
+                                <Check
+                                  className={cn(
+                                    'size-4 shrink-0',
+                                    attachForm.data.article_id ===
+                                      String(article.id)
+                                      ? 'opacity-100'
+                                      : 'opacity-0',
+                                  )}
+                                />
+                                <div className="flex min-w-0 flex-col gap-0.5">
+                                  <span className="text-sm">
+                                    {article.description}
+                                  </span>
+                                  <span className="text-xs text-muted-foreground">
+                                    Cód. Int: {article.internal_code}
+                                    {article.barcode
+                                      ? ` | Barra: ${article.barcode}`
+                                      : ''}
+                                  </span>
+                                </div>
+                              </CommandItem>
+                            ))}
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                     <InputError message={attachForm.errors.article_id} />
                   </div>
 
-                  <div className="sm:col-span-3">
+                  <div className="min-w-0 sm:col-span-3">
                     <Label
                       htmlFor="attach-supplier-art-code"
                       className="text-xs"
@@ -320,7 +396,7 @@ export default function ManageSupplierArticlesDialog({
                     />
                   </div>
 
-                  <div className="sm:col-span-3">
+                  <div className="min-w-0 sm:col-span-4">
                     <Label htmlFor="attach-art-notes" className="text-xs">
                       Observaciones
                     </Label>
@@ -352,13 +428,115 @@ export default function ManageSupplierArticlesDialog({
                 </form>
               )}
             </div>
+
+            {/* Associated Articles List */}
+            <div className="min-w-0 space-y-3">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <h4 className="text-sm font-semibold">
+                  Artículos asociados (
+                  {associatedSearch.trim() === ''
+                    ? associatedArticles.length
+                    : `${filteredAssociatedArticles.length} de ${associatedArticles.length}`}
+                  )
+                </h4>
+                {associatedArticles.length > 0 && (
+                  <div className="relative w-full sm:w-72">
+                    <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      type="search"
+                      placeholder="Buscar artículo asociado..."
+                      aria-label="Buscar artículo asociado"
+                      className="pl-8"
+                      value={associatedSearch}
+                      onChange={(e) => setAssociatedSearch(e.target.value)}
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Artículo</TableHead>
+                      <TableHead>Código en Proveedor</TableHead>
+                      <TableHead>Último Costo</TableHead>
+                      <TableHead>Observaciones</TableHead>
+                      <TableHead className="text-right">Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredAssociatedArticles.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={5}
+                          className="py-8 text-center text-sm whitespace-normal text-muted-foreground"
+                        >
+                          {associatedArticles.length === 0
+                            ? 'Este proveedor no tiene artículos asociados actualmente.'
+                            : 'Ningún artículo asociado coincide con la búsqueda.'}
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredAssociatedArticles.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell className="min-w-[16rem] whitespace-normal">
+                            <div className="font-medium">
+                              {item.article_description}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Cód. Int: {item.article_internal_code}
+                              {item.article_barcode
+                                ? ` | Barra: ${item.article_barcode}`
+                                : ''}
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-mono text-sm font-medium">
+                            {item.supplier_article_code}
+                          </TableCell>
+                          <TableCell>
+                            {item.last_cost !== null
+                              ? formatCurrency(item.last_cost)
+                              : '—'}
+                          </TableCell>
+                          <TableCell className="max-w-[12rem] truncate text-xs text-muted-foreground">
+                            {item.notes ?? '—'}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleOpenEdit(item)}
+                                aria-label={`Editar código en proveedor para ${item.article_description}`}
+                              >
+                                <Pencil className="size-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDetach(item)}
+                                aria-label={`Desasociar ${item.article_description}`}
+                                className="text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="size-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="border-t px-6 py-4">
             <Button
               type="button"
               variant="outline"
-              onClick={() => onOpenChange(false)}
+              onClick={() => handleOpenChange(false)}
             >
               Cerrar
             </Button>
