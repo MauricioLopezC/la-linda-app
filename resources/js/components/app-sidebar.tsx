@@ -12,6 +12,7 @@ import {
   Package,
   ReceiptText,
   Ruler,
+  ShoppingBag,
   ShoppingCart,
   Tags,
   LayoutGrid,
@@ -58,6 +59,7 @@ import { index as paymentMethods } from '@/routes/sales/payment-methods';
 // alcance de este sprint; se oculta del menú sin borrar el código que lo soporta.
 // import { index as vatRates } from '@/routes/pricing/vat-rates';
 import { index as pointsOfSale } from '@/routes/sales/points-of-sale';
+import { index as sales } from '@/routes/sales/sales';
 import type { NavGroup, NavItem } from '@/types';
 
 const navGroups: NavGroup[] = [
@@ -174,6 +176,11 @@ const navGroups: NavGroup[] = [
   {
     label: 'Ventas',
     items: [
+      {
+        title: 'Ventas',
+        href: sales(),
+        icon: ShoppingBag,
+      },
       {
         title: 'Clientes',
         href: customers(),
