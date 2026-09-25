@@ -26,5 +26,31 @@ class PriceListSeeder extends Seeder
                 'is_active' => true,
             ]
         );
+
+        PriceList::updateOrCreate(
+            ['name_normalized' => 'lista mostrador'],
+            [
+                'name' => 'Lista Mostrador',
+                'description' => 'Precios de la venta de mostrador. Los artículos que no figuran acá toman el precio de la Lista General.',
+                'scope' => PriceListScope::Canal,
+                'channel' => PriceListChannel::Mostrador,
+                'valid_from' => now()->toDateString(),
+                'valid_to' => null,
+                'is_active' => true,
+            ]
+        );
+
+        PriceList::updateOrCreate(
+            ['name_normalized' => 'mayorista'],
+            [
+                'name' => 'Mayorista',
+                'description' => 'Lista particular para clientes mayoristas. Tiene precedencia sobre la lista del canal.',
+                'scope' => PriceListScope::Particular,
+                'channel' => null,
+                'valid_from' => now()->toDateString(),
+                'valid_to' => null,
+                'is_active' => true,
+            ]
+        );
     }
 }

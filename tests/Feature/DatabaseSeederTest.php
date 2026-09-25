@@ -1,5 +1,8 @@
 <?php
 
+use App\Models\Catalog\Article;
+use App\Models\Customers\Customer;
+use App\Models\Pricing\PriceList;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 
@@ -25,4 +28,18 @@ it('reseeding the demo admin user stays idempotent', function () {
     $this->seed(DatabaseSeeder::class);
 
     expect(User::where('email', 'demo-admin@example.com')->count())->toBe(1);
+});
+
+it('seeds demo prices that exercise every step of the price cascade', function () {
+    $this->seed(DatabaseSeeder::class);
+
+    $general = PriceList::query()->where('name_normalized', 'lista general')->sole();
+    $mostrador = PriceList::query()->where('name_normalized', 'lista mostrador')->sole();
+    $mayorista = PriceList::query()->where('name_normalized', 'mayorista')->sole();
+    $activeArticles = Article::query()->active()->count();
+
+    expect($general->items()->count())->toBe($activeArticles - 1)
+        ->and($mostrador->items()->count())->toBeGreaterThan(0)->toBeLessThan($general->items()->count())
+        ->and($mayorista->items()->count())->toBe($general->items()->count())
+        ->and(Customer::query()->where('id_number', '30500858628')->value('price_list_id'))->toBe($mayorista->id);
 });

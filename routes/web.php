@@ -22,6 +22,7 @@ use App\Http\Controllers\Purchasing\SupplierController;
 use App\Http\Controllers\Purchasing\SupplierVoucherController;
 use App\Http\Controllers\Sales\PaymentMethodController;
 use App\Http\Controllers\Sales\PointOfSaleController;
+use App\Http\Controllers\Sales\SaleController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'welcome')->name('home');
@@ -126,6 +127,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/', [PaymentMethodController::class, 'store'])->name('store');
         Route::put('{payment_method}', [PaymentMethodController::class, 'update'])->name('update');
         Route::patch('{payment_method}/toggle', [PaymentMethodController::class, 'toggleStatus'])->name('toggle');
+    });
+
+    Route::prefix('sales/sales')->name('sales.sales.')->group(function () {
+        Route::get('/', [SaleController::class, 'index'])->name('index');
+        Route::post('/', [SaleController::class, 'store'])->name('store');
+        Route::get('search-articles', [SaleController::class, 'searchArticles'])->name('search-articles');
+        Route::post('{sale}/items', [SaleController::class, 'storeItem'])->name('items.store');
+        Route::patch('{sale}/items/{item}', [SaleController::class, 'updateItem'])->name('items.update')->scopeBindings();
+        Route::delete('{sale}/items/{item}', [SaleController::class, 'destroyItem'])->name('items.destroy')->scopeBindings();
+        Route::patch('{sale}/customer', [SaleController::class, 'updateCustomer'])->name('customer.update');
+        Route::post('{sale}/discard', [SaleController::class, 'discard'])->name('discard');
+        // Declared last so the literal segments above are not swallowed by the wildcard.
+        Route::get('{sale}', [SaleController::class, 'show'])->name('show');
     });
 
     Route::prefix('purchasing/suppliers')->name('purchasing.suppliers.')->group(function () {
