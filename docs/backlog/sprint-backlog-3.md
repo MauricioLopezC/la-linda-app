@@ -12,7 +12,7 @@
 
 1. **Cerrar al 100% el módulo de Compras**: Completar la conciliación de órdenes de compra contra comprobantes (`HU-037`), la actualización automática de costos y cierre de órdenes (`HU-038`), el ingreso automático e inmutable de existencias a partir de comprobantes recibidos incorporando el tipo documental **Remito** (`HU-026`), y las herramientas de gestión y control financiero (cuenta corriente de proveedores `HU-028` y listado gerencial de pagos y egresos `HU-055`).
 2. **Establecer el maestro de Clientes y Puntos de Venta**: Administrar el padrón de clientes con sus condiciones fiscales y el cliente por defecto Consumidor Final (`HU-021`), y reconectar/habilitar los puntos de venta vinculados a depósitos (`HU-051`).
-3. **Construir el motor transversal de Precios**: Crear las listas de precios por canal (`HU-011`), permitir la definición de precios de artículos por lista (`HU-012`), asignar listas diferenciadas a clientes (`HU-022`) y construir el servicio de resolución automática de precios con cascada de precedencias (`HU-056`), dejando la base lista para el circuito de ventas del Sprint 4.
+3. **Construir el motor transversal de Precios**: Crear las listas de precios por canal (`HU-011`), permitir la definición de precios de artículos por lista (`HU-012`), asignar listas diferenciadas a clientes (`HU-022`) y construir el servicio de resolución automática de precios con cascada de precedencias (`HU-056`), dejando la base lista para el circuito de ventas.
 
 ---
 
@@ -351,11 +351,21 @@ erDiagram
 
 | Ítem | Motivo |
 |---|---|
-| `HU-039`, `HU-040`, `HU-041` | Apertura de venta de mostrador, lectura de código de barras y cálculo de totales/IVA corresponden al circuito de ventas de caja del Sprint 4. |
-| `HU-042`, `HU-043` | Facturación fiscal y PDF de comprobante de venta corresponden al Sprint 4. |
+| `HU-039`, `HU-040`, `HU-041` | Apertura de venta de mostrador, lectura de código de barras y cálculo de totales/IVA son del circuito de ventas de caja, que no se comprometió en este sprint. |
+| `HU-042`, `HU-043` | Facturación fiscal y PDF del comprobante de venta se construyen sobre la venta de mostrador, que no se comprometió en este sprint. |
 | `HU-044`, `HU-045` | Anulación de venta y devoluciones parciales de clientes se construyen sobre la venta ya confirmada. |
 | `HU-029`, `HU-030` | Aumento masivo de precios por porcentaje e historial de precios se incorporan como optimización posterior al motor comercial. |
 | `HU-014` | Contactos secundarios de proveedores no bloquean las operaciones transaccionales. |
+
+> **Trabajo adelantado fuera del compromiso (2026-09-24):** para ver funcionando `HU-056` desde
+> una pantalla real se construyó una venta básica de mostrador (PR #56): abrir la venta con
+> Consumidor Final, cargar artículos por código de barras o búsqueda con el precio resuelto por
+> `HU-056`, el total sin discriminar IVA y cambiar el cliente recalculando los precios. Toca
+> `HU-039`, `HU-040`, `HU-041` y parte de `EPIC-03`, que **siguen fuera del sprint**: no suman a la
+> velocidad del Sprint 3 ni se dan por terminadas. Sus criterios se definen con el PO en el Sprint
+> Planning en que entren, tomando como punto de partida `docs/plans/venta-basica-plan.md`. Queda
+> pendiente confirmar con el PO si el precio de lista es final con IVA incluido, que es lo que
+> asume la implementación.
 
 ---
 

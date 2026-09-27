@@ -17,8 +17,8 @@ factura y numeración (HU-042, HU-043), descuento de stock (EPIC-06), anulación
 | **HU-041** Precio, IVA y totales | Precio unitario de cada línea resuelto por HU-056 (nunca a mano), total de la línea y total de la venta | **IVA discriminado por alícuota** (ver la sección siguiente) |
 | **EPIC-03** (recorte) | Cambiar el cliente de una venta abierta y recalcular el precio de sus líneas | Tipo de comprobante según la condición fiscal (va con HU-042) |
 
-Los criterios de aceptación de HU-039, HU-040 y HU-041 dicen "a definir en el refinamiento previo
-al Sprint 4". Los que usa este plan son una **propuesta** que el PO tiene que validar.
+HU-039, HU-040 y HU-041 no tienen criterios de aceptación: se definen en el Sprint Planning en que
+entren. Los que usa este plan son una **propuesta** que el PO tiene que validar.
 
 ## IVA: ¿se puede calcular el total sin discriminarlo?
 
@@ -115,7 +115,7 @@ cliente con ventas pasa a ser lógica sin tocar nada más.
 (`.ai/rules/migrations.md`). Hoy las listas de precios no tienen ruta para borrarlas, así que
 `restrictOnDelete` no bloquea ningún flujo existente.
 
-Este DER va al sprint backlog del Sprint 4 cuando se cree, en su sección "Tablas nuevas".
+Este DER va a la sección "Tablas nuevas" del sprint backlog del sprint en que entren estas historias.
 
 ## Cambios propuestos
 

@@ -31,8 +31,13 @@ Product Owner se genera a pedido a partir de este documento.
   valen 2 desde el 2026-08-22, cuando la exportación salió de sus criterios hacia `HU-053`.
 - **Alcance** referencia las macrofuncionalidades de `LaLindaAlcanceV1.md` (`ADM-01`, `STK-04`, ...).
 - Los criterios de aceptación siguen la estructura *Datos / Validaciones / Comportamiento / Verificación*.
-- El nivel de detalle decrece a propósito: los ítems del final del backlog llevan un solo criterio
-  con lo que ya define el alcance y el resto queda para el refinamiento previo a su sprint.
+- **Solo las historias ya implementadas tienen criterios de aceptación (decisión del equipo,
+  2026-09-27).** Las pendientes dicen "A definir en el Sprint Planning correspondiente": sus
+  criterios se desglosan en el planning del sprint en que entren, a partir de lo que el PO explique
+  en ese momento. Los criterios escritos por adelantado arrastraban errores conceptuales de
+  iteraciones anteriores y de otros documentos (alcance, pliego), y el PO los cambiaba igual al
+  llegar el sprint. No se completan criterios de historias pendientes fuera del planning; en el
+  planning también se pueden agregar, partir o reformular historias.
 - **`HU-004` no es precondición de nada (PO, 2026-08-11).** El profesor pidió arrancar por
   artículos y stock, así que las historias de catálogo, parámetros, proveedores y clientes ya
   no dependen de roles y permisos: les alcanza con que exista un usuario logueado, que lo
@@ -56,7 +61,7 @@ Product Owner se genera a pedido a partir de este documento.
 ## Índice
 
 70 registros históricos: 66 ítems activos con **358 story points estimados**, 3 historias
-absorbidas, más la reserva de estabilización del Sprint 6 (`HAB-03`, sin estimar a propósito).
+absorbidas, más la reserva de estabilización (`HAB-03`, sin estimar a propósito).
 
 | # | ID | Título | Módulo | SP | Estado |
 |---|----|--------|--------|----|--------|
@@ -270,14 +275,7 @@ independiente.
 
 **Criterios de aceptación**
 
-- **Datos:** artículo, imagen (archivo cargado y su URL)
-- **Validaciones:**
-    - la imagen admite formatos JPG y PNG de hasta 2 MB
-    - un artículo tiene a lo sumo una imagen; cargar una nueva reemplaza a la anterior
-- **Comportamiento:**
-    - la imagen se administra desde la ficha del artículo, con carga y baja
-    - la imagen es la que se muestra en el listado de búsqueda (HU-009) y en el catálogo público (HU-046)
-    - un artículo sin imagen se muestra con una imagen genérica, no con un espacio vacío
+- A definir en el Sprint Planning correspondiente
 
 ## HU-009 - Buscar artículos en el catálogo
 
@@ -287,14 +285,7 @@ independiente.
 
 **Criterios de aceptación**
 
-- **Datos:** filtros por descripción, código interno, código de barras, categoría, marca, proveedor y estado
-- **Validaciones:** la búsqueda por descripción es parcial y no distingue mayúsculas ni acentos
-- **Comportamiento:**
-    - los filtros se combinan entre sí
-    - el resultado se pagina
-    - la búsqueda por código de barras exacto devuelve directamente el artículo correspondiente
-    - el listado es exportable a CSV y Excel
-    - el filtro por proveedor depende de la asociación artículo-proveedor, que llega con HU-015: hasta entonces la búsqueda se entrega sin ese filtro y se completa después
+- A definir en el Sprint Planning correspondiente
 
 ## HU-010 - Importar el catálogo desde un archivo CSV
 
@@ -304,14 +295,7 @@ independiente.
 
 **Criterios de aceptación**
 
-- **Datos:** archivo CSV con las columnas descripción, código interno, código de barras, categoría, subcategoría, marca, unidad de medida, alícuota de IVA, estado (activo, inactivo), indicador de publicable en el canal online
-- **Validaciones:**
-    - se rechaza la fila cuyo código interno ya existe, la que referencia una categoría, marca, unidad o alícuota inexistente, y la que omite un dato obligatorio
-    - las filas válidas se importan igualmente aunque otras fallen
-- **Comportamiento:**
-    - al finalizar se muestra un resumen con la cantidad de filas procesadas, importadas y rechazadas, y el detalle de cada rechazo con su número de fila y su motivo
-    - el informe de rechazos se puede descargar
-    - la importación se ejecuta dentro de una operación que no deja el catálogo en estado intermedio si se interrumpe
+- A definir en el Sprint Planning correspondiente
 
 ## HU-011 - Administrar listas de precios
 
@@ -373,17 +357,7 @@ independiente.
 
 **Criterios de aceptación**
 
-- **Datos:** nombre, apellido, documento, correo electrónico, nombre de usuario, sucursal de pertenencia, rol, estado activo o inactivo
-- **Validaciones:**
-    - nombre de usuario, correo y documento únicos
-    - correo con formato válido
-    - sucursal y rol obligatorios
-    - no se permite dejar el sistema sin al menos un usuario administrador activo
-- **Comportamiento:**
-    - la baja de un usuario con operaciones registradas es siempre lógica y pasa a estado inactivo, nunca se elimina físicamente
-    - el listado se filtra por nombre, sucursal, rol y estado
-    - al crear el usuario se le asigna una contraseña inicial que deberá cambiar en su primer ingreso
-    - la contraseña inicial no se envía por correo: se muestra una única vez en pantalla al Administrador al confirmar el alta, para que se la comunique al empleado por el medio que corresponda
+- A definir en el Sprint Planning correspondiente
 
 > **Resuelto (2026-08-12, a confirmar con el PO):** se descarta el autoregistro de empleados
 > -ese patrón es el de `EPIC-11` para clientes de la tienda online, no para personal interno
@@ -391,8 +365,8 @@ independiente.
 > mail con la contraseña inicial: `LaLindaAlcanceV1.md` (línea 179) ya deja la "recuperación de
 > contraseña por correo electrónico" en **Deseable**, fuera del alcance comprometido de
 > `SEG-02`, así que construir envío de mails ahora sería alcance nuevo sin aprobar. La solución
-> dentro de alcance es mostrar la contraseña generada en pantalla al Admin (arriba, en
-> Comportamiento). Si más adelante se aprueba el ítem deseable, el mecanismo a implementar es
+> dentro de alcance es mostrar la contraseña generada en pantalla al Admin. Si
+> más adelante se aprueba el ítem deseable, el mecanismo a implementar es
 > un link de invitación reutilizando el flujo de recuperación de contraseña del starter kit,
 > no reenviar la contraseña en texto plano por mail.
 
@@ -404,15 +378,7 @@ independiente.
 
 **Criterios de aceptación**
 
-- **Datos:** nombre del rol, descripción, matriz de permisos por módulo y por operación (consulta, alta, modificación, baja, autorización)
-- **Validaciones:**
-    - nombre de rol único
-    - no se puede eliminar un rol con usuarios asignados
-    - el rol Administrador conserva siempre la totalidad de los permisos y no puede quedar sin ellos
-- **Comportamiento:**
-    - el sistema se entrega con los roles predefinidos administrador, gerente, encargado de depósito, encargado de compras y vendedor
-    - la restricción se aplica ocultando las opciones no permitidas en la interfaz y además rechazando la petición en el servidor
-- **Verificación:** un usuario sin permiso que intenta acceder por URL directa recibe un error de autorización y no la pantalla
+- A definir en el Sprint Planning correspondiente
 
 ## HU-013 - Administrar proveedores
 
@@ -438,14 +404,7 @@ independiente.
 
 **Criterios de aceptación**
 
-- **Datos:**
-    - contacto (nombre, cargo, teléfono, correo electrónico, observaciones)
-    - filtros del listado por razón social, CUIT, rubro y estado
-- **Validaciones:**
-    - un proveedor admite más de un contacto
-    - nombre y al menos un medio de contacto obligatorios
-    - correo con formato válido cuando se informa
-- **Comportamiento:** los filtros del listado se combinan entre sí y el resultado es exportable a CSV y Excel
+- A definir en el Sprint Planning correspondiente
 
 ## HU-015 - Asociar artículos a sus proveedores
 
@@ -539,15 +498,7 @@ independiente.
 
 **Criterios de aceptación**
 
-- **Datos:** depósito de origen, depósito de destino, fecha, observaciones, detalle con artículo y cantidad
-- **Validaciones:**
-    - origen y destino obligatorios y distintos entre sí
-    - la cantidad a transferir no puede superar la existencia disponible en el depósito de origen
-    - el detalle debe contener al menos un artículo, sin repeticiones
-    - la cantidad debe ser mayor a cero
-- **Comportamiento:**
-    - al confirmar se generan dos movimientos vinculados entre sí, uno de egreso en el origen y uno de ingreso en el destino, ambos con el usuario responsable
-    - la transferencia confirmada no se edita, se corrige mediante una transferencia inversa
+- A definir en el Sprint Planning correspondiente
 
 ## HU-020 - Definir el stock mínimo y ver los artículos en faltante
 
@@ -557,14 +508,7 @@ independiente.
 
 **Criterios de aceptación**
 
-- **Datos:** artículo, depósito, stock mínimo
-- **Validaciones:**
-    - el mínimo debe ser un número entero mayor o igual a cero
-    - se define por la combinación de artículo y depósito, no de forma global para todo el sistema
-- **Comportamiento:**
-    - el panel principal muestra un aviso con la cantidad de artículos por debajo del mínimo en todos los depósitos
-    - existe un listado de artículos en faltante con su existencia actual y su mínimo, exportable a CSV y Excel
-    - el indicador se recalcula automáticamente después de cada movimiento de stock
+- A definir en el Sprint Planning correspondiente
 
 ## HU-021 - Administrar clientes
 
@@ -878,14 +822,7 @@ reimputación innecesarios.
 
 **Criterios de aceptación**
 
-- **Datos:** lista de precios, porcentaje a aplicar, filtros por categoría, marca o proveedor, criterio de redondeo
-- **Validaciones:**
-    - el porcentaje debe ser distinto de cero
-    - el precio resultante debe ser mayor a cero
-    - la operación requiere permiso de autorización
-- **Comportamiento:**
-    - antes de confirmar se muestra una previsualización con el precio actual y el precio resultante de cada artículo alcanzado y la cantidad total de artículos afectados
-    - la confirmación se aplica en una única operación y queda registrada en el historial de precios y en el log de auditoría
+- A definir en el Sprint Planning correspondiente
 
 ## HU-030 - Consultar el historial de cambios de precio
 
@@ -895,11 +832,7 @@ reimputación innecesarios.
 
 **Criterios de aceptación**
 
-- **Datos:** artículo, lista, precio anterior, precio nuevo, variación porcentual, fecha y hora, usuario responsable
-- **Validaciones:** el historial es de solo lectura y se genera automáticamente ante cada cambio, individual o masivo
-- **Comportamiento:**
-    - filtros por artículo, lista, usuario y rango de fechas
-    - exportable a CSV y Excel
+- A definir en el Sprint Planning correspondiente
 
 ---
 
@@ -949,8 +882,12 @@ reimputación innecesarios.
 
 **Criterios de aceptación**
 
-- Sucursal, punto de venta, canal (mostrador o e-commerce), usuario responsable, cliente y fecha y hora de la operación. La venta arranca con el cliente Consumidor Final y se puede reasignar después (EPIC-03)
-- Resto de los criterios a definir en el refinamiento previo al Sprint 4
+- A definir en el Sprint Planning correspondiente
+
+> **Implementación parcial adelantada (Sprint 3):** para ver funcionando `HU-056` desde una
+> pantalla real se construyó una venta básica de mostrador fuera del compromiso del sprint (PR
+> #56). Qué se hizo y qué quedó afuera está en `docs/plans/venta-basica-plan.md`. No son criterios
+> aprobados: se revisan con el PO en el Sprint Planning en que entre esta historia.
 
 ## HU-040 - Incorporar artículos a la venta por código de barras o búsqueda
 
@@ -960,8 +897,12 @@ reimputación innecesarios.
 
 **Criterios de aceptación**
 
-- Detalle de artículos y cantidades, con relación de muchos a muchos entre la venta y los artículos. La lectura del código de barras agrega la línea directamente, sin pasar por una pantalla de búsqueda intermedia
-- Resto de los criterios a definir en el refinamiento previo al Sprint 4
+- A definir en el Sprint Planning correspondiente
+
+> **Implementación parcial adelantada (Sprint 3):** para ver funcionando `HU-056` desde una
+> pantalla real se construyó una venta básica de mostrador fuera del compromiso del sprint (PR
+> #56). Qué se hizo y qué quedó afuera está en `docs/plans/venta-basica-plan.md`. No son criterios
+> aprobados: se revisan con el PO en el Sprint Planning en que entre esta historia.
 
 ## HU-007 - Administrar las alícuotas de IVA
 
@@ -971,11 +912,12 @@ reimputación innecesarios.
 
 **Criterios de aceptación**
 
-- **Datos:** alícuota de IVA (descripción, porcentaje, estado)
-- **Validaciones:**
-    - nombre único
-    - el porcentaje debe estar entre 0 y 100
-    - no se puede dar de baja un valor ya utilizado en una operación registrada
+- A definir en el Sprint Planning correspondiente
+
+> **Implementación existente:** el ABM de alícuotas (`pricing/vat-rates`) se construyó en el PR
+> #15, antes de que esta historia bajara de prioridad. Después, el commit `183e65a` quitó la
+> relación entre el artículo y la alícuota, y con eso quedó sin efecto el control de baja de una
+> alícuota en uso (`VatRate::isInUse()` devuelve siempre `false`). Se revisa en el planning.
 
 > **Corrección del PO (2026-08-22):** medios de pago se sacó de esta historia -tampoco hace
 > falta para artículos ni para stock- y pasó a `HU-052`. `HU-008` (catálogo) dejó de depender de
@@ -993,8 +935,17 @@ reimputación innecesarios.
 
 **Criterios de aceptación**
 
-- El precio de cada línea se obtiene de la lista resuelta según `PRE-03` (HU-056), y se calculan el IVA discriminado por alícuota, el subtotal y el total. Ningún precio se puede escribir a mano
-- Resto de los criterios a definir en el refinamiento previo al Sprint 4
+- A definir en el Sprint Planning correspondiente
+
+> **Implementación parcial adelantada (Sprint 3):** para ver funcionando `HU-056` desde una
+> pantalla real se construyó una venta básica de mostrador fuera del compromiso del sprint (PR
+> #56). Qué se hizo y qué quedó afuera está en `docs/plans/venta-basica-plan.md`. No son criterios
+> aprobados: se revisan con el PO en el Sprint Planning en que entre esta historia.
+>
+> **Pendiente de confirmar con el PO:** la implementación asume que el precio de lista es final,
+> con IVA incluido, y por eso calcula el total sin discriminar IVA. Si el PO define que es neto,
+> ese total queda mal. `docs/plans/venta-basica-plan.md` propone partir esta historia en "precio
+> y totales" y "discriminar el IVA por alícuota"; la división se decide en el planning.
 
 ## EPIC-03 - Identificar al cliente y determinar el tipo de comprobante
 
@@ -1004,7 +955,14 @@ reimputación innecesarios.
 
 **Criterios de aceptación**
 
-- A desglosar en Sprint Planning
+- A definir en el Sprint Planning correspondiente
+
+> **Implementación parcial adelantada (Sprint 3):** para ver funcionando `HU-056` desde una
+> pantalla real se construyó una venta básica de mostrador fuera del compromiso del sprint (PR
+> #56). Qué se hizo y qué quedó afuera está en `docs/plans/venta-basica-plan.md`. No son criterios
+> aprobados: se revisan con el PO en el Sprint Planning en que entre esta historia.
+> De esta épica solo se hizo cambiar el cliente de una venta abierta y recalcular sus precios;
+> el tipo de comprobante no se construyó.
 
 ## HU-052 - Administrar medios de pago
 
@@ -1034,7 +992,7 @@ reimputación innecesarios.
 
 **Criterios de aceptación**
 
-- A desglosar en Sprint Planning
+- A definir en el Sprint Planning correspondiente
 
 ## HU-042 - Emitir la factura con numeración correlativa por punto de venta
 
@@ -1044,8 +1002,7 @@ reimputación innecesarios.
 
 **Criterios de aceptación**
 
-- Tipo de comprobante según la condición fiscal resuelta en EPIC-03, numeración correlativa y sin huecos por punto de venta, IVA discriminado y datos fiscales del emisor y del cliente. La numeración es propia del sistema, no de ARCA (ver SPIKE-01)
-- Resto de los criterios a definir en el refinamiento previo al Sprint 4
+- A definir en el Sprint Planning correspondiente
 
 ## HU-043 - Imprimir y descargar la factura en PDF
 
@@ -1055,8 +1012,7 @@ reimputación innecesarios.
 
 **Criterios de aceptación**
 
-- Representación impresa de una factura ya emitida, con idéntico contenido en pantalla, en la impresión y en el PDF. La reutiliza el canal online (EPIC-15)
-- Resto de los criterios a definir en el refinamiento previo al Sprint 4
+- A definir en el Sprint Planning correspondiente
 
 ## EPIC-06 - Descontar el stock automáticamente al confirmar la venta
 
@@ -1066,7 +1022,7 @@ reimputación innecesarios.
 
 **Criterios de aceptación**
 
-- A desglosar en Sprint Planning
+- A definir en el Sprint Planning correspondiente
 
 ## HU-044 - Anular una venta con nota de crédito y reingreso de stock
 
@@ -1076,8 +1032,7 @@ reimputación innecesarios.
 
 **Criterios de aceptación**
 
-- La anulación emite la nota de crédito por el total de la venta y genera el movimiento de reingreso de stock. La venta original nunca se borra ni se edita: queda en estado anulada, con su comprobante y su contrapartida
-- Resto de los criterios a definir en el refinamiento previo al Sprint 4
+- A definir en el Sprint Planning correspondiente
 
 ## HU-045 - Registrar una devolución parcial de cliente
 
@@ -1087,8 +1042,7 @@ reimputación innecesarios.
 
 **Criterios de aceptación**
 
-- Selección de artículos y cantidades a devolver sobre una venta facturada, con nota de crédito por el importe devuelto y reingreso de stock por las cantidades devueltas. No se puede devolver más de lo vendido ni devolver dos veces la misma unidad
-- Resto de los criterios a definir en el refinamiento previo al Sprint 4
+- A definir en el Sprint Planning correspondiente
 
 ## EPIC-08 - Consultar los comprobantes emitidos
 
@@ -1098,7 +1052,7 @@ reimputación innecesarios.
 
 **Criterios de aceptación**
 
-- A desglosar en Sprint Planning
+- A definir en el Sprint Planning correspondiente
 
 ## EPIC-09 - Consultar la ficha del cliente con su historial
 
@@ -1108,7 +1062,7 @@ reimputación innecesarios.
 
 **Criterios de aceptación**
 
-- A desglosar en Sprint Planning
+- A definir en el Sprint Planning correspondiente
 
 ## EPIC-10 - Registrar y consultar el log de auditoría
 
@@ -1118,7 +1072,7 @@ reimputación innecesarios.
 
 **Criterios de aceptación**
 
-- A desglosar en Sprint Planning. El registro se va incorporando desde las primeras historias del backlog; esta historia entrega la pantalla de consulta y completa la cobertura sobre todos los módulos
+- A definir en el Sprint Planning correspondiente
 
 ## SPIKE-01 - Investigar la integración con ARCA (WSAA y WSFE)
 
@@ -1128,8 +1082,7 @@ reimputación innecesarios.
 
 **Criterios de aceptación**
 
-- Timebox de 3 días. Resultado esperado: obtención de certificado de homologación, prueba de autenticación contra WSAA y de solicitud de CAE contra WSFE para una factura B, y estimación del esfuerzo de integración completa
-- La decisión de incorporarlo al alcance la toma el Product Owner al cierre del Sprint 4
+- A definir en el Sprint Planning correspondiente
 
 ---
 
@@ -1141,7 +1094,7 @@ reimputación innecesarios.
 
 **Criterios de aceptación**
 
-- A desglosar en Sprint Planning
+- A definir en el Sprint Planning correspondiente
 
 ## HU-046 - Publicar el catálogo en la tienda online
 
@@ -1151,8 +1104,7 @@ reimputación innecesarios.
 
 **Criterios de aceptación**
 
-- Se publican únicamente los artículos activos marcados como publicables (HU-008), con descripción, imagen (HU-032), categoría y el precio de la lista del canal online resuelto por HU-056
-- Resto de los criterios a definir en el refinamiento previo al Sprint 5
+- A definir en el Sprint Planning correspondiente
 
 ## HU-047 - Buscar, filtrar y ordenar artículos en la tienda online
 
@@ -1162,8 +1114,7 @@ reimputación innecesarios.
 
 **Criterios de aceptación**
 
-- Filtros por categoría, marca, rango de precio y disponibilidad, combinables entre sí, con ordenamiento seleccionable por el cliente
-- Resto de los criterios a definir en el refinamiento previo al Sprint 5
+- A definir en el Sprint Planning correspondiente
 
 ## HU-048 - Mostrar la disponibilidad online e impedir la compra sin stock
 
@@ -1173,8 +1124,7 @@ reimputación innecesarios.
 
 **Criterios de aceptación**
 
-- La disponibilidad se calcula sobre el depósito marcado como canal online (HU-005). Los artículos sin existencias se muestran marcados como no disponibles y no se pueden incorporar al carrito
-- Resto de los criterios a definir en el refinamiento previo al Sprint 5
+- A definir en el Sprint Planning correspondiente
 
 ## EPIC-13 - Gestionar el carrito de compras
 
@@ -1184,7 +1134,7 @@ reimputación innecesarios.
 
 **Criterios de aceptación**
 
-- A desglosar en Sprint Planning
+- A definir en el Sprint Planning correspondiente
 
 ## HU-049 - Elegir la modalidad de entrega y calcular el costo de envío
 
@@ -1194,8 +1144,7 @@ reimputación innecesarios.
 
 **Criterios de aceptación**
 
-- Envío a domicilio con costo de envío, o retiro en una sucursal activa elegida por el cliente (HU-005). El costo de envío se suma al total del pedido
-- Resto de los criterios a definir en el refinamiento previo al Sprint 5
+- A definir en el Sprint Planning correspondiente
 
 > **A revisar con el PO:** falta definir si el costo de envío es un valor fijo único o un
 > parámetro configurable. Si es configurable, se administra en `ADM-03`, pero no encaja en
@@ -1210,8 +1159,7 @@ reimputación innecesarios.
 
 **Criterios de aceptación**
 
-- Integración con Mercado Pago operando exclusivamente en entorno de prueba (sandbox), registrando el identificador y el estado de la transacción asociada al pedido. El pedido solo pasa a pagado cuando la pasarela confirma la acreditación
-- Resto de los criterios a definir en el refinamiento previo al Sprint 5
+- A definir en el Sprint Planning correspondiente
 
 ## EPIC-15 - Procesar el pedido pagado como una venta con factura y egreso de stock
 
@@ -1221,7 +1169,7 @@ reimputación innecesarios.
 
 **Criterios de aceptación**
 
-- A desglosar en Sprint Planning. Reutiliza íntegramente VTA-06 y VTA-07
+- A definir en el Sprint Planning correspondiente
 
 ## EPIC-16 - Seguir el estado del pedido y recibir notificaciones por correo
 
@@ -1231,7 +1179,7 @@ reimputación innecesarios.
 
 **Criterios de aceptación**
 
-- A desglosar en Sprint Planning
+- A definir en el Sprint Planning correspondiente
 
 ## EPIC-17 - Administrar los pedidos web desde el panel interno
 
@@ -1241,7 +1189,7 @@ reimputación innecesarios.
 
 **Criterios de aceptación**
 
-- A desglosar en Sprint Planning
+- A definir en el Sprint Planning correspondiente
 
 ---
 
@@ -1253,7 +1201,7 @@ reimputación innecesarios.
 
 **Criterios de aceptación**
 
-- A desglosar en Sprint Planning
+- A definir en el Sprint Planning correspondiente
 
 ## EPIC-19 - Visualizar los egresos del periodo
 
@@ -1263,7 +1211,7 @@ reimputación innecesarios.
 
 **Criterios de aceptación**
 
-- A desglosar en Sprint Planning
+- A definir en el Sprint Planning correspondiente
 
 ## EPIC-20 - Visualizar la relación entre ingresos y egresos y su evolución
 
@@ -1273,7 +1221,7 @@ reimputación innecesarios.
 
 **Criterios de aceptación**
 
-- A desglosar en Sprint Planning. Incluye gráficos de barras y de líneas
+- A definir en el Sprint Planning correspondiente
 
 ## EPIC-21 - Visualizar indicadores operativos complementarios
 
@@ -1283,7 +1231,7 @@ reimputación innecesarios.
 
 **Criterios de aceptación**
 
-- A desglosar en Sprint Planning
+- A definir en el Sprint Planning correspondiente
 
 ## HU-053 - Exportar a CSV y Excel los listados de stock
 
@@ -1293,14 +1241,7 @@ reimputación innecesarios.
 
 **Criterios de aceptación**
 
-- **Datos:** las mismas columnas que cada listado muestra en pantalla, sin agregar ninguna que el usuario no pueda ver ahí
-- **Validaciones:**
-    - la exportación respeta los filtros aplicados en el momento de pedirla, no exporta el listado completo
-    - el archivo se genera con el mismo permiso de consulta que habilita el listado, no con uno propio
-- **Comportamiento:**
-    - alcanza al listado de existencias por depósito (`HU-016`) y al historial de movimientos de stock (`HU-018`)
-    - los dos formatos, CSV y Excel, salen del mismo patrón de exportación
-- **Verificación:** se exporta un listado con filtros aplicados y se comprueba que el archivo trae exactamente las filas y columnas que se veían en pantalla
+- A definir en el Sprint Planning correspondiente
 
 > **Desglosada de `HU-016` y `HU-018` el 2026-08-22.** El PO pidió no invertir tiempo en nada que no
 > hubiera pedido explícitamente, y la exportación no estaba entre lo que pidió para el arranque de
@@ -1315,15 +1256,15 @@ reimputación innecesarios.
 
 **Criterios de aceptación**
 
-- A desglosar en Sprint Planning
+- A definir en el Sprint Planning correspondiente
 
 ## HAB-03 - Estabilización y cierre
 
 **Tipo:** Habilitador · **Estimación:** sin estimar, reserva de capacidad · **Estado:** Pendiente · **Depende de:** nada
 
 No se estima en story points a propósito: no es trabajo de tamaño conocido sino una **reserva de
-capacidad del Sprint 6**. En el planning de ese sprint se decide cuánta capacidad se le aparta
-(orientativo: entre un tercio y la mitad) y el resto se llena con ítems del backlog.
+capacidad para el cierre del proyecto**. En qué sprint entra y cuánta capacidad se le aparta
+se decide en el Sprint Planning, como con cualquier otro ítem.
 
 **Criterios de aceptación**
 
