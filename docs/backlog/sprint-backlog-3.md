@@ -357,6 +357,16 @@ erDiagram
 | `HU-029`, `HU-030` | Aumento masivo de precios por porcentaje e historial de precios se incorporan como optimización posterior al motor comercial. |
 | `HU-014` | Contactos secundarios de proveedores no bloquean las operaciones transaccionales. |
 
+> **Trabajo adelantado fuera del compromiso (2026-09-24):** para ver funcionando `HU-056` desde
+> una pantalla real se construyó una venta básica de mostrador (PR #56): abrir la venta con
+> Consumidor Final, cargar artículos por código de barras o búsqueda con el precio resuelto por
+> `HU-056`, el total sin discriminar IVA y cambiar el cliente recalculando los precios. Toca
+> `HU-039`, `HU-040`, `HU-041` y parte de `EPIC-03`, que **siguen fuera del sprint**: no suman a la
+> velocidad del Sprint 3 ni se dan por terminadas. Sus criterios se definen con el PO en el Sprint
+> Planning en que entren, tomando como punto de partida `docs/plans/venta-basica-plan.md`. Queda
+> pendiente confirmar con el PO si el precio de lista es final con IVA incluido, que es lo que
+> asume la implementación.
+
 ---
 
 ## Definition of Done
