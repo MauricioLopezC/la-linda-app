@@ -3,7 +3,7 @@
 Esta historia construye el `Action` central de resolución de precios (`ResolveArticlePrice`) que
 aplica la cascada definida en el backlog: lista particular del cliente → lista de canal → lista
 general. No tiene pantalla propia: es un servicio interno que invocarán tanto la venta de mostrador
-(Sprint 4) como el e-commerce.
+como el e-commerce.
 
 HU-022 (`feature/HU-022-asignar-lista-precios-cliente`) ya implementa la columna `price_list_id`
 en `customers` y la relación `Customer::priceList()`, pero aún no está mergeada a `master`. Este
@@ -226,7 +226,7 @@ se mergea antes de ejecutar esta HU, o que los tests corren sobre esa branch).
 ### Manual Verification
 
 No aplica: el Action no tiene endpoint propio. La verificación manual real llegará cuando se lo
-invoque desde la pantalla de venta (HU-039/HU-040, Sprint 4).
+invoque desde la pantalla de venta (HU-039/HU-040).
 
 ### CI checks
 

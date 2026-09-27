@@ -61,7 +61,7 @@ Product Owner se genera a pedido a partir de este documento.
 ## Índice
 
 70 registros históricos: 66 ítems activos con **358 story points estimados**, 3 historias
-absorbidas, más la reserva de estabilización del Sprint 6 (`HAB-03`, sin estimar a propósito).
+absorbidas, más la reserva de estabilización (`HAB-03`, sin estimar a propósito).
 
 | # | ID | Título | Módulo | SP | Estado |
 |---|----|--------|--------|----|--------|
@@ -1263,8 +1263,8 @@ reimputación innecesarios.
 **Tipo:** Habilitador · **Estimación:** sin estimar, reserva de capacidad · **Estado:** Pendiente · **Depende de:** nada
 
 No se estima en story points a propósito: no es trabajo de tamaño conocido sino una **reserva de
-capacidad del Sprint 6**. En el planning de ese sprint se decide cuánta capacidad se le aparta
-(orientativo: entre un tercio y la mitad) y el resto se llena con ítems del backlog.
+capacidad para el cierre del proyecto**. En qué sprint entra y cuánta capacidad se le aparta
+se decide en el Sprint Planning, como con cualquier otro ítem.
 
 **Criterios de aceptación**
 
