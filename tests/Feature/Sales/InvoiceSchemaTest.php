@@ -14,10 +14,10 @@ test('invoice numbers are unique per point of sale and type', function () {
 
     $sameCounter = Sale::factory()->confirmed()->create(['point_of_sale_id' => $first->point_of_sale_id]);
 
-    expect(fn () => Invoice::factory()->create([
+    expect(inSavepoint(fn () => Invoice::factory()->create([
         'sale_id' => $sameCounter->id,
         'number' => $first->number,
-    ]))->toThrow(QueryException::class);
+    ])))->toThrow(QueryException::class);
 
     $typeA = Invoice::factory()->typeA()->create([
         'sale_id' => $sameCounter->id,
@@ -32,33 +32,33 @@ test('a sale has at most one invoice', function () {
     $invoice = Invoice::factory()->create();
 
     expect($invoice->sale->invoice->id)->toBe($invoice->id)
-        ->and(fn () => Invoice::factory()->create(['sale_id' => $invoice->sale_id]))
+        ->and(inSavepoint(fn () => Invoice::factory()->create(['sale_id' => $invoice->sale_id])))
         ->toThrow(QueryException::class);
 });
 
 test('an invoice total is its net plus its VAT', function () {
-    expect(fn () => Invoice::factory()->create([
+    expect(inSavepoint(fn () => Invoice::factory()->create([
         'net_amount' => '1000.00',
         'vat_amount' => '210.00',
         'total_amount' => '1200.00',
-    ]))->toThrow(QueryException::class);
+    ])))->toThrow(QueryException::class);
 });
 
 test('an invoice line total is its net plus its VAT', function () {
     $item = InvoiceItem::factory()->create();
 
     expect($item->invoice->items()->sole()->line_total)->toBe('1210.00')
-        ->and(fn () => InvoiceItem::factory()->create([
+        ->and(inSavepoint(fn () => InvoiceItem::factory()->create([
             'net_amount' => '1000.00',
             'vat_amount' => '200.00',
             'line_total' => '1210.00',
-        ]))->toThrow(QueryException::class);
+        ])))->toThrow(QueryException::class);
 });
 
 test('La Linda never issues a C invoice', function () {
     $invoice = Invoice::factory()->create();
 
-    expect(fn () => DB::table('invoices')->where('id', $invoice->id)->update(['type' => 'C']))
+    expect(inSavepoint(fn () => DB::table('invoices')->where('id', $invoice->id)->update(['type' => 'C'])))
         ->toThrow(QueryException::class);
 });
 
@@ -77,6 +77,6 @@ test('a sale originates at most one stock movement', function () {
 
     expect($sale->stockMovement->id)->toBe($movement->id)
         ->and($movement->sale->id)->toBe($sale->id)
-        ->and(fn () => StockMovement::factory()->create(['sale_id' => $sale->id]))
+        ->and(inSavepoint(fn () => StockMovement::factory()->create(['sale_id' => $sale->id])))
         ->toThrow(QueryException::class);
 });

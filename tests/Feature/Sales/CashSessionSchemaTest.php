@@ -19,7 +19,7 @@ test('a point of sale has at most one open cash session', function () {
     $pointOfSale = PointOfSale::factory()->create();
     CashSession::factory()->create(['point_of_sale_id' => $pointOfSale->id]);
 
-    expect(fn () => CashSession::factory()->create(['point_of_sale_id' => $pointOfSale->id]))
+    expect(inSavepoint(fn () => CashSession::factory()->create(['point_of_sale_id' => $pointOfSale->id])))
         ->toThrow(QueryException::class);
 });
 
@@ -27,7 +27,7 @@ test('a user has at most one open cash session', function () {
     $user = User::factory()->create();
     CashSession::factory()->create(['user_id' => $user->id]);
 
-    expect(fn () => CashSession::factory()->create(['user_id' => $user->id]))
+    expect(inSavepoint(fn () => CashSession::factory()->create(['user_id' => $user->id])))
         ->toThrow(QueryException::class);
 });
 
@@ -44,15 +44,15 @@ test('closed sessions do not count against the single open session', function ()
 });
 
 test('a session is closed exactly when it has a closing time', function () {
-    expect(fn () => CashSession::factory()->create(['closed_at' => now()]))
+    expect(inSavepoint(fn () => CashSession::factory()->create(['closed_at' => now()])))
         ->toThrow(QueryException::class);
 
-    expect(fn () => CashSession::factory()->closed()->create(['closed_at' => null]))
+    expect(inSavepoint(fn () => CashSession::factory()->closed()->create(['closed_at' => null])))
         ->toThrow(QueryException::class);
 });
 
 test('the opening amount cannot be negative', function () {
-    expect(fn () => CashSession::factory()->create(['opening_amount' => '-1.00']))
+    expect(inSavepoint(fn () => CashSession::factory()->create(['opening_amount' => '-1.00'])))
         ->toThrow(QueryException::class);
 });
 
@@ -61,16 +61,16 @@ test('a denomination is counted once per session and moment', function () {
     CashCount::factory()->create(['cash_session_id' => $session->id, 'denomination' => '1000']);
     CashCount::factory()->closing()->create(['cash_session_id' => $session->id, 'denomination' => '1000']);
 
-    expect(fn () => CashCount::factory()->create(['cash_session_id' => $session->id, 'denomination' => '1000']))
+    expect(inSavepoint(fn () => CashCount::factory()->create(['cash_session_id' => $session->id, 'denomination' => '1000'])))
         ->toThrow(QueryException::class)
-        ->and(fn () => CashCount::factory()->create(['quantity' => -1]))
+        ->and(inSavepoint(fn () => CashCount::factory()->create(['quantity' => -1])))
         ->toThrow(QueryException::class);
 
     expect($session->openingCounts()->sole()->denomination()->label())->toBe('$1.000');
 });
 
 test('a counter sale cannot exist without a cash session, an online sale can', function () {
-    expect(fn () => Sale::factory()->create(['cash_session_id' => null]))
+    expect(inSavepoint(fn () => Sale::factory()->create(['cash_session_id' => null])))
         ->toThrow(QueryException::class);
 
     $online = Sale::factory()->online()->create();
@@ -84,9 +84,9 @@ test('a sale is confirmed exactly when it has a confirmation time', function () 
     expect($confirmed->status)->toBe(SaleStatus::Confirmed)
         ->and($confirmed->cashSession->sales()->count())->toBe(1);
 
-    expect(fn () => Sale::factory()->create(['confirmed_at' => now()]))
+    expect(inSavepoint(fn () => Sale::factory()->create(['confirmed_at' => now()])))
         ->toThrow(QueryException::class)
-        ->and(fn () => Sale::factory()->confirmed()->create(['confirmed_at' => null]))
+        ->and(inSavepoint(fn () => Sale::factory()->confirmed()->create(['confirmed_at' => null])))
         ->toThrow(QueryException::class);
 });
 
@@ -97,23 +97,23 @@ test('a sale movement carries its sale and nothing else does', function () {
     expect($movement->type)->toBe(CashMovementType::Sale)
         ->and($sale->cashMovements()->sole()->id)->toBe($movement->id);
 
-    expect(fn () => CashMovement::factory()->create(['type' => CashMovementType::Sale, 'reason' => null]))
+    expect(inSavepoint(fn () => CashMovement::factory()->create(['type' => CashMovementType::Sale, 'reason' => null])))
         ->toThrow(QueryException::class)
-        ->and(fn () => CashMovement::factory()->create(['sale_id' => $sale->id]))
+        ->and(inSavepoint(fn () => CashMovement::factory()->create(['sale_id' => $sale->id])))
         ->toThrow(QueryException::class);
 });
 
 test('an income or expense requires a reason, an opening does not', function () {
-    expect(fn () => CashMovement::factory()->expense()->create(['reason' => null]))
+    expect(inSavepoint(fn () => CashMovement::factory()->expense()->create(['reason' => null])))
         ->toThrow(QueryException::class);
 
     expect(CashMovement::factory()->opening()->create()->reason)->toBeNull();
 });
 
 test('a movement amount is positive and the tendered cash covers it', function () {
-    expect(fn () => CashMovement::factory()->create(['amount' => '0.00']))
+    expect(inSavepoint(fn () => CashMovement::factory()->create(['amount' => '0.00'])))
         ->toThrow(QueryException::class)
-        ->and(fn () => CashMovement::factory()->create(['amount' => '100.00', 'tendered_amount' => '50.00']))
+        ->and(inSavepoint(fn () => CashMovement::factory()->create(['amount' => '100.00', 'tendered_amount' => '50.00'])))
         ->toThrow(QueryException::class);
 });
 
@@ -130,23 +130,23 @@ test('a closure line is unique per payment method and its difference is declared
         'difference' => '-500.00',
     ]);
 
-    expect(fn () => CashSessionClosureLine::factory()->create([
+    expect(inSavepoint(fn () => CashSessionClosureLine::factory()->create([
         'cash_session_id' => $line->cash_session_id,
         'payment_method_id' => $line->payment_method_id,
-    ]))->toThrow(QueryException::class);
+    ])))->toThrow(QueryException::class);
 
-    expect(fn () => CashSessionClosureLine::factory()->create([
+    expect(inSavepoint(fn () => CashSessionClosureLine::factory()->create([
         'expected_amount' => '1000.00',
         'declared_amount' => '500.00',
         'difference' => '500.00',
-    ]))->toThrow(QueryException::class);
+    ])))->toThrow(QueryException::class);
 });
 
 test('a payment method kind is restricted and defaults to other', function () {
     $paymentMethod = PaymentMethod::factory()->create();
 
     expect($paymentMethod->fresh()->kind)->toBe(PaymentMethodKind::Other)
-        ->and(fn () => DB::table('payment_methods')->where('id', $paymentMethod->id)->update(['kind' => 'cheque']))
+        ->and(inSavepoint(fn () => DB::table('payment_methods')->where('id', $paymentMethod->id)->update(['kind' => 'cheque'])))
         ->toThrow(QueryException::class);
 });
 

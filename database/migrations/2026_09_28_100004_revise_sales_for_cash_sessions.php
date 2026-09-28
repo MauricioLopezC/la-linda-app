@@ -108,8 +108,16 @@ return new class extends Migration
             return;
         }
 
-        Schema::table('sale_items', function (Blueprint $table) {
-            $table->dropForeign(['sale_id']);
+        /*
+         * Looked up by target instead of by conventional name: after a rebuild of sale_items
+         * the constraint keeps the temporary table's name (e.g. sale_items_revised_sale_id_foreign).
+         */
+        $foreignKeysToSales = collect(Schema::getForeignKeys('sale_items'))
+            ->filter(fn (array $foreignKey): bool => $foreignKey['foreign_table'] === 'sales')
+            ->pluck('name');
+
+        Schema::table('sale_items', function (Blueprint $table) use ($foreignKeysToSales) {
+            $foreignKeysToSales->each(fn (string $name) => $table->dropForeign($name));
         });
     }
 
