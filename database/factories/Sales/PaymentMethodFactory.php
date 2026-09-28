@@ -2,6 +2,7 @@
 
 namespace Database\Factories\Sales;
 
+use App\Enums\Sales\PaymentMethodKind;
 use App\Models\Sales\PaymentMethod;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -19,9 +20,24 @@ class PaymentMethodFactory extends Factory
     {
         return [
             'name' => fake()->unique()->words(2, true),
+            'kind' => PaymentMethodKind::Other,
             'is_enabled_online' => false,
             'is_active' => true,
         ];
+    }
+
+    public function cash(): static
+    {
+        return $this->state(fn (): array => [
+            'kind' => PaymentMethodKind::Cash,
+        ]);
+    }
+
+    public function card(): static
+    {
+        return $this->state(fn (): array => [
+            'kind' => PaymentMethodKind::Card,
+        ]);
     }
 
     public function inactive(): static

@@ -436,6 +436,12 @@ Lógica en `app/Actions/{Module}`, respuestas en `app/Data/{Module}`, validació
 
 ## Diseño de datos (DER proyectado Sprint 4)
 
+> **Esquema entregado por adelantado.** Todas las migraciones de este DER (tablas nuevas y
+> modificadas) se mergean juntas en un PR de esquema el día 1, con modelos, enums, factories y
+> tests de esquema, en lugar de repartirlas entre las historias. Cada historia construye sobre ese
+> esquema sus Actions, pantallas y reglas. Un ajuste posterior va en una migración nueva: las que ya
+> corrieron en producción no se editan.
+
 ```mermaid
 erDiagram
     POINTS_OF_SALE ||--o{ CASH_SESSIONS : "abre turnos"
@@ -475,7 +481,7 @@ erDiagram
 | status | varchar(20) | CHECK `in ('abierta', 'cerrada')` |
 | opened_at | timestamp | |
 | opening_amount | decimal(12,2) | CHECK `>= 0`; suma del conteo de apertura |
-| closed_at | timestamp | nullable |
+| closed_at | timestamp | nullable; CHECK: presente si y solo si `status = 'cerrada'` |
 | closing_notes | text | nullable; obligatoria si el cierre tiene diferencias |
 | created_at / updated_at | timestamp | |
 
@@ -563,7 +569,7 @@ aparte.
 |---|---|---|
 | id | bigint PK | |
 | customer_id | FK → customers | único |
-| email | varchar | único; es el usuario de la tienda |
+| email | varchar | único; es el usuario de la tienda. El modelo lo guarda en minúsculas y sin espacios, así el índice no distingue mayúsculas |
 | password | varchar | hash |
 | remember_token | varchar | nullable |
 | created_at / updated_at | timestamp | |
@@ -586,18 +592,22 @@ aparte.
 | number | unsignedInteger | único, correlativo, no editable |
 | customer_id | FK → customers | |
 | status | varchar(20) | CHECK `in ('pendiente', 'pagado')` en este sprint; `EPIC-16`/`EPIC-17` agregan el resto |
-| delivery_method | varchar(20) | CHECK `in ('retiro', 'envio')` — HU-049 |
+| delivery_method | varchar(20) | CHECK `in ('retiro', 'envio')`, default `retiro` — HU-049 |
 | pickup_branch_id | FK → branches | nullable; obligatorio si `delivery_method = 'retiro'` |
 | shipping_address | varchar(255) | nullable; obligatorio si `delivery_method = 'envio'` |
 | shipping_notes | varchar(255) | nullable |
 | items_amount | decimal(12,2) | CHECK `> 0`; suma de las líneas |
-| shipping_cost | decimal(12,2) | CHECK `>= 0`; 0 si es retiro; congelado |
+| shipping_cost | decimal(12,2) | CHECK `>= 0`, default 0; 0 si es retiro; congelado |
 | total_amount | decimal(12,2) | CHECK `> 0`; `items_amount + shipping_cost` |
 | mp_preference_id | varchar(100) | nullable — HU-050 |
 | mp_payment_id | varchar(100) | nullable, único; idempotencia del webhook |
-| paid_at | timestamp | nullable; obligatorio si `status = 'pagado'` |
+| paid_at | timestamp | nullable; CHECK: presente si y solo si `status = 'pagado'` |
 | notes | text | nullable |
 | placed_at | timestamp | |
+| created_at / updated_at | timestamp | el pedido cambia de estado |
+
+La tabla nace con todas las columnas de HU-049 y HU-050. Con los valores por defecto (retiro, sin
+costo de envío) HU-062 funciona sola; si se recorta HU-049 o HU-050, no queda esquema pendiente.
 
 | Columna (`web_order_items`) | Tipo | Reglas |
 |---|---|---|
@@ -614,15 +624,22 @@ aparte.
 ### Tablas modificadas
 
 - **`sales`:** `cash_session_id` (FK nullable; CHECK `channel = 'online' OR cash_session_id IS NOT
-  NULL`), `status` suma `confirmada`, `confirmed_at` nullable.
+  NULL`), `status` suma `confirmada`, `confirmed_at` nullable (CHECK: presente si y solo si la
+  venta está `confirmada`). La migración borra las ventas de mostrador anteriores, que no tienen
+  turno: ninguna estaba confirmada, así que no movieron stock ni dinero.
 - **`payment_methods`:** `kind` varchar(20) CHECK `in ('efectivo', 'tarjeta', 'billetera_virtual',
   'transferencia', 'otro')`.
 - **`stock_movements`:** `sale_id` FK nullable, mismo patrón que `supplier_voucher_id`.
 - **`stock_balances`:** se quita `CHECK (quantity >= 0)` (EPIC-06): la venta puede dejar la
   existencia negativa. La regla sigue en las Actions de movimientos manuales y transferencias.
-- **`articles`:** `vat_rate_id` FK → vat_rates, obligatoria para artículos activos (HU-063).
+- **`articles`:** `vat_rate_id` FK → vat_rates, nullable en la base. "Obligatoria para artículos
+  activos" la validan los Form Requests y `AddArticleToSale`, sin CHECK: un CHECK obligaría a
+  reconstruir `articles` y todas las FK que la apuntan. La migración asigna el 21% a los artículos
+  existentes (HU-063).
 - **`sale_items`:** `vat_rate_id`, `vat_rate` decimal(5,2), `net_amount` y `vat_amount`
-  decimal(12,2), congelados al agregar la línea (HU-063).
+  decimal(12,2), congelados al agregar la línea (HU-063). El modelo recalcula neto e IVA cada vez
+  que cambia el total de la línea; un CHECK exige `net_amount + vat_amount = line_total`, con
+  tolerancia de medio centavo porque SQLite guarda los decimales como coma flotante.
 
 ---
 

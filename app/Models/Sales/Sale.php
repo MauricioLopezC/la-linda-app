@@ -6,6 +6,7 @@ use App\Concerns\ConvertsMoneyToCents;
 use App\Enums\Sales\SaleChannel;
 use App\Enums\Sales\SaleStatus;
 use App\Models\Customers\Customer;
+use App\Models\Inventory\StockMovement;
 use App\Models\User;
 use Database\Factories\Sales\SaleFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -15,35 +16,46 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 
 /**
  * A sale being built at a point of sale (HU-039).
  *
- * The branch is not stored: it is derived from point_of_sale → warehouse → branch.
+ * The branch is not stored: it is derived from point_of_sale → warehouse → branch. A counter
+ * sale always belongs to the cash session it was opened in (a CHECK enforces it); only online
+ * sales (EPIC-15) have no session.
  *
  * @property int $id
  * @property int $point_of_sale_id
  * @property SaleChannel $channel
+ * @property int|null $cash_session_id
  * @property int $customer_id
  * @property int|null $user_id
  * @property Carbon $opened_at
  * @property SaleStatus $status
+ * @property Carbon|null $confirmed_at
  * @property string $total_amount
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property PointOfSale $pointOfSale
+ * @property CashSession|null $cashSession
  * @property Customer $customer
  * @property User|null $user
  * @property Collection<int, SaleItem> $items
+ * @property Collection<int, CashMovement> $cashMovements
+ * @property Invoice|null $invoice
+ * @property StockMovement|null $stockMovement
  */
 #[Fillable([
     'point_of_sale_id',
     'channel',
+    'cash_session_id',
     'customer_id',
     'user_id',
     'opened_at',
     'status',
+    'confirmed_at',
     'total_amount',
 ])]
 class Sale extends Model
@@ -67,6 +79,7 @@ class Sale extends Model
             'channel' => SaleChannel::class,
             'status' => SaleStatus::class,
             'opened_at' => 'datetime',
+            'confirmed_at' => 'datetime',
             'total_amount' => 'decimal:2',
         ];
     }
@@ -75,6 +88,12 @@ class Sale extends Model
     public function pointOfSale(): BelongsTo
     {
         return $this->belongsTo(PointOfSale::class);
+    }
+
+    /** @return BelongsTo<CashSession, $this> */
+    public function cashSession(): BelongsTo
+    {
+        return $this->belongsTo(CashSession::class);
     }
 
     /** @return BelongsTo<Customer, $this> */
@@ -96,6 +115,32 @@ class Sale extends Model
     }
 
     /**
+     * The payments of the sale: one `venta` movement per payment method (EPIC-04).
+     *
+     * @return HasMany<CashMovement, $this>
+     */
+    public function cashMovements(): HasMany
+    {
+        return $this->hasMany(CashMovement::class);
+    }
+
+    /** @return HasOne<Invoice, $this> */
+    public function invoice(): HasOne
+    {
+        return $this->hasOne(Invoice::class);
+    }
+
+    /**
+     * The "Salida por Venta" stock movement generated on confirmation (EPIC-06).
+     *
+     * @return HasOne<StockMovement, $this>
+     */
+    public function stockMovement(): HasOne
+    {
+        return $this->hasOne(StockMovement::class);
+    }
+
+    /**
      * @param  Builder<Sale>  $query
      */
     public function scopeOpen(Builder $query): void
@@ -114,8 +159,8 @@ class Sale extends Model
     /**
      * Recompute total_amount as the sum of the line totals, in cents to avoid float drift.
      *
-     * List prices are final prices with VAT included, so the total needs no VAT breakdown
-     * (that is HU-057).
+     * List prices are final prices with VAT included, so the total needs no VAT breakdown:
+     * each line keeps its own net and VAT (HU-063).
      */
     public function recalculateTotal(): void
     {

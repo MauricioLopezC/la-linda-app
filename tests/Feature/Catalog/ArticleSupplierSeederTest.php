@@ -7,6 +7,7 @@ use Database\Seeders\Catalog\ArticleSupplierSeeder;
 use Database\Seeders\Catalog\BrandSeeder;
 use Database\Seeders\Catalog\CategorySeeder;
 use Database\Seeders\Catalog\UnitOfMeasureSeeder;
+use Database\Seeders\Pricing\VatRateSeeder;
 use Database\Seeders\Purchasing\SupplierSeeder;
 
 beforeEach(function () {
@@ -14,6 +15,7 @@ beforeEach(function () {
         CategorySeeder::class,
         BrandSeeder::class,
         UnitOfMeasureSeeder::class,
+        VatRateSeeder::class,
         SupplierSeeder::class,
         ArticleSeeder::class,
     ]);
