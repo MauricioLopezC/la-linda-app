@@ -1,0 +1,440 @@
+<title>Orden de ataque</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: encabezado con el portón (PR #59) → carga por persona → gantt interactivo por persona × día → caminos críticos → contratos, choques y recorte */
+:root {
+  --bg: oklch(98% 0.004 75);
+  --surface: oklch(100% 0 0);
+  --surface2: oklch(96% 0.006 75);
+  --border: oklch(90% 0.008 75);
+  --text: oklch(17% 0.007 75);
+  --muted: oklch(50% 0.012 75);
+  --primary: oklch(54% 0.115 152);
+  --primary-soft: oklch(93% 0.045 152);
+  --accent: oklch(66% 0.16 45);
+  --accent-soft: oklch(94% 0.05 55);
+  --caja-bg: oklch(93% 0.05 152);  --caja-fg: oklch(34% 0.09 152);
+  --fact-bg: oklch(94% 0.06 85);   --fact-fg: oklch(42% 0.11 70);
+  --tienda-bg: oklch(94% 0.03 240); --tienda-fg: oklch(40% 0.1 245);
+  --gate-bg: oklch(90% 0.01 75);   --gate-fg: oklch(30% 0.01 75);
+  --danger: oklch(52% 0.19 25);    --danger-soft: oklch(95% 0.04 25);
+  --shadow: 0 8px 24px oklch(40% 0.02 75 / 0.12);
+  --font: 'Instrument Sans', system-ui, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: oklch(19% 0.01 75); --surface: oklch(24% 0.01 75); --surface2: oklch(28% 0.012 75);
+  --border: oklch(34% 0.012 75); --text: oklch(95% 0.005 75); --muted: oklch(68% 0.01 75);
+  --primary: oklch(64% 0.11 152); --primary-soft: oklch(30% 0.05 152);
+  --accent: oklch(70% 0.13 48); --accent-soft: oklch(32% 0.06 48);
+  --caja-bg: oklch(32% 0.06 152); --caja-fg: oklch(88% 0.07 152);
+  --fact-bg: oklch(34% 0.06 80);  --fact-fg: oklch(90% 0.08 85);
+  --tienda-bg: oklch(32% 0.05 245); --tienda-fg: oklch(88% 0.05 240);
+  --gate-bg: oklch(34% 0.01 75); --gate-fg: oklch(92% 0.005 75);
+  --danger: oklch(72% 0.15 25); --danger-soft: oklch(32% 0.07 25);
+  --shadow: 0 8px 24px oklch(8% 0 0 / 0.45); color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: oklch(19% 0.01 75); --surface: oklch(24% 0.01 75); --surface2: oklch(28% 0.012 75);
+  --border: oklch(34% 0.012 75); --text: oklch(95% 0.005 75); --muted: oklch(68% 0.01 75);
+  --primary: oklch(64% 0.11 152); --primary-soft: oklch(30% 0.05 152);
+  --accent: oklch(70% 0.13 48); --accent-soft: oklch(32% 0.06 48);
+  --caja-bg: oklch(32% 0.06 152); --caja-fg: oklch(88% 0.07 152);
+  --fact-bg: oklch(34% 0.06 80);  --fact-fg: oklch(90% 0.08 85);
+  --tienda-bg: oklch(32% 0.05 245); --tienda-fg: oklch(88% 0.05 240);
+  --gate-bg: oklch(34% 0.01 75); --gate-fg: oklch(92% 0.005 75);
+  --danger: oklch(72% 0.15 25); --danger-soft: oklch(32% 0.07 25);
+  --shadow: 0 8px 24px oklch(8% 0 0 / 0.45); color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-inline: 20px; padding-block: 32px 64px; display: grid; gap: 40px; }
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+h1 { font-size: 32px; letter-spacing: -0.02em; line-height: 1.15; }
+h2 { font-size: 20px; font-weight: 600; }
+h3 { font-size: 15px; font-weight: 600; }
+p { margin: 0; }
+.eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; }
+.muted { color: var(--muted); }
+.mono { font-family: var(--mono); font-size: 0.92em; }
+section { display: grid; gap: 16px; min-width: 0; }
+.sec-head { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px; }
+.sec-head p { max-width: 62ch; }
+
+/* Encabezado */
+header { display: grid; gap: 20px; }
+.meta { display: flex; flex-wrap: wrap; gap: 8px 20px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.meta b { color: var(--text); font-weight: 600; }
+.gate { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; box-shadow: var(--shadow); }
+.gate .step { display: flex; align-items: center; gap: 10px; }
+.gate .num { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: var(--surface); font-weight: 700; font-size: 14px; flex: none; }
+.gate p { flex: 1 1 320px; min-width: 0; }
+
+/* Carga */
+.load { display: grid; gap: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+.load-row { display: grid; grid-template-columns: 84px 1fr 56px; align-items: center; gap: 12px; font-variant-numeric: tabular-nums; }
+.load-row .who { font-weight: 600; }
+.bar-track { position: relative; height: 26px; background: var(--surface2); border-radius: 6px; }
+.bar { position: absolute; inset: 0 auto 0 0; display: flex; border-radius: 6px; overflow: hidden; transition: width .35s ease; }
+.bar span { height: 100%; border-right: 2px solid var(--surface); font-size: 11px; font-weight: 600; display: flex; align-items: center; padding-inline: 6px; white-space: nowrap; overflow: hidden; }
+.bar span.caja { background: var(--caja-bg); color: var(--caja-fg); }
+.bar span.fact { background: var(--fact-bg); color: var(--fact-fg); }
+.bar span.tienda { background: var(--tienda-bg); color: var(--tienda-fg); }
+.avg { position: absolute; top: -6px; bottom: -6px; width: 0; border-left: 2px dashed var(--muted); }
+.load-row .sp { text-align: right; font-weight: 600; }
+.load-row.over .sp { color: var(--danger); }
+.load-foot { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 13px; color: var(--muted); padding-top: 6px; }
+.sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -2px; margin-right: 6px; }
+.sw.caja { background: var(--caja-bg); border: 1px solid var(--caja-fg); }
+.sw.fact { background: var(--fact-bg); border: 1px solid var(--fact-fg); }
+.sw.tienda { background: var(--tienda-bg); border: 1px solid var(--tienda-fg); }
+.sw.dash { border-left: 2px dashed var(--muted); width: 2px; border-radius: 0; }
+
+/* Toggle */
+.toggle { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 6px 14px 6px 6px; font: inherit; color: var(--text); font-size: 14px; }
+.toggle:focus-visible, .blk:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.toggle .knob { width: 36px; height: 20px; border-radius: 999px; background: var(--border); position: relative; transition: background .2s; flex: none; }
+.toggle .knob::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--surface); transition: transform .2s; box-shadow: 0 1px 2px oklch(0% 0 0 / .3); }
+.toggle[aria-pressed="true"] .knob { background: var(--primary); }
+.toggle[aria-pressed="true"] .knob::after { transform: translateX(16px); }
+
+/* Gantt */
+.gantt-scroll { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
+.gantt { display: grid; grid-template-columns: 96px repeat(11, minmax(72px, 1fr)); min-width: 940px; position: relative; }
+.gh { padding: 10px 8px; font-size: 12px; border-bottom: 1px solid var(--border); font-variant-numeric: tabular-nums; display: grid; gap: 2px; align-content: start; }
+.gh b { font-size: 13px; }
+.gh.wk { border-left: 1px solid var(--border); }
+.gh.after { background: var(--danger-soft); color: var(--danger); }
+.gh .flag { font-size: 10.5px; font-weight: 600; color: var(--accent); line-height: 1.25; }
+.gname { padding: 12px 10px; font-weight: 600; border-top: 1px solid var(--border); display: flex; align-items: center; background: var(--surface); position: sticky; left: 0; z-index: 2; }
+.gcell { border-top: 1px solid var(--border); min-height: 64px; }
+.gcell.wk { border-left: 1px solid var(--border); }
+.gcell.after { background: var(--danger-soft); }
+.blk { margin: 8px 3px; border-radius: 8px; padding: 6px 8px; font: inherit; text-align: left; cursor: pointer; border: 1px solid transparent; display: grid; gap: 1px; align-content: start; position: relative; z-index: 1; min-width: 0; transition: opacity .2s, transform .15s, box-shadow .2s; }
+.blk .id { font-weight: 700; font-size: 13px; }
+.blk .t { font-size: 11.5px; line-height: 1.3; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.blk .spb { position: absolute; top: 6px; right: 8px; font-size: 11px; font-weight: 600; opacity: .8; }
+.blk.caja { background: var(--caja-bg); color: var(--caja-fg); border-color: color-mix(in oklch, var(--caja-fg) 25%, transparent); }
+.blk.fact { background: var(--fact-bg); color: var(--fact-fg); border-color: color-mix(in oklch, var(--fact-fg) 25%, transparent); }
+.blk.tienda { background: var(--tienda-bg); color: var(--tienda-fg); border-color: color-mix(in oklch, var(--tienda-fg) 25%, transparent); }
+.blk.gate { background: var(--gate-bg); color: var(--gate-fg); }
+.blk.fac { background-image: repeating-linear-gradient(135deg, transparent 0 7px, color-mix(in oklch, currentColor 10%, transparent) 7px 9px); }
+.blk.overflow { outline: 2px dashed var(--danger); outline-offset: -2px; }
+.blk:hover { transform: translateY(-1px); box-shadow: var(--shadow); }
+.gantt.focus .blk { opacity: .25; }
+.gantt.focus .blk.sel, .gantt.focus .blk.dep, .gantt.focus .blk.next { opacity: 1; }
+.blk.sel { box-shadow: 0 0 0 2px var(--text); }
+.blk.dep { box-shadow: 0 0 0 2px var(--accent); }
+.blk.next { box-shadow: 0 0 0 2px var(--primary); }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 13px; color: var(--muted); }
+.legend .ring { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -2px; }
+.hatch { background: repeating-linear-gradient(135deg, var(--surface2) 0 4px, var(--border) 4px 6px); border: 1px solid var(--border); }
+
+/* Detalle */
+.detail { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; display: grid; gap: 10px; min-height: 120px; }
+.detail .row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: var(--surface2); border: 1px solid var(--border); }
+.chip.dep { border-color: var(--accent); }
+.chip.next { border-color: var(--primary); }
+.chip.warn { background: var(--danger-soft); color: var(--danger); border-color: transparent; }
+.chip.ok { background: var(--primary-soft); color: var(--text); border-color: transparent; }
+.lbl { font-size: 12px; color: var(--muted); min-width: 92px; }
+
+/* Caminos críticos */
+.paths { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+.path { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; display: grid; gap: 14px; min-width: 0; }
+.chain { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.node { display: grid; padding: 6px 10px; border-radius: 8px; font-size: 13px; line-height: 1.25; }
+.node small { font-size: 11px; opacity: .8; }
+.node.caja { background: var(--caja-bg); color: var(--caja-fg); }
+.node.fact { background: var(--fact-bg); color: var(--fact-fg); }
+.node.tienda { background: var(--tienda-bg); color: var(--tienda-fg); }
+.arr { color: var(--muted); font-size: 14px; }
+.path .note { font-size: 13.5px; color: var(--muted); }
+
+/* Tarjetas de abajo */
+.grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; display: grid; gap: 12px; align-content: start; min-width: 0; }
+.card ol, .card ul { margin: 0; padding-left: 20px; display: grid; gap: 8px; font-size: 14px; }
+.tbl-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { font-size: 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+code { font-family: var(--mono); font-size: 12.5px; background: var(--surface2); padding: 1px 5px; border-radius: 4px; }
+.cut { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.cut .chip { font-size: 13px; }
+.reco { border-color: var(--primary); background: color-mix(in oklch, var(--primary-soft) 45%, var(--surface)); }
+
+@media (max-width: 640px) {
+  h1 { font-size: 26px; }
+  .load-row { grid-template-columns: 70px 1fr 44px; gap: 8px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+
+<header>
+  <div class="eyebrow" id="h-eyebrow"></div>
+  <h1 id="h-title"></h1>
+  <div class="meta" id="h-meta"></div>
+  <div class="gate" id="h-gate"></div>
+</header>
+
+<section>
+  <div class="sec-head">
+    <div>
+      <div class="eyebrow">Carga</div>
+      <h2>Story points por persona</h2>
+    </div>
+    <button class="toggle" id="toggle-alt" type="button" aria-pressed="false" hidden>
+      <span class="knob"></span><span id="toggle-label"></span>
+    </button>
+  </div>
+  <div class="load" id="load"></div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <div>
+      <div class="eyebrow">Cronograma tentativo</div>
+      <h2>Quién hace qué, día por día</h2>
+    </div>
+    <p class="muted" id="gantt-hint"></p>
+  </div>
+  <div class="legend" id="legend"></div>
+  <div class="gantt-scroll"><div class="gantt" id="gantt"></div></div>
+  <div class="detail" id="detail"></div>
+</section>
+
+<section>
+  <div>
+    <div class="eyebrow">Caminos críticos</div>
+    <h2 id="paths-title"></h2>
+  </div>
+  <div class="paths" id="paths"></div>
+</section>
+
+<section>
+  <div>
+    <div class="eyebrow">Coordinación</div>
+    <h2>Acuerdos, choques y plan B</h2>
+  </div>
+  <div class="grid3" id="coord"></div>
+  <div class="card" id="hotspots-card">
+    <h3>Archivos donde van a chocar</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Archivo</th><th>Quiénes lo tocan</th><th>Qué hacer</th></tr></thead>
+        <tbody id="hotspots"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+</div>
+
+<script>
+/* ===================== DATOS DEL SPRINT (lo único que se reemplaza) =====================
+ * Textos: pueden llevar HTML simple (<b>, <code>).
+ * DAYS: días hábiles del sprint en orden; el último SIEMPRE es { after: true } ("Fuera del sprint").
+ *   wk: true marca el primer día de una semana nueva (dibuja un separador). flag: hito del día.
+ * ITEMS: s/e = índice de día de inicio y fin (inclusive). Un e igual al índice de "after" = no entra.
+ *   track: una de las claves de TRACKS. sp: 0 para portones sin puntos (PR de esquema, etc.).
+ *   fac: true = arranca con factories/stubs antes de que entre su dependencia.
+ *   deps: ids de ITEMS de los que depende. alt: posición alternativa si se aplica la propuesta.
+ * TRACKS: hasta 3 áreas, cada una con clase css 'caja' | 'fact' | 'tienda' (verde, ámbar, azul).
+ */
+const PLAN = {
+  eyebrow: 'Supermercados La Linda · Sprint 4',
+  title: 'Orden de ataque del Sprint 4',
+  meta: ['<b>28/09 → 10/10</b>', '<b>97 SP</b> comprometidos', 'velocidad observada <b>60–65 SP</b>', '<b>6</b> personas'],
+  totalSp: 97,
+  spPerDay: 2.5,
+  overloadAbove: 24,
+  gate: { title: 'Mergear el PR #59 (esquema)', text: 'Todas las historias construyen sobre ese esquema. Una vez en master, casi nadie espera la Action de otro: se arranca con las <b>factories</b> y se integra cuando entra la pieza real.' },
+  tracks: [
+    { css: 'caja', label: 'Caja y venta de mostrador' },
+    { css: 'fact', label: 'IVA y factura' },
+    { css: 'tienda', label: 'Tienda online' },
+  ],
+  people: ['Mauri', 'Chiara', 'Clarita', 'Facu', 'Pablo', 'Aza'],
+  days: [
+    { d: 'Lu', n: '28/09', flag: 'Planning' },
+    { d: 'Ma', n: '29/09' }, { d: 'Mi', n: '30/09' }, { d: 'Ju', n: '01/10' },
+    { d: 'Vi', n: '02/10', flag: 'Revisión PO del Sprint 3' },
+    { d: 'Lu', n: '05/10', flag: 'Checkpoint de recorte', wk: true },
+    { d: 'Ma', n: '06/10' }, { d: 'Mi', n: '07/10' }, { d: 'Ju', n: '08/10' },
+    { d: 'Vi', n: '09/10', flag: 'Demo 10/10' },
+    { n: 'Fuera del sprint', after: true },
+  ],
+  items: [
+    { id: 'PR #59', t: 'Esquema del Sprint 4', who: 'Mauri', track: 'gate', sp: 0, s: 0, e: 0, deps: [], note: 'Migraciones, modelos, enums, factories y tests de esquema. Es el portón de todo el sprint.' },
+    { id: 'HU-057', t: 'Abrir caja con fondo por denominación', who: 'Mauri', track: 'caja', sp: 5, s: 1, e: 2, deps: ['PR #59'], note: 'Primer desbloqueo de la caja: HU-039, HU-058 y EPIC-04 lo usan.' },
+    { id: 'HU-060', t: 'Cierre y arqueo por medio de pago', who: 'Mauri', track: 'caja', sp: 8, s: 3, e: 6, fac: true, deps: ['EPIC-04', 'HU-058'], note: 'Arranca con cash_movements de factory (venta, ingreso, egreso). Integra cuando entran EPIC-04 y HU-058.' },
+    { id: 'HU-043', t: 'PDF de la factura', who: 'Mauri', track: 'fact', sp: 5, s: 7, e: 8, fac: true, deps: ['HU-042'], note: 'Se arma con factory de Invoice apenas se acuerda la firma de IssueInvoice. Segundo en el orden de recorte.' },
+    { id: 'HU-007+063', t: 'Alícuota en el artículo + IVA por línea', who: 'Chiara', track: 'fact', sp: 4, s: 1, e: 2, deps: ['PR #59'], note: 'No depende de nadie. Toca AddArticleToSale: rebasea después de 40+41.' },
+    { id: 'HU-046', t: 'Catálogo público de la tienda', who: 'Chiara', track: 'tienda', sp: 5, s: 3, e: 4, deps: ['EPIC-11'], note: 'Necesita solo el layout público de EPIC-11. Va antes que HU-058 porque bloquea toda la cadena de la tienda.' },
+    { id: 'HU-058', t: 'Ingresos y egresos de caja', who: 'Chiara', track: 'caja', sp: 3, s: 5, e: 6, deps: ['HU-057'], note: 'Alimenta a HU-060, que mientras tanto trabaja con factories.' },
+    { id: 'HU-040+041', t: 'Carga de artículos y totales (PR #56)', who: 'Clarita', track: 'caja', sp: 4, s: 1, e: 2, deps: ['PR #59'], note: 'Cerrar criterios sobre lo del PR #56. De paso, partir sales/show.tsx en componentes para que no choquen 5 personas.' },
+    { id: 'HU-062', t: 'Confirmar el pedido', who: 'Clarita', track: 'tienda', sp: 5, s: 3, e: 5, fac: true, deps: ['EPIC-13'], note: 'El backend (PlaceWebOrder) arranca con cart_items de factory; la pantalla, cuando entra EPIC-13.' },
+    { id: 'HU-039', t: 'Venta atada al turno de caja', who: 'Facu', track: 'caja', sp: 3, s: 1, e: 2, fac: true, deps: ['HU-057'], note: 'Usa CashSession::factory() abierto, sin esperar la Action ni la pantalla de HU-057. Mergear antes que 40+41 porque cambia los tests de venta.' },
+    { id: 'HU-050', t: 'Pago con Mercado Pago (sandbox)', who: 'Facu', track: 'tienda', sp: 8, s: 3, e: 8, fac: true, deps: ['HU-049'], note: 'Preferencia, webhook y MarkWebOrderAsPaid con web_order de factory y Http::fake(). Del 49 solo necesita total_amount, que ya está en el esquema. Primero en el orden de recorte.' },
+    { id: 'EPIC-03', t: 'Cliente y tipo de comprobante', who: 'Pablo', track: 'fact', sp: 5, s: 1, e: 2, fac: true, deps: ['HU-039'], note: 'Enum InvoiceType + cliente de la venta, con factories.' },
+    { id: 'EPIC-04', t: 'Cobro mixto → venta confirmada', who: 'Pablo', track: 'caja', sp: 8, s: 3, e: 5, deps: ['HU-039', 'HU-040+041', 'HU-057'], note: 'Dueño de ConfirmSalePayment. Deja un stub de IssueInvoice hasta que entre HU-042.' },
+    { id: 'EPIC-06', t: 'Egreso de stock al confirmar', who: 'Pablo', track: 'caja', sp: 5, s: 6, e: 7, fac: true, deps: ['EPIC-04'], note: 'Puede empezar contra una venta confirmada de factory. Se enchufa en la transacción de ConfirmSalePayment.' },
+    { id: 'EPIC-11', t: 'Cuenta de cliente, guard y layout', who: 'Aza', track: 'tienda', sp: 8, s: 1, e: 3, deps: ['PR #59'], note: 'Primer PR chico con guard + layout público (fin del 30/09) para desbloquear HU-046.' },
+    { id: 'EPIC-13', t: 'Carrito', who: 'Aza', track: 'tienda', sp: 8, s: 4, e: 5, deps: ['HU-046', 'EPIC-11'], note: 'Cuando entra, Clarita conecta la pantalla de HU-062.' },
+    { id: 'HU-042', t: 'Factura emitida al confirmar', who: 'Aza', track: 'fact', sp: 8, s: 6, e: 8, deps: ['EPIC-03', 'EPIC-04', 'HU-007+063'], note: 'Implementa IssueInvoice dentro de la transacción de ConfirmSalePayment. Si el 05/10 viene atrasada, la toma Pablo.' },
+    { id: 'HU-049', t: 'Retiro o envío a domicilio', who: 'Aza', track: 'tienda', sp: 5, s: 9, e: 10, deps: ['HU-062'], note: 'Extiende PlaceWebOrder y el checkout de HU-062.', alt: { who: 'Clarita', s: 6, e: 7 } },
+  ],
+  // Propuesta de rebalanceo que activa el interruptor (null si no hay).
+  proposal: {
+    toggle: 'Aplicar propuesta: HU-049 pasa a Clarita',
+    title: 'Propuesta: HU-049 a Clarita',
+    text: 'HU-049 extiende la misma Action (<code>PlaceWebOrder</code>) y la misma pantalla de checkout que HU-062. Si la hace Clarita, nadie más toca esos archivos, Aza baja de 29 a 24 SP y el bloque deja de caer fuera del sprint. Si el lunes 05/10 Aza viene atrasado con HU-042, la toma Pablo, que ya conoce la transacción de EPIC-04.',
+  },
+  pathsTitle: 'Las dos cadenas que definen el sprint',
+  // Caminos críticos: ids de ITEMS en orden. La persona se toma del item (respeta la propuesta).
+  paths: [
+    { title: 'Mostrador', chain: ['HU-057', 'HU-039', 'EPIC-04', 'HU-042', 'HU-043'], note: 'Pasa por 4 personas. HU-042 además espera a EPIC-03 (Pablo) y a HU-063 (Chiara).' },
+    { title: 'Tienda', chain: ['EPIC-11', 'HU-046', 'EPIC-13', 'HU-062', 'HU-049', 'HU-050'], note: '34 SP en serie repartidos entre 5 personas. Es la cadena más frágil: para cortarla, el layout público de EPIC-11 sale en un primer PR chico, y HU-062 y HU-050 arrancan con factories.' },
+  ],
+  contracts: [
+    '<code>IssueInvoice(Sale): Invoice</code>: Pablo la llama desde <code>ConfirmSalePayment</code>, Aza la implementa y Mauri arma el PDF. Pablo deja un stub hasta que entre HU-042.',
+    '<code>ConfirmSalePayment</code> es de Pablo. EPIC-06 y HU-042 se enchufan en su transacción.',
+    'Layout público de la tienda (Aza): es lo primero que se mergea de EPIC-11, porque lo necesitan HU-046 y EPIC-13.',
+  ],
+  cuts: {
+    title: 'Orden de recorte (se decide el lunes 05/10)',
+    order: ['HU-050', 'HU-043', 'HU-049'],
+    text: 'Sin HU-050 el pedido queda pendiente de pago. Sin HU-043 la factura existe pero sin PDF. Sin HU-049 la tienda ofrece solo retiro. La caja y la factura sin PDF se cortan al final.',
+  },
+  hotspots: [
+    ['<code>pages/sales/show.tsx</code>', 'Clarita, Pablo, Chiara, Aza, Mauri', 'Clarita lo parte en componentes (ítems, totales/IVA, cliente, cobro, factura) durante 40+41, y cada uno toca el suyo.'],
+    ['<code>AddArticleToSale</code>', 'Clarita (41), Chiara (63)', 'Clarita mergea primero y Chiara rebasea.'],
+    ['<code>OpenSale</code> y sus tests', 'Facu (39), Clarita (40)', 'Facu mergea primero, porque cambia cómo se crea toda venta en los tests.'],
+    ['<code>PlaceWebOrder</code> + checkout', 'Clarita (62), Aza (49)', 'Se resuelve con la propuesta de pasar HU-049 a Clarita.'],
+  ],
+};
+/* ===================== FIN DE LOS DATOS ===================== */
+
+const { people: PEOPLE, days: DAYS, items: ITEMS } = PLAN;
+const AFTER = DAYS.findIndex(d => d.after);
+const $ = id => document.getElementById(id);
+let moved = false;
+let selected = null;
+const byId = id => ITEMS.find(i => i.id === id);
+const pos = it => (moved && it.alt) ? { who: it.alt.who, s: it.alt.s, e: it.alt.e } : { who: it.who, s: it.s, e: it.e };
+const nextOf = id => ITEMS.filter(i => i.deps.includes(id)).map(i => i.id);
+const short = id => id.replace('HU-', '').replace('EPIC-', 'E');
+const fmt = n => n.toLocaleString('es-AR', { maximumFractionDigits: 1 });
+
+function renderStatic() {
+  document.title = PLAN.title;
+  $('h-eyebrow').innerHTML = PLAN.eyebrow;
+  $('h-title').innerHTML = PLAN.title;
+  $('h-meta').innerHTML = PLAN.meta.map(m => `<span>${m}</span>`).join('');
+  $('h-gate').innerHTML = PLAN.gate
+    ? `<div class="step"><span class="num">0</span><h3>${PLAN.gate.title}</h3></div><p class="muted">${PLAN.gate.text}</p>`
+    : '';
+  $('h-gate').hidden = !PLAN.gate;
+  $('gantt-hint').innerHTML = `Tocá un bloque para ver de qué depende y qué desbloquea. Las fechas son estimadas a ~${fmt(PLAN.spPerDay)} SP por día y persona.`;
+  $('legend').innerHTML = PLAN.tracks.map(t => `<span><span class="sw ${t.css}"></span>${t.label}</span>`).join('')
+    + '<span><span class="ring hatch"></span>Arranca con factories antes de que entre su dependencia</span>'
+    + '<span><span class="ring" style="box-shadow:0 0 0 2px var(--accent)"></span>Depende de</span>'
+    + '<span><span class="ring" style="box-shadow:0 0 0 2px var(--primary)"></span>Desbloquea</span>';
+  if (PLAN.proposal) {
+    $('toggle-alt').hidden = false;
+    $('toggle-label').textContent = PLAN.proposal.toggle;
+  }
+  $('paths-title').innerHTML = PLAN.pathsTitle;
+  const cards = [];
+  if (PLAN.contracts?.length) cards.push(`<div class="card"><h3>Contratos del día 1</h3><ol>${PLAN.contracts.map(c => `<li>${c}</li>`).join('')}</ol></div>`);
+  if (PLAN.proposal) cards.push(`<div class="card reco"><h3>${PLAN.proposal.title}</h3><p style="font-size:14px">${PLAN.proposal.text}</p></div>`);
+  if (PLAN.cuts) cards.push(`<div class="card"><h3>${PLAN.cuts.title}</h3><div class="cut">${PLAN.cuts.order.map((id, i) => `<span class="chip warn">${i + 1} · ${id}</span>`).join('<span class="arr">→</span>')}</div><p class="muted" style="font-size:14px">${PLAN.cuts.text}</p></div>`);
+  $('coord').innerHTML = cards.join('');
+  $('hotspots').innerHTML = (PLAN.hotspots || []).map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('');
+  $('hotspots-card').hidden = !PLAN.hotspots?.length;
+}
+
+function renderPaths() {
+  $('paths').innerHTML = PLAN.paths.map(p => `<div class="path"><h3>${p.title}</h3><div class="chain">${
+    p.chain.map(id => { const it = byId(id); return `<span class="node ${it.track}">${id}<small>${pos(it).who}</small></span>`; }).join('<span class="arr">→</span>')
+  }</div><p class="note">${p.note}</p></div>`).join('');
+}
+
+function renderLoad() {
+  const totals = PEOPLE.map(p => ({ p, items: ITEMS.filter(i => pos(i).who === p && i.sp > 0) }));
+  const sums = totals.map(t => t.items.reduce((a, i) => a + i.sp, 0));
+  const max = Math.max(...sums, PLAN.totalSp / PEOPLE.length) * 1.1;
+  const avg = PLAN.totalSp / PEOPLE.length;
+  $('load').innerHTML = totals.map(({ p, items }, k) => {
+    const sum = sums[k];
+    const segs = items.map(i => `<span class="${i.track}" style="width:${i.sp / sum * 100}%" title="${i.id} · ${i.sp} SP">${short(i.id)}</span>`).join('');
+    return `<div class="load-row${sum > PLAN.overloadAbove ? ' over' : ''}"><span class="who">${p}</span>
+      <div class="bar-track"><div class="bar" style="width:${sum / max * 100}%">${segs}</div><span class="avg" style="left:${avg / max * 100}%"></span></div>
+      <span class="sp">${sum} SP</span></div>`;
+  }).join('') + `<div class="load-foot"><span><span class="sw dash"></span>Promedio parejo: ${fmt(avg)} SP por persona</span><span>En rojo, más de ${PLAN.overloadAbove} SP</span></div>`;
+}
+
+function renderGantt() {
+  const g = $('gantt');
+  g.style.gridTemplateColumns = `96px repeat(${DAYS.length}, minmax(72px, 1fr))`;
+  g.style.minWidth = `${96 + DAYS.length * 78}px`;
+  let html = '<div class="gh"></div>' + DAYS.map(d =>
+    `<div class="gh${d.wk ? ' wk' : ''}${d.after ? ' after' : ''}"><b>${d.d ? `${d.d} ${d.n}` : d.n}</b>${d.flag ? `<span class="flag">${d.flag}</span>` : ''}</div>`).join('');
+  PEOPLE.forEach((p, r) => {
+    const row = r + 2;
+    html += `<div class="gname" style="grid-row:${row};grid-column:1">${p}</div>`;
+    DAYS.forEach((d, c) => html += `<div class="gcell${d.wk ? ' wk' : ''}${d.after ? ' after' : ''}" style="grid-row:${row};grid-column:${c + 2}"></div>`);
+    ITEMS.filter(i => pos(i).who === p).forEach(i => {
+      const { s, e } = pos(i);
+      const cls = [i.track, i.fac ? 'fac' : '', e >= AFTER ? 'overflow' : ''].join(' ');
+      html += `<button type="button" class="blk ${cls}" data-id="${i.id}" style="grid-row:${row};grid-column:${s + 2} / ${e + 3}">
+        <span class="id">${i.id}</span>${i.sp ? `<span class="spb">${i.sp}</span>` : ''}<span class="t">${i.t}</span></button>`;
+    });
+  });
+  g.innerHTML = html;
+  g.querySelectorAll('.blk').forEach(b => b.addEventListener('click', () => select(b.dataset.id === selected ? null : b.dataset.id)));
+  applySelection();
+}
+
+function applySelection() {
+  const g = $('gantt');
+  g.classList.toggle('focus', !!selected);
+  g.querySelectorAll('.blk').forEach(b => {
+    const id = b.dataset.id;
+    b.classList.toggle('sel', id === selected);
+    b.classList.toggle('dep', !!selected && byId(selected).deps.includes(id));
+    b.classList.toggle('next', !!selected && nextOf(selected).includes(id));
+  });
+  const d = $('detail');
+  if (!selected) {
+    d.innerHTML = `<div class="eyebrow">Detalle</div><p class="muted">Tocá cualquier bloque del cronograma para ver de qué depende, qué desbloquea y cómo arrancarlo sin esperar.</p>`;
+    return;
+  }
+  const it = byId(selected), p = pos(it);
+  const chips = (ids, cls) => ids.length ? ids.map(x => `<span class="chip ${cls}">${x} · ${pos(byId(x)).who}</span>`).join('') : '<span class="muted" style="font-size:13px">nada</span>';
+  const dayLabel = i => DAYS[i].after ? 'fuera del sprint' : `${DAYS[i].d} ${DAYS[i].n}`;
+  d.innerHTML = `<div class="row"><h3>${it.id} · ${it.t}</h3></div>
+    <div class="row"><span class="chip">${p.who}</span>${it.sp ? `<span class="chip">${it.sp} SP</span>` : ''}<span class="chip">${dayLabel(p.s)} → ${dayLabel(p.e)}</span>${it.fac ? '<span class="chip ok">Arranca con factories</span>' : ''}${p.e >= AFTER ? '<span class="chip warn">No entra en el sprint</span>' : ''}</div>
+    <div class="row"><span class="lbl">Depende de</span>${chips(it.deps, 'dep')}</div>
+    <div class="row"><span class="lbl">Desbloquea</span>${chips(nextOf(it.id), 'next')}</div>
+    <p style="font-size:14px">${it.note}</p>`;
+}
+
+function select(id) { selected = id; applySelection(); }
+
+$('toggle-alt').addEventListener('click', e => {
+  moved = !moved;
+  e.currentTarget.setAttribute('aria-pressed', String(moved));
+  renderLoad(); renderGantt(); renderPaths();
+});
+
+renderStatic();
+renderLoad();
+renderGantt();
+renderPaths();
+</script>
