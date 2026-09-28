@@ -78,3 +78,14 @@ Decididos en el Sprint Planning 4 a partir de la reunión con el PO del 26/09/20
 Lo que el cliente confirma desde el carrito de la tienda online (`HU-062`). **No es una venta**:
 se convierte en venta, con su factura y su egreso de stock, cuando está pagado (`EPIC-15`). No
 confundir con la *orden de compra*, que La Linda le emite a un proveedor.
+
+### Factura de venta (`Invoice`)
+El comprobante que La Linda le emite al cliente al confirmar una venta (`HU-042`): A si el cliente
+es responsable inscripto, B para el resto. Numeración correlativa propia por punto de venta y por
+tipo. Mientras no se integre ARCA (`SPIKE-01`) no tiene CAE. No confundir con la *factura de
+proveedor* (`SupplierVoucher`), que La Linda recibe y registra en compras.
+
+### Conflicto de stock en una venta
+La falta de existencia en el sistema no bloquea una venta: si el artículo está en la caja, se
+vende. Cuando la salida por venta deja una existencia negativa, esa línea queda marcada como
+conflicto y se regulariza después con un movimiento manual.

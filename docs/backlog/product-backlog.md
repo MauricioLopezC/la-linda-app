@@ -17,7 +17,7 @@ Product Owner se genera a pedido a partir de este documento.
   no los describía. Los MMF reales se identifican al cerrar cada sprint, no por adelantado.
 - Estimación en **story points**, escala de Fibonacci.
 - **Capacidad de referencia: 30 a 40 SP por sprint (indicación del PO).** Con 6 sprints eso da
-  entre 180 y 240 SP. El backlog activo estimado suma **382 SP**, entre 1,5 y 2 veces la capacidad.
+  entre 180 y 240 SP. El backlog activo estimado suma **381 SP**, entre 1,5 y 2 veces la capacidad.
   El desvío se informa al PO para que decida el recorte; **no se disimula bajando las
   estimaciones**, porque los story points miden tamaño relativo y la capacidad es un hecho aparte.
 - **Velocidad observada desde el Sprint 3: 60 a 65 SP por sprint** (Sprint 3 comprometió 59). Los
@@ -65,7 +65,7 @@ Product Owner se genera a pedido a partir de este documento.
 
 ## Índice
 
-77 registros históricos: 73 ítems activos con **382 story points estimados**, 3 historias
+77 registros históricos: 73 ítems activos con **381 story points estimados**, 3 historias
 absorbidas, más la reserva de estabilización (`HAB-03`, sin estimar a propósito).
 
 | # | ID | Título | Módulo | SP | Estado |
@@ -113,27 +113,27 @@ absorbidas, más la reserva de estabilización (`HAB-03`, sin estimar a propósi
 | 41 | [EPIC-06](#epic-06) | Descontar el stock automáticamente al confirmar la venta | VTA | 5 | Pendiente |
 | 42 | [HU-058](#hu-058) | Registrar ingresos y egresos de dinero en la caja | VTA | 3 | Pendiente |
 | 43 | [HU-060](#hu-060) | Cerrar la caja con arqueo por medio de pago | VTA | 8 | Pendiente |
-| 44 | [HU-061](#hu-061) | Consultar los turnos de caja y su rendición | VTA | 3 | Pendiente |
-| 45 | [HU-059](#hu-059) | Registrar un préstamo de dinero entre cajas | VTA | 3 | Pendiente |
-| 46 | [HU-046](#hu-046) | Publicar el catálogo en la tienda online | ECO | 5 | Pendiente |
-| 47 | [EPIC-11](#epic-11) | Registrarse e iniciar sesión como cliente en la tienda online | CLI | 8 | Pendiente |
-| 48 | [EPIC-13](#epic-13) | Gestionar el carrito de compras | ECO | 8 | Pendiente |
-| 49 | [HU-062](#hu-062) | Confirmar el pedido desde el carrito | ECO | 5 | Pendiente |
-| 50 | [HU-048](#hu-048) | Mostrar la disponibilidad online e impedir la compra sin stock | ECO | 3 | Pendiente |
-| 51 | [HU-047](#hu-047) | Buscar, filtrar y ordenar artículos en la tienda online | ECO | 5 | Pendiente |
-| 52 | [HU-007](#hu-007) | Administrar las alícuotas de IVA | ADM | 2 | Pendiente |
-| 53 | [HU-063](#hu-063) | Discriminar el IVA por alícuota en la venta | VTA | 3 | Pendiente |
-| 54 | [EPIC-03](#epic-03) | Identificar al cliente y determinar el tipo de comprobante | VTA | 5 | Pendiente |
-| 55 | [HU-042](#hu-042) | Emitir la factura con numeración correlativa por punto de venta | VTA | 8 | Pendiente |
-| 56 | [HU-043](#hu-043) | Imprimir y descargar la factura en PDF | VTA | 5 | Pendiente |
-| 57 | [HU-044](#hu-044) | Anular una venta con nota de crédito y reingreso de stock | VTA | 8 | Pendiente |
-| 58 | [HU-045](#hu-045) | Registrar una devolución parcial de cliente | VTA | 5 | Pendiente |
-| 59 | [EPIC-08](#epic-08) | Consultar los comprobantes emitidos | VTA | 5 | Pendiente |
-| 60 | [EPIC-09](#epic-09) | Consultar la ficha del cliente con su historial | CLI | 5 | Pendiente |
-| 61 | [EPIC-10](#epic-10) | Registrar y consultar el log de auditoría | SEG | 8 | Pendiente |
-| 62 | [SPIKE-01](#spike-01) | Investigar la integración con ARCA (WSAA y WSFE) | VTA | 3 | Pendiente |
-| 63 | [HU-049](#hu-049) | Elegir la modalidad de entrega y calcular el costo de envío | ECO | 5 | Pendiente |
-| 64 | [HU-050](#hu-050) | Pagar el pedido con Mercado Pago en sandbox | ECO | 8 | Pendiente |
+| 44 | [HU-007](#hu-007) | Administrar las alícuotas de IVA | ADM | 1 | Pendiente |
+| 45 | [HU-063](#hu-063) | Discriminar el IVA por alícuota en la venta | VTA | 3 | Pendiente |
+| 46 | [EPIC-03](#epic-03) | Identificar al cliente y determinar el tipo de comprobante | VTA | 5 | Pendiente |
+| 47 | [HU-042](#hu-042) | Emitir la factura con numeración correlativa por punto de venta | VTA | 8 | Pendiente |
+| 48 | [HU-043](#hu-043) | Imprimir y descargar la factura en PDF | VTA | 5 | Pendiente |
+| 49 | [HU-061](#hu-061) | Consultar los turnos de caja y su rendición | VTA | 3 | Pendiente |
+| 50 | [HU-059](#hu-059) | Registrar un préstamo de dinero entre cajas | VTA | 3 | Pendiente |
+| 51 | [HU-046](#hu-046) | Publicar el catálogo en la tienda online | ECO | 5 | Pendiente |
+| 52 | [EPIC-11](#epic-11) | Registrarse e iniciar sesión como cliente en la tienda online | CLI | 8 | Pendiente |
+| 53 | [EPIC-13](#epic-13) | Gestionar el carrito de compras | ECO | 8 | Pendiente |
+| 54 | [HU-062](#hu-062) | Confirmar el pedido desde el carrito | ECO | 5 | Pendiente |
+| 55 | [HU-049](#hu-049) | Elegir la modalidad de entrega y calcular el costo de envío | ECO | 5 | Pendiente |
+| 56 | [HU-050](#hu-050) | Pagar el pedido con Mercado Pago en sandbox | ECO | 8 | Pendiente |
+| 57 | [HU-048](#hu-048) | Mostrar la disponibilidad online e impedir la compra sin stock | ECO | 3 | Pendiente |
+| 58 | [HU-047](#hu-047) | Buscar, filtrar y ordenar artículos en la tienda online | ECO | 5 | Pendiente |
+| 59 | [HU-044](#hu-044) | Anular una venta con nota de crédito y reingreso de stock | VTA | 8 | Pendiente |
+| 60 | [HU-045](#hu-045) | Registrar una devolución parcial de cliente | VTA | 5 | Pendiente |
+| 61 | [EPIC-08](#epic-08) | Consultar los comprobantes emitidos | VTA | 5 | Pendiente |
+| 62 | [EPIC-09](#epic-09) | Consultar la ficha del cliente con su historial | CLI | 5 | Pendiente |
+| 63 | [EPIC-10](#epic-10) | Registrar y consultar el log de auditoría | SEG | 8 | Pendiente |
+| 64 | [SPIKE-01](#spike-01) | Investigar la integración con ARCA (WSAA y WSFE) | VTA | 3 | Pendiente |
 | 65 | [EPIC-15](#epic-15) | Procesar el pedido pagado como una venta con factura y egreso de stock | ECO | 8 | Pendiente |
 | 66 | [EPIC-16](#epic-16) | Seguir el estado del pedido y recibir notificaciones por correo | ECO | 8 | Pendiente |
 | 67 | [EPIC-17](#epic-17) | Administrar los pedidos web desde el panel interno | ECO | 8 | Pendiente |
@@ -918,6 +918,7 @@ reimputación innecesarios.
 - **Validaciones:**
     - el punto de venta debe estar activo
     - una caja tiene a lo sumo un turno abierto, y un cajero también
+    - se cuentan solo billetes de las denominaciones vigentes, de $20.000 a $10 ($20.000, $10.000, $2.000, $1.000, $500, $200, $100, $50, $20 y $10); no se aceptan monedas
     - las cantidades son enteras y mayores o iguales a cero
     - el fondo inicial es la suma de denominación × cantidad; nunca se carga a mano
 - **Comportamiento:**
@@ -931,6 +932,8 @@ reimputación innecesarios.
 > 26/09: "¿Qué hace un cajero cuando llega? Se sienta, abre la caja y carga cuánto cambio tiene",
 > con el conteo de billetes por denominación. La caja se modela como el punto de venta de
 > `HU-051`, y el "ID de movimiento de caja" que pidió el PO es el turno de caja.
+> **Respuesta del PO (2026-09-28):** se cuentan los billetes de $20.000 a $10, y no se aceptan
+> monedas.
 
 ## HU-039 - Abrir una venta de mostrador dentro del turno de caja
 
@@ -1014,7 +1017,7 @@ reimputación innecesarios.
 
 **Criterios de aceptación**
 
-- **Datos:** por cada medio usado, medio de pago, importe y referencia opcional (número de cupón u operación); en efectivo, además, importe entregado por el cliente y vuelto
+- **Datos:** por cada medio usado, medio de pago e importe; en efectivo, además, importe entregado por el cliente y vuelto
 - **Validaciones:**
     - solo medios de pago activos
     - la suma de los importes coincide con el total de la venta; solo el efectivo puede recibir de más, y la diferencia es el vuelto
@@ -1025,11 +1028,14 @@ reimputación innecesarios.
     - al completar el cobro la venta pasa a confirmada y queda inmutable
     - cobro, confirmación y egreso de stock (`EPIC-06`) ocurren en una sola operación: si algo falla, no queda nada a medias
     - cada medio de pago tiene una clase (efectivo, tarjeta, billetera virtual, transferencia u otro) que ordena el arqueo de `HU-060`
+    - al confirmar se emite la factura (`HU-042`) en la misma operación
+    - no se carga el número de cupón de cada cobro con tarjeta: el POSNET se rinde con el total y el número de lote al cerrar (`HU-060`)
 - **Verificación:** se cobra una venta de $8.500 con $5.000 de débito y $10.000 en efectivo; el vuelto es $6.500 y quedan dos movimientos de caja, de $5.000 y de $3.500
 
 > **Pasa de Epic a Historia en el Sprint Planning 4 (2026-09-27).** Que las ventas sean
 > movimientos de caja es indicación del PO (26/09): "Vayan por esa entidad: las ventas también son
-> movimientos de caja".
+> movimientos de caja". **Respuesta del PO (2026-09-28):** del POSNET alcanza con el total y el
+> número de lote al cerrar la caja; se saca la referencia opcional por cobro.
 
 ## EPIC-06 - Descontar el stock automáticamente al confirmar la venta
 
@@ -1042,14 +1048,18 @@ reimputación innecesarios.
 - **Datos:** el movimiento generado toma el tipo de sistema "Salida por Venta", el depósito del punto de venta, los artículos y cantidades de la venta, el usuario y la venta de origen
 - **Validaciones:**
     - el movimiento se genera una sola vez por venta, al confirmarla
-    - si algún artículo quedaría con existencia negativa, la venta no se confirma y el mensaje nombra el artículo (a confirmar con el PO)
+    - la falta de existencia en el sistema no bloquea la venta: si el artículo está en la caja, se vende
 - **Comportamiento:**
+    - si una línea deja la existencia negativa, el movimiento se registra igual y la línea queda marcada como conflicto de stock, con la existencia que el sistema tenía antes de la venta
+    - el conflicto se resuelve después sobre la salida por venta, regularizando la existencia con un movimiento manual (`HU-017`); los movimientos manuales siguen sin poder dejar existencias negativas
     - el movimiento es inmutable y queda vinculado a la venta; desde el historial de stock se navega hasta ella
     - las ventas abiertas o descartadas no mueven stock
-- **Verificación:** se confirma una venta y se comprueba el egreso en las existencias del depósito de la caja y en el historial de movimientos
+- **Verificación:** se confirma una venta y se comprueba el egreso en las existencias del depósito de la caja y en el historial de movimientos; se vende un artículo con existencia cero y la venta se confirma, con la línea marcada como conflicto
 
 > **Dependencia corregida (Sprint Planning 4):** dependía de `HU-042` (factura), pero el egreso
 > ocurre al confirmar la venta con el cobro, que existe antes que la factura.
+> **Respuesta del PO (2026-09-28):** si el sistema dice que no hay stock pero el artículo está en
+> la caja, la venta no se bloquea; el conflicto se resuelve en la salida por venta.
 
 ## HU-058 - Registrar ingresos y egresos de dinero en la caja
 
@@ -1082,7 +1092,7 @@ reimputación innecesarios.
 
 **Criterios de aceptación**
 
-- **Datos:** conteo de cierre por denominación; importe declarado por cada medio no efectivo con movimientos en el turno; número de lote del POSNET para las tarjetas; esperado, declarado y diferencia por medio de pago; observaciones; fecha y hora de cierre
+- **Datos:** conteo de cierre por denominación (mismos billetes que la apertura, sin monedas); importe declarado por cada medio no efectivo con movimientos en el turno; total y número de lote del cierre del POSNET para las tarjetas; esperado, declarado y diferencia por medio de pago; observaciones; fecha y hora de cierre
 - **Validaciones:**
     - el esperado de cada medio se calcula de los movimientos del turno; nunca se carga a mano
     - el efectivo declarado es la suma del conteo por denominación
@@ -1097,7 +1107,137 @@ reimputación innecesarios.
 
 > **Historia nueva del Sprint Planning 4 (2026-09-27).** PO (26/09): "No solo se vende en
 > efectivo; también se cobra con tarjeta, aplicaciones y POSNET. El cajero saca el cierre de lote
-> del POSNET y en el sistema tiene que haber un listado con el cierre".
+> del POSNET y en el sistema tiene que haber un listado con el cierre". **Respuesta del PO
+> (2026-09-28):** del POSNET se cargan el total y el número de lote al cerrar, no cada cupón.
+
+## HU-007 - Administrar las alícuotas de IVA
+
+**Tipo:** Historia · **Módulo:** ADM · **Estimación:** 1 SP (reestimada, antes 2) · **Estado:** Pendiente · **Sprint:** 4 · **Alcance:** `ADM-03` · **Depende de:** nada
+
+**Como** Administrador, **necesito** administrar las alícuotas de IVA, **para** que el catálogo y las operaciones tomen siempre un valor controlado y no cargado a mano en cada pantalla.
+
+**Criterios de aceptación**
+
+- **Datos:** descripción, porcentaje, estado (activa o inactiva)
+- **Validaciones:**
+    - el porcentaje es mayor o igual a cero y no se repite entre alícuotas
+    - una alícuota asignada a algún artículo no se puede desactivar
+- **Comportamiento:**
+    - solo las alícuotas activas se ofrecen al asignarla a un artículo (`HU-063`)
+    - las alícuotas ya guardadas en ventas y facturas no cambian si después se edita la alícuota
+- **Verificación:** se intenta desactivar el 21% con artículos que la usan y se rechaza; una alícuota sin artículos se desactiva
+
+> **Implementación existente:** el ABM de alícuotas (`pricing/vat-rates`) se construyó en el PR
+> #15, antes de que esta historia bajara de prioridad. Después, el commit `183e65a` quitó la
+> relación entre el artículo y la alícuota, y con eso quedó sin efecto el control de baja de una
+> alícuota en uso (`VatRate::isInUse()` devuelve siempre `false`). **Reestimada de 2 a 1 SP
+> (Sprint Planning 4, 2026-09-28):** entra porque `HU-063` la necesita; el trabajo restante es
+> reactivar el control de baja cuando `HU-063` vuelva a relacionar el artículo con su alícuota.
+
+> **Corrección del PO (2026-08-22):** medios de pago se sacó de esta historia -tampoco hace
+> falta para artículos ni para stock- y pasó a `HU-052`. `HU-008` (catálogo) dejó de depender de
+> esta historia: la alícuota de IVA del artículo pasa a opcional hasta que esta historia entre.
+> **Reubicación (2026-08-22):** esta historia entera bajó de prioridad y se movió desde el
+> bloque de parámetros (ADM, cerca del tope) hasta acá, justo antes de `HU-041`, la primera
+> historia que realmente necesita alícuotas para calcular algo. No aporta a artículos ni a
+> stock, así que no había motivo para construirla antes que ellos.
+
+## HU-063 - Discriminar el IVA por alícuota en la venta
+
+**Tipo:** Historia · **Módulo:** VTA · **Estimación:** 3 SP · **Estado:** Pendiente · **Sprint:** 4 · **Alcance:** `VTA-03` · **Depende de:** HU-007, HU-041
+
+**Como** Cajero, **necesito** que la venta desglose el neto y el IVA de cada alícuota, **para** emitir la factura A a un responsable inscripto con el IVA discriminado.
+
+**Criterios de aceptación**
+
+- **Datos:** alícuota de IVA del artículo; por línea de venta, alícuota, importe neto e IVA; por venta, neto e IVA agrupados por alícuota
+- **Validaciones:**
+    - todo artículo activo tiene una alícuota activa; la alícuota vuelve a ser obligatoria en el ABM de artículos
+    - un artículo sin alícuota no se puede agregar a una venta, y el mensaje lo nombra
+    - neto más IVA de cada línea es exactamente el total de la línea, sin diferencias de redondeo
+- **Comportamiento:**
+    - el precio de lista es final con IVA incluido: el neto se obtiene dividiendo el total de la línea por (1 + alícuota) y el IVA es la diferencia
+    - la alícuota y los importes quedan fijos en la línea al agregarla; un cambio posterior de alícuota no la modifica
+    - discriminar el IVA no cambia el total de la venta
+- **Verificación:** una venta con un artículo al 21% y otro al 10,5% muestra el neto y el IVA de cada alícuota, y neto más IVA suma el total
+
+> **Historia nueva por la división de `HU-041` (acordada el 2026-09-24, registrada en el Sprint
+> Planning 4).** Requiere volver a relacionar el artículo con su alícuota, que el commit `183e65a`
+> quitó. **Entra al Sprint 4 (PO, 2026-09-28)** junto con la factura. Deja de depender de
+> `EPIC-03`: el desglose se calcula para toda venta y la factura decide si lo muestra.
+
+## EPIC-03 - Identificar al cliente y determinar el tipo de comprobante
+
+**Tipo:** Historia (antes Epic) · **Módulo:** VTA · **Estimación:** 5 SP · **Estado:** Pendiente · **Sprint:** 4 · **Alcance:** `VTA-04` · **Depende de:** HU-039, HU-021
+
+**Como** Vendedor, **necesito** identificar al cliente de la operación o dejarlo como consumidor final, **para** emitir el comprobante que corresponde a su condición fiscal.
+
+**Criterios de aceptación**
+
+- **Datos:** cliente de la venta, su condición frente al IVA, tipo y número de documento, y el tipo de comprobante que corresponde
+- **Validaciones:**
+    - solo se eligen clientes activos, y el cliente solo se cambia en una venta abierta
+    - la factura A exige que el cliente sea responsable inscripto y tenga CUIT cargado
+- **Comportamiento:**
+    - la venta abre con Consumidor Final; se busca otro cliente por nombre o documento
+    - el tipo de comprobante se determina solo según la condición del cliente: responsable inscripto → factura A; consumidor final, monotributo y exento → factura B (a confirmar con el PO)
+    - la venta muestra el tipo de comprobante antes de cobrar
+    - cambiar el cliente vuelve a resolver los precios (`HU-041`) y el tipo de comprobante
+- **Verificación:** una venta a un responsable inscripto muestra factura A; al cambiarla a Consumidor Final pasa a factura B
+
+> **Implementación parcial adelantada (Sprint 3):** para ver funcionando `HU-056` desde una
+> pantalla real se construyó una venta básica de mostrador fuera del compromiso del sprint (PR
+> #56). Qué se hizo y qué quedó afuera está en `docs/plans/venta-basica-plan.md`.
+> De esta épica solo se hizo cambiar el cliente de una venta abierta y recalcular sus precios;
+> el tipo de comprobante no se construyó. **Pasa de Epic a Historia y entra al Sprint 4 (PO,
+> 2026-09-28)** como parte de la facturación al cerrar la venta. Conserva sus 5 SP: lo adelantado
+> es la parte chica y el tipo de comprobante es lo nuevo.
+
+## HU-042 - Emitir la factura con numeración correlativa por punto de venta
+
+**Tipo:** Historia · **Módulo:** VTA · **Estimación:** 8 SP · **Estado:** Pendiente · **Sprint:** 4 · **Alcance:** `VTA-06` · **Depende de:** EPIC-03, EPIC-04, HU-063
+
+**Como** Vendedor, **necesito** que al cerrar la venta se emita la factura A o B con numeración correlativa por punto de venta e IVA discriminado, **para** entregarle al cliente el comprobante de su compra.
+
+**Criterios de aceptación**
+
+- **Datos:** tipo (A o B), punto de venta, número, fecha y hora de emisión, datos del cliente al momento de emitir (nombre o razón social, condición frente al IVA, documento y domicilio), detalle de artículos, neto e IVA por alícuota, total, medios de pago, venta y turno de caja de origen
+- **Validaciones:**
+    - la numeración es correlativa por punto de venta y tipo de comprobante, automática, sin saltos ni duplicados, y no editable
+    - hay una sola factura por venta, y solo se emite sobre una venta confirmada
+- **Comportamiento:**
+    - la factura se emite sola al confirmar el cobro (`EPIC-04`), en la misma operación: si la emisión falla, la venta no se confirma
+    - queda asociada al turno de caja, igual que la venta
+    - los datos del cliente y los importes quedan fijos en la factura; un cambio posterior en el cliente no la modifica
+    - la factura A discrimina el IVA por alícuota; la B muestra el total con IVA incluido
+    - la factura es inmutable; su anulación con nota de crédito es `HU-044`
+    - no tiene CAE: es un comprobante interno hasta que se integre ARCA (`SPIKE-01`)
+- **Verificación:** se confirman dos ventas en la Caja 1 y quedan las facturas B 0001-00000001 y 0001-00000002; una venta a un responsable inscripto en la misma caja emite la A 0001-00000001
+
+> **Nota del Sprint Planning 4:** el PO pidió que cada comprobante emitido quede asociado al turno
+> de caja (`HU-057`), igual que la venta. **Entra al Sprint 4 (PO, 2026-09-28):** "agregar
+> facturación al cerrar una venta (con PDF)".
+
+## HU-043 - Imprimir y descargar la factura en PDF
+
+**Tipo:** Historia · **Módulo:** VTA · **Estimación:** 5 SP · **Estado:** Pendiente · **Sprint:** 4 · **Alcance:** `VTA-06` · **Depende de:** HU-042
+
+**Como** Vendedor, **necesito** imprimir la factura o descargarla en PDF, **para** entregársela al cliente en papel o por correo.
+
+**Criterios de aceptación**
+
+- **Datos:** letra y código del comprobante, datos de La Linda como emisor (razón social, CUIT, domicilio, condición frente al IVA, inicio de actividades), punto de venta y número, fecha, datos del cliente, detalle con cantidad, descripción, precio unitario y subtotal, neto e IVA por alícuota en la A, total, medios de pago y vuelto
+- **Validaciones:**
+    - el PDF sale de los datos guardados en la factura; nunca recalcula precios ni importes
+    - solo se genera para facturas emitidas
+- **Comportamiento:**
+    - al confirmar la venta se ofrece imprimir o descargar la factura
+    - se puede volver a descargar desde el detalle de la venta en cualquier momento
+    - el PDF indica que es un comprobante sin CAE mientras no se integre ARCA (`SPIKE-01`)
+- **Verificación:** se descarga la factura de una venta con dos alícuotas y dos medios de pago, y los importes coinciden con la venta; se cambia el domicilio del cliente y el PDF conserva el original
+
+> **Entra al Sprint 4 (PO, 2026-09-28)** junto con `HU-042`. Reutiliza `barryvdh/laravel-dompdf`,
+> ya usado para el PDF de la orden de pago (`HU-027`).
 
 ## HU-061 - Consultar los turnos de caja y su rendición
 
@@ -1207,7 +1347,7 @@ reimputación innecesarios.
 
 **Criterios de aceptación**
 
-- **Datos:** número de pedido, cliente, sucursal de retiro, observaciones, fecha y hora, estado; detalle con artículo, cantidad, precio unitario, lista de origen y subtotal; total
+- **Datos:** número de pedido, cliente, modalidad de entrega (`HU-049`), observaciones, fecha y hora, estado; detalle con artículo, cantidad, precio unitario, lista de origen y subtotal; total
 - **Validaciones:**
     - el carrito tiene al menos un artículo
     - si algún artículo quedó no disponible, la confirmación se rechaza y el mensaje lo nombra
@@ -1215,7 +1355,7 @@ reimputación innecesarios.
     - la sucursal de retiro está activa
 - **Comportamiento:**
     - los precios se resuelven de nuevo al confirmar y quedan fijos en el pedido
-    - el pedido nace pendiente; el envío a domicilio (`HU-049`) y el pago online (`HU-050`) se suman después
+    - el pedido nace pendiente de pago; la modalidad de entrega la agrega `HU-049` y el pago online `HU-050`, las dos en este mismo sprint
     - al confirmar, el carrito se vacía
     - el cliente consulta sus pedidos y su detalle en "Mis pedidos", y no ve los de otros clientes
 - **Verificación:** se confirma un pedido, se cambia después un precio en la lista online y el pedido conserva el precio original; el carrito queda vacío
@@ -1223,6 +1363,60 @@ reimputación innecesarios.
 > **Historia nueva del Sprint Planning 4 (2026-09-27).** El PO pidió "carrito de compras y
 > checkout": "entra y resuelve su compra". El backlog saltaba del carrito a la modalidad de entrega
 > y al pago sin un paso de confirmación; esta historia lo agrega.
+
+## HU-049 - Elegir la modalidad de entrega y calcular el costo de envío
+
+**Tipo:** Historia · **Módulo:** ECO · **Estimación:** 5 SP · **Estado:** Pendiente · **Sprint:** 4 · **Alcance:** `ECO-05` · **Depende de:** HU-062
+
+**Como** Cliente, **necesito** elegir entre envío a domicilio y retiro en una sucursal, **para** recibir la compra como me quede más cómodo.
+
+**Criterios de aceptación**
+
+- **Datos:** modalidad de entrega (retiro en sucursal o envío a domicilio), sucursal de retiro, domicilio de entrega e indicaciones, costo de envío, total del pedido con el envío
+- **Validaciones:**
+    - el retiro exige una sucursal activa; el envío exige un domicilio de entrega
+    - el costo de envío nunca lo carga el cliente
+- **Comportamiento:**
+    - el retiro en sucursal no tiene costo; el envío a domicilio suma un costo fijo único (a confirmar con el PO)
+    - el domicilio de entrega se precarga con el del cliente y se puede cambiar para ese pedido sin modificar su cuenta
+    - el costo de envío queda fijo en el pedido al confirmarlo
+    - el checkout muestra el subtotal de artículos, el envío y el total antes de confirmar
+- **Verificación:** se confirma un pedido con envío a domicilio y su total es artículos más costo de envío; otro con retiro no suma envío
+
+> **A revisar con el PO:** falta definir si el costo de envío es un valor fijo único o un
+> parámetro configurable. Si es configurable, se administra en `ADM-03`, pero no encaja en
+> `HU-007` (alícuotas de IVA) ni en `HU-052` (medios de pago) desde el desglose del 2026-08-22:
+> habría que dar de alta un nuevo parámetro cuando se confirme con el PO. Mientras tanto se avanza
+> con un costo fijo en la configuración de la aplicación.
+
+> **Dependencia corregida (Sprint Planning 4):** pasa a depender de `HU-062`, que ya confirma el
+> pedido con retiro en sucursal; esta historia le suma el envío a domicilio. **Entra al Sprint 4
+> (PO, 2026-09-28):** "agregar pago con Mercado Pago y envío".
+
+## HU-050 - Pagar el pedido con Mercado Pago en sandbox
+
+**Tipo:** Historia · **Módulo:** ECO · **Estimación:** 8 SP · **Estado:** Pendiente · **Sprint:** 4 · **Alcance:** `ECO-06` · **Depende de:** HU-049
+
+**Como** Cliente, **necesito** pagar mi pedido en línea, **para** completar la compra sin ir al supermercado.
+
+**Criterios de aceptación**
+
+- **Datos:** estado de pago del pedido, identificador de la preferencia y del pago en Mercado Pago, importe pagado, fecha y hora de acreditación
+- **Validaciones:**
+    - el importe que se cobra es el total del pedido con el envío; el cliente no lo modifica
+    - solo el cliente dueño del pedido puede pagarlo, y un pedido pagado no se vuelve a pagar
+    - el pago se da por acreditado solo después de consultarlo en la API de Mercado Pago; nunca por los parámetros de la redirección
+    - una misma notificación recibida dos veces no produce efectos duplicados
+- **Comportamiento:**
+    - al confirmar el pedido el cliente va al checkout de Mercado Pago en modo sandbox
+    - el pedido nace pendiente de pago; con el pago aprobado pasa a pagado con su fecha de acreditación
+    - si el pago se rechaza o se abandona, el pedido sigue pendiente y se puede reintentar desde "Mis pedidos"
+    - "Mis pedidos" muestra el estado de pago de cada pedido
+    - las credenciales de Mercado Pago se configuran por entorno y nunca se exponen en el frontend
+    - el pedido pagado todavía no se convierte en venta (`EPIC-15`)
+- **Verificación:** con la tarjeta de prueba aprobada el pedido queda pagado; con la rechazada queda pendiente y se reintenta con éxito
+
+> **Entra al Sprint 4 (PO, 2026-09-28):** "agregar pago con Mercado Pago y envío".
 
 ## HU-048 - Mostrar la disponibilidad online e impedir la compra sin stock
 
@@ -1245,83 +1439,6 @@ reimputación innecesarios.
 - A definir en el Sprint Planning correspondiente
 
 ---
-
-## HU-007 - Administrar las alícuotas de IVA
-
-**Tipo:** Historia · **Módulo:** ADM · **Estimación:** 2 SP · **Estado:** Pendiente · **Alcance:** `ADM-03` · **Depende de:** nada
-
-**Como** Administrador, **necesito** administrar las alícuotas de IVA, **para** que el catálogo y las operaciones tomen siempre un valor controlado y no cargado a mano en cada pantalla.
-
-**Criterios de aceptación**
-
-- A definir en el Sprint Planning correspondiente
-
-> **Implementación existente:** el ABM de alícuotas (`pricing/vat-rates`) se construyó en el PR
-> #15, antes de que esta historia bajara de prioridad. Después, el commit `183e65a` quitó la
-> relación entre el artículo y la alícuota, y con eso quedó sin efecto el control de baja de una
-> alícuota en uso (`VatRate::isInUse()` devuelve siempre `false`). Se revisa en el planning.
-
-> **Corrección del PO (2026-08-22):** medios de pago se sacó de esta historia -tampoco hace
-> falta para artículos ni para stock- y pasó a `HU-052`. `HU-008` (catálogo) dejó de depender de
-> esta historia: la alícuota de IVA del artículo pasa a opcional hasta que esta historia entre.
-> **Reubicación (2026-08-22):** esta historia entera bajó de prioridad y se movió desde el
-> bloque de parámetros (ADM, cerca del tope) hasta acá, justo antes de `HU-041`, la primera
-> historia que realmente necesita alícuotas para calcular algo. No aporta a artículos ni a
-> stock, así que no había motivo para construirla antes que ellos.
-
-## HU-063 - Discriminar el IVA por alícuota en la venta
-
-**Tipo:** Historia · **Módulo:** VTA · **Estimación:** 3 SP · **Estado:** Pendiente · **Alcance:** `VTA-03` · **Depende de:** HU-007, HU-041, EPIC-03
-
-**Como** Cajero, **necesito** que la venta desglose el neto y el IVA de cada alícuota, **para** emitir la factura A a un responsable inscripto con el IVA discriminado.
-
-**Criterios de aceptación**
-
-- A definir en el Sprint Planning correspondiente
-
-> **Historia nueva por la división de `HU-041` (acordada el 2026-09-24, registrada en el Sprint
-> Planning 4).** Requiere volver a relacionar el artículo con su alícuota, que el commit `183e65a`
-> quitó.
-
-## EPIC-03 - Identificar al cliente y determinar el tipo de comprobante
-
-**Tipo:** Epic · **Módulo:** VTA · **Estimación:** 5 SP · **Estado:** Pendiente · **Alcance:** `VTA-04` · **Depende de:** HU-039, HU-021
-
-**Como** Vendedor, **necesito** identificar al cliente de la operación o dejarlo como consumidor final, **para** emitir el comprobante que corresponde a su condición fiscal.
-
-**Criterios de aceptación**
-
-- A definir en el Sprint Planning correspondiente
-
-> **Implementación parcial adelantada (Sprint 3):** para ver funcionando `HU-056` desde una
-> pantalla real se construyó una venta básica de mostrador fuera del compromiso del sprint (PR
-> #56). Qué se hizo y qué quedó afuera está en `docs/plans/venta-basica-plan.md`. No son criterios
-> aprobados: se revisan con el PO en el Sprint Planning en que entre esta historia.
-> De esta épica solo se hizo cambiar el cliente de una venta abierta y recalcular sus precios;
-> el tipo de comprobante no se construyó.
-
-## HU-042 - Emitir la factura con numeración correlativa por punto de venta
-
-**Tipo:** Historia · **Módulo:** VTA · **Estimación:** 8 SP · **Estado:** Pendiente · **Alcance:** `VTA-06` · **Depende de:** EPIC-03, EPIC-04, HU-063
-
-**Como** Vendedor, **necesito** emitir la factura A, B o C con numeración correlativa por punto de venta e IVA discriminado, **para** entregarle al cliente el comprobante de su compra.
-
-**Criterios de aceptación**
-
-- A definir en el Sprint Planning correspondiente
-
-> **Nota del Sprint Planning 4:** el PO pidió que cada comprobante emitido quede asociado al turno
-> de caja (`HU-057`), igual que la venta.
-
-## HU-043 - Imprimir y descargar la factura en PDF
-
-**Tipo:** Historia · **Módulo:** VTA · **Estimación:** 5 SP · **Estado:** Pendiente · **Alcance:** `VTA-06` · **Depende de:** HU-042
-
-**Como** Vendedor, **necesito** imprimir la factura o descargarla en PDF, **para** entregársela al cliente en papel o por correo.
-
-**Criterios de aceptación**
-
-- A definir en el Sprint Planning correspondiente
 
 ## HU-044 - Anular una venta con nota de crédito y reingreso de stock
 
@@ -1378,34 +1495,6 @@ reimputación innecesarios.
 **Tipo:** Spike · **Módulo:** VTA · **Estimación:** 3 SP · **Estado:** Pendiente · **Alcance:** deseable de `VTA`, sin ID propio (integración ARCA) · **Depende de:** nada
 
 **Como** Equipo de Desarrollo, **necesito** conocer el esfuerzo real de integrar la facturación electrónica con ARCA, **para** poder decidir con información si se incorpora al alcance comprometido o queda como deseable.
-
-**Criterios de aceptación**
-
-- A definir en el Sprint Planning correspondiente
-
-## HU-049 - Elegir la modalidad de entrega y calcular el costo de envío
-
-**Tipo:** Historia · **Módulo:** ECO · **Estimación:** 5 SP · **Estado:** Pendiente · **Alcance:** `ECO-05` · **Depende de:** HU-062
-
-**Como** Cliente, **necesito** elegir entre envío a domicilio y retiro en una sucursal, **para** recibir la compra como me quede más cómodo.
-
-**Criterios de aceptación**
-
-- A definir en el Sprint Planning correspondiente
-
-> **A revisar con el PO:** falta definir si el costo de envío es un valor fijo único o un
-> parámetro configurable. Si es configurable, se administra en `ADM-03`, pero no encaja en
-> `HU-007` (alícuotas de IVA) ni en `HU-052` (medios de pago) desde el desglose del 2026-08-22:
-> habría que dar de alta un nuevo parámetro cuando se confirme con el PO.
-
-> **Dependencia corregida (Sprint Planning 4):** pasa a depender de `HU-062`, que ya confirma el
-> pedido con retiro en sucursal; esta historia le suma el envío a domicilio.
-
-## HU-050 - Pagar el pedido con Mercado Pago en sandbox
-
-**Tipo:** Historia · **Módulo:** ECO · **Estimación:** 8 SP · **Estado:** Pendiente · **Alcance:** `ECO-06` · **Depende de:** HU-049
-
-**Como** Cliente, **necesito** pagar mi pedido en línea, **para** completar la compra sin ir al supermercado.
 
 **Criterios de aceptación**
 
