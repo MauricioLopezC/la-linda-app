@@ -5,6 +5,7 @@ use App\Models\Catalog\Article;
 use App\Models\Customers\Customer;
 use App\Models\Pricing\PriceList;
 use App\Models\Pricing\PriceListItem;
+use App\Models\Sales\CashSession;
 use App\Models\Sales\PointOfSale;
 use App\Models\Sales\Sale;
 use App\Models\User;
@@ -15,7 +16,8 @@ use App\Models\User;
  * opens online sales.
  */
 beforeEach(function () {
-    $this->actingAs(User::factory()->create());
+    $user = User::factory()->create();
+    $this->actingAs($user);
 
     $this->general = PriceList::factory()->forChannel(PriceListChannel::General)->create(['name' => 'Lista General']);
     $this->mostrador = PriceList::factory()->forChannel(PriceListChannel::Mostrador)->create(['name' => 'Lista Mostrador']);
@@ -32,6 +34,7 @@ beforeEach(function () {
 
     Customer::factory()->defaultCustomer()->create();
     $this->pointOfSale = PointOfSale::factory()->create();
+    CashSession::factory()->create(['point_of_sale_id' => $this->pointOfSale->id, 'user_id' => $user->id]);
 });
 
 /**

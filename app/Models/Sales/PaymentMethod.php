@@ -3,6 +3,7 @@
 namespace App\Models\Sales;
 
 use App\Concerns\NormalizesUniqueAttributes;
+use App\Enums\Sales\PaymentMethodKind;
 use Database\Factories\Sales\PaymentMethodFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -16,12 +17,13 @@ use Illuminate\Support\Facades\Schema;
  * @property int $id
  * @property string $name
  * @property string $name_normalized
+ * @property PaymentMethodKind $kind
  * @property bool $is_enabled_online
  * @property bool $is_active
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['name', 'is_enabled_online', 'is_active'])]
+#[Fillable(['name', 'kind', 'is_enabled_online', 'is_active'])]
 class PaymentMethod extends Model
 {
     /** @use HasFactory<PaymentMethodFactory> */
@@ -31,6 +33,7 @@ class PaymentMethod extends Model
 
     /** @var array<string, mixed> */
     protected $attributes = [
+        'kind' => PaymentMethodKind::Other,
         'is_enabled_online' => false,
         'is_active' => true,
     ];
@@ -39,6 +42,7 @@ class PaymentMethod extends Model
     protected function casts(): array
     {
         return [
+            'kind' => PaymentMethodKind::class,
             'is_enabled_online' => 'boolean',
             'is_active' => 'boolean',
         ];
@@ -63,7 +67,11 @@ class PaymentMethod extends Model
             return true;
         }
 
-        if (Schema::hasTable('sales') && DB::table('sales')->where('payment_method_id', $this->id)->exists()) {
+        if (DB::table('cash_movements')->where('payment_method_id', $this->id)->exists()) {
+            return true;
+        }
+
+        if (DB::table('cash_session_closure_lines')->where('payment_method_id', $this->id)->exists()) {
             return true;
         }
 

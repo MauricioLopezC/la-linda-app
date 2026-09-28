@@ -7,6 +7,7 @@ use App\Enums\Catalog\ArticleStatus;
 use App\Models\Inventory\StockBalance;
 use App\Models\Inventory\StockMovementItem;
 use App\Models\Pricing\PriceListItem;
+use App\Models\Pricing\VatRate;
 use App\Models\Purchasing\Supplier;
 use Database\Factories\Catalog\ArticleFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -28,12 +29,14 @@ use Illuminate\Support\Carbon;
  * @property int $category_id
  * @property int|null $brand_id
  * @property int $unit_of_measure_id
+ * @property int|null $vat_rate_id
  * @property ArticleStatus $status
  * @property bool $is_online_publishable
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
+ * @property VatRate|null $vatRate
  */
-#[Fillable(['description', 'internal_code', 'barcode', 'category_id', 'brand_id', 'unit_of_measure_id', 'status', 'is_online_publishable'])]
+#[Fillable(['description', 'internal_code', 'barcode', 'category_id', 'brand_id', 'unit_of_measure_id', 'vat_rate_id', 'status', 'is_online_publishable'])]
 class Article extends Model
 {
     /** @use HasFactory<ArticleFactory> */
@@ -90,6 +93,17 @@ class Article extends Model
     public function unitOfMeasure(): BelongsTo
     {
         return $this->belongsTo(UnitOfMeasure::class);
+    }
+
+    /**
+     * The VAT rate its prices include (HU-063). Required for active articles, enforced by the
+     * article Form Requests rather than by the schema.
+     *
+     * @return BelongsTo<VatRate, $this>
+     */
+    public function vatRate(): BelongsTo
+    {
+        return $this->belongsTo(VatRate::class);
     }
 
     /**

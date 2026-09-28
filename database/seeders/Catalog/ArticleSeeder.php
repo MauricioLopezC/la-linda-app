@@ -7,10 +7,18 @@ use App\Models\Catalog\Article;
 use App\Models\Catalog\Brand;
 use App\Models\Catalog\Category;
 use App\Models\Catalog\UnitOfMeasure;
+use App\Models\Pricing\VatRate;
 use Illuminate\Database\Seeder;
 
 class ArticleSeeder extends Seeder
 {
+    /**
+     * Fresh fruit and vegetables carry the reduced 10.5% VAT rate; everything else the general 21%.
+     *
+     * @var list<string>
+     */
+    private const REDUCED_VAT_CATEGORIES = ['Frutas', 'Verduras'];
+
     /**
      * Run the database seeds.
      */
@@ -19,6 +27,8 @@ class ArticleSeeder extends Seeder
         $categories = Category::query()->get()->keyBy('name');
         $brands = Brand::query()->get()->keyBy('name');
         $unitsOfMeasure = UnitOfMeasure::query()->get()->keyBy('name');
+        $generalVatRate = VatRate::query()->where('percentage', 21)->firstOrFail();
+        $reducedVatRate = VatRate::query()->where('percentage', 10.5)->firstOrFail();
 
         $articles = [
             [
@@ -175,7 +185,7 @@ class ArticleSeeder extends Seeder
             ],
         ];
 
-        Article::unguarded(function () use ($articles, $categories, $brands, $unitsOfMeasure): void {
+        Article::unguarded(function () use ($articles, $categories, $brands, $unitsOfMeasure, $generalVatRate, $reducedVatRate): void {
             foreach ($articles as $data) {
                 Article::updateOrCreate(
                     ['internal_code_normalized' => Article::normalizeUniqueValue($data['internal_code'])],
@@ -186,6 +196,9 @@ class ArticleSeeder extends Seeder
                         'category_id' => $categories[$data['category']]->id,
                         'brand_id' => isset($data['brand']) ? $brands[$data['brand']]->id : null,
                         'unit_of_measure_id' => $unitsOfMeasure[$data['unit']]->id,
+                        'vat_rate_id' => in_array($data['category'], self::REDUCED_VAT_CATEGORIES, true)
+                            ? $reducedVatRate->id
+                            : $generalVatRate->id,
                         'status' => $data['status'] ?? ArticleStatus::Active,
                         'is_online_publishable' => $data['is_online_publishable'],
                     ],

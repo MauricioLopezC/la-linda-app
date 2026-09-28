@@ -21,8 +21,8 @@ return new class extends Migration
              * support ALTER TABLE ADD CONSTRAINT, so a DB::statement() after Schema::create()
              * would only ever run on Postgres and leave the rule untested.
              *
-             * This is the single guarantee that no flow can leave stock negative: it holds for
-             * the manual adjustment of HU-017 and for every automatic movement that comes later.
+             * This CHECK was removed in Sprint 4 (remove_quantity_check_from_stock_balances): a
+             * sale may leave stock negative (EPIC-06), so the rule now lives in the actions.
              */
             $table->rawColumn('quantity', 'decimal(12, 3) check (quantity >= 0)')->default(0);
             $table->timestamps();

@@ -6,6 +6,9 @@ use App\Concerns\NormalizesUniqueAttributes;
 use App\Enums\Customers\CustomerIdType;
 use App\Enums\Customers\CustomerTaxCondition;
 use App\Enums\Customers\PersonType;
+use App\Models\Ecommerce\CartItem;
+use App\Models\Ecommerce\CustomerAccount;
+use App\Models\Ecommerce\WebOrder;
 use App\Models\Pricing\PriceList;
 use App\Rules\Customers\ValidCuit;
 use Database\Factories\Customers\CustomerFactory;
@@ -14,6 +17,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -35,6 +40,7 @@ use Illuminate\Support\Facades\Schema;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read PriceList|null $priceList
+ * @property-read CustomerAccount|null $account
  */
 #[Fillable([
     'person_type',
@@ -125,6 +131,10 @@ class Customer extends Model
             return true;
         }
 
+        if (DB::table('web_orders')->where('customer_id', $this->id)->exists()) {
+            return true;
+        }
+
         return false;
     }
 
@@ -136,6 +146,32 @@ class Customer extends Model
     public function priceList(): BelongsTo
     {
         return $this->belongsTo(PriceList::class);
+    }
+
+    /**
+     * The online store login of this customer (EPIC-11), if they registered.
+     *
+     * @return HasOne<CustomerAccount, $this>
+     */
+    public function account(): HasOne
+    {
+        return $this->hasOne(CustomerAccount::class);
+    }
+
+    /**
+     * @return HasMany<CartItem, $this>
+     */
+    public function cartItems(): HasMany
+    {
+        return $this->hasMany(CartItem::class);
+    }
+
+    /**
+     * @return HasMany<WebOrder, $this>
+     */
+    public function webOrders(): HasMany
+    {
+        return $this->hasMany(WebOrder::class);
     }
 
     /**

@@ -6,6 +6,7 @@ use App\Models\Catalog\Article;
 use App\Models\Catalog\UnitOfMeasure;
 use App\Models\Pricing\PriceList;
 use App\Models\Pricing\PriceListItem;
+use App\Models\Pricing\VatRate;
 use App\Models\Sales\Sale;
 use App\Models\Sales\SaleItem;
 use App\Models\User;
@@ -122,6 +123,48 @@ test('an article sold by unit rejects decimal quantities', function () {
 
     $this->post(route('sales.sales.items.store', $this->sale), ['article_id' => $article->id, 'quantity' => '1.5'])
         ->assertSessionHasErrors(['quantity']);
+});
+
+test('a line freezes the article VAT rate and splits its total into net and VAT', function () {
+    $reduced = VatRate::factory()->create(['percentage' => 10.5]);
+    $article = articlePricedIn($this->mostradorList, '1250.40', ['vat_rate_id' => $reduced->id]);
+
+    $this->post(route('sales.sales.items.store', $this->sale), ['article_id' => $article->id])
+        ->assertSessionHasNoErrors();
+
+    $article->update(['vat_rate_id' => VatRate::factory()->create(['percentage' => 21])->id]);
+    $item = SaleItem::sole()->fresh();
+
+    // 1250.40 / 1.105 = 1131.583... → 1131.58; VAT = 1250.40 − 1131.58
+    expect($item->vat_rate_id)->toBe($reduced->id)
+        ->and($item->vat_rate)->toBe('10.50')
+        ->and($item->net_amount)->toBe('1131.58')
+        ->and($item->vat_amount)->toBe('118.82');
+});
+
+test('changing the quantity keeps net plus VAT equal to the line total', function () {
+    $article = articlePricedIn($this->mostradorList, '99.99');
+    $this->post(route('sales.sales.items.store', $this->sale), ['article_id' => $article->id]);
+    $item = SaleItem::sole();
+
+    $this->patch(route('sales.sales.items.update', [$this->sale, $item]), ['quantity' => 7])
+        ->assertSessionHasNoErrors();
+
+    $item->refresh();
+
+    // 7 × 99.99 = 699.93 → net 699.93 / 1.21 = 578.454... → 578.45
+    expect($item->line_total)->toBe('699.93')
+        ->and($item->net_amount)->toBe('578.45')
+        ->and($item->vat_amount)->toBe('121.48');
+});
+
+test('an article without a VAT rate is rejected', function () {
+    $article = articlePricedIn($this->mostradorList, '100.00', ['vat_rate_id' => null]);
+
+    $this->post(route('sales.sales.items.store', $this->sale), ['article_id' => $article->id])
+        ->assertSessionHasErrors(['article_id']);
+
+    expect(SaleItem::count())->toBe(0);
 });
 
 test('changing the quantity recalculates the line and the sale total', function () {

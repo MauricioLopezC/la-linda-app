@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /*
@@ -47,4 +48,14 @@ expect()->extend('toBeOne', function () {
 function something()
 {
     // ..
+}
+
+/**
+ * Run a statement expected to violate a constraint inside a savepoint. On Postgres a failed
+ * statement aborts the whole RefreshDatabase transaction, so a test that keeps querying after
+ * an expected QueryException needs the failure contained; SQLite does not care either way.
+ */
+function inSavepoint(Closure $callback): Closure
+{
+    return fn () => DB::transaction($callback);
 }

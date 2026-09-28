@@ -117,6 +117,12 @@ class AddArticleToSale
             ]);
         }
 
+        if ($article->vatRate === null) {
+            throw ValidationException::withMessages([
+                $field => "El artículo \"{$article->description}\" no tiene alícuota de IVA asignada.",
+            ]);
+        }
+
         $quantityString = number_format($quantity, 3, '.', '');
 
         return $sale->items()->create([
@@ -125,6 +131,8 @@ class AddArticleToSale
             'unit_price' => $resolvedPrice->unit_price,
             'price_list_id' => $resolvedPrice->price_list_id,
             'line_total' => SaleItem::calculateLineTotal($quantityString, $resolvedPrice->unit_price),
+            'vat_rate_id' => $article->vatRate->id,
+            'vat_rate' => $article->vatRate->percentage,
         ]);
     }
 }

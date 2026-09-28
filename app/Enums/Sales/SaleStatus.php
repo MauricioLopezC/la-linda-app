@@ -5,12 +5,14 @@ namespace App\Enums\Sales;
 enum SaleStatus: string
 {
     case Open = 'abierta';
+    case Confirmed = 'confirmada';
     case Discarded = 'descartada';
 
     public function label(): string
     {
         return match ($this) {
             self::Open => 'Abierta',
+            self::Confirmed => 'Confirmada',
             self::Discarded => 'Descartada',
         };
     }

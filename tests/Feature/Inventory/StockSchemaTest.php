@@ -25,10 +25,12 @@ test('a stock balance is unique per article and warehouse', function () {
     ]))->toThrow(QueryException::class);
 });
 
-test('a stock balance cannot go negative', function () {
+test('a stock balance can go negative, since a sale is never blocked by missing stock', function () {
     $balance = StockBalance::factory()->create(['quantity' => 5]);
 
-    expect(fn () => $balance->update(['quantity' => -1]))->toThrow(QueryException::class);
+    $balance->update(['quantity' => -1]);
+
+    expect($balance->fresh()->quantity)->toBe('-1.000');
 });
 
 test('a stock balance keeps decimal quantities for articles sold by weight', function () {

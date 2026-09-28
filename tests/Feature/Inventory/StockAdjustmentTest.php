@@ -17,6 +17,7 @@ use Database\Seeders\Inventory\StockMovementTypeSeeder;
 use Database\Seeders\Inventory\WarehouseSeeder;
 use Database\Seeders\Inventory\WarehouseStockSeeder;
 use Database\Seeders\Organization\BranchSeeder;
+use Database\Seeders\Pricing\VatRateSeeder;
 use Inertia\Testing\AssertableInertia;
 
 beforeEach(function () {
@@ -415,6 +416,7 @@ it('seeds initial inventory through RegisterStockAdjustment using the initial lo
         CategorySeeder::class,
         BrandSeeder::class,
         UnitOfMeasureSeeder::class,
+        VatRateSeeder::class,
         ArticleSeeder::class,
         WarehouseStockSeeder::class,
     ]);

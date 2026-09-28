@@ -3,6 +3,7 @@
 namespace App\Models\Inventory;
 
 use App\Models\Purchasing\SupplierVoucher;
+use App\Models\Sales\Sale;
 use App\Models\User;
 use Database\Factories\Inventory\StockMovementFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -24,14 +25,16 @@ use Illuminate\Support\Carbon;
  * @property int $warehouse_id
  * @property int|null $supplier_voucher_id
  * @property int|null $reversal_of_movement_id
+ * @property int|null $sale_id
  * @property string|null $notes
  * @property int $user_id
  * @property Carbon|null $created_at
  * @property SupplierVoucher|null $supplierVoucher
+ * @property Sale|null $sale
  * @property StockMovement|null $reversalOf
  * @property StockMovement|null $reversal
  */
-#[Fillable(['stock_movement_type_id', 'warehouse_id', 'supplier_voucher_id', 'reversal_of_movement_id', 'notes', 'user_id'])]
+#[Fillable(['stock_movement_type_id', 'warehouse_id', 'supplier_voucher_id', 'reversal_of_movement_id', 'sale_id', 'notes', 'user_id'])]
 class StockMovement extends Model
 {
     /** @use HasFactory<StockMovementFactory> */
@@ -102,6 +105,16 @@ class StockMovement extends Model
     public function supplierVoucher(): BelongsTo
     {
         return $this->belongsTo(SupplierVoucher::class);
+    }
+
+    /**
+     * Get the sale that originated this movement (EPIC-06).
+     *
+     * @return BelongsTo<Sale, $this>
+     */
+    public function sale(): BelongsTo
+    {
+        return $this->belongsTo(Sale::class);
     }
 
     /**
