@@ -11,7 +11,7 @@ class ToggleVatRateStatus
     {
         if ($vatRate->is_active && $vatRate->isInUse()) {
             throw ValidationException::withMessages([
-                'vat_rate' => 'No se puede dar de baja una alícuota de IVA que ya ha sido utilizada en operaciones registradas.',
+                'vat_rate' => 'No se puede desactivar una alícuota de IVA asignada a artículos u operaciones.',
             ]);
         }
 

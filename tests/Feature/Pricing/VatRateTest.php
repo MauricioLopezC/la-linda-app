@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Catalog\Article;
 use App\Models\Pricing\VatRate;
 use App\Models\User;
 use Illuminate\Database\QueryException;
@@ -81,4 +82,23 @@ test('vat rate status can be toggled', function () {
         ->assertSessionHasNoErrors();
 
     expect($vatRate->fresh()->is_active)->toBeFalse();
+});
+
+test('cannot deactivate vat rate when assigned to an article', function () {
+    $user = User::factory()->create();
+    $vatRate = VatRate::factory()->create(['is_active' => true]);
+    Article::factory()->create(['vat_rate_id' => $vatRate->id]);
+
+    $this->actingAs($user)->patch(route('pricing.vat-rates.toggle', $vatRate))
+        ->assertSessionHasErrors(['vat_rate']);
+
+    expect($vatRate->fresh()->is_active)->toBeTrue();
+
+    $this->actingAs($user)->put(route('pricing.vat-rates.update', $vatRate), [
+        'description' => $vatRate->description,
+        'percentage' => $vatRate->percentage,
+        'is_active' => false,
+    ])->assertSessionHasErrors(['vat_rate']);
+
+    expect($vatRate->fresh()->is_active)->toBeTrue();
 });
