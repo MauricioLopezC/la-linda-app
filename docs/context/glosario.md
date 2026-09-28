@@ -57,3 +57,35 @@ Son dos cosas independientes. El **estado** (`is_active`) es una decisión manua
 no se usa. La **vigencia** es calculada a partir de las fechas y la fecha actual: `Vigente`,
 `Futura` o `Vencida`. Una lista puede estar activa pero vencida, o inactiva pero dentro de su
 periodo. Para que la cascada de precios la considere tiene que estar **activa y vigente** a la vez.
+
+### Caja, turno de caja y movimiento de caja (`PointOfSale`, `CashSession`, `CashMovement`)
+Decididos en el Sprint Planning 4 a partir de la reunión con el PO del 26/09/2026.
+- **Caja:** el puesto físico donde se cobra. En el sistema es el **punto de venta** (`HU-051`):
+  no existe una entidad "caja" aparte.
+- **Turno de caja** (`cash_sessions`): el período entre que un cajero abre la caja declarando el
+  fondo inicial billete por billete y la cierra con el arqueo. Es lo que el PO llamó "ID de
+  movimiento de caja": toda venta y todo movimiento de dinero quedan asociados a un turno. Una caja
+  tiene a lo sumo un turno abierto, y un cajero también.
+- **Movimiento de caja** (`cash_movements`): cualquier entrada o salida de dinero de un turno:
+  apertura, venta, ingreso, egreso (gastos y retiros) y préstamo entre cajas. **Una venta también
+  es un movimiento de caja**, uno por cada medio de pago con que se cobró. No confundir con
+  *movimiento de stock*, que mueve mercadería y no dinero.
+- **Arqueo:** el conteo al cerrar el turno. Por cada medio de pago compara el **esperado** (lo que
+  suman los movimientos) con el **declarado** (billetes contados, cierre de lote del POSNET,
+  billeteras); la diferencia es sobrante si es positiva y faltante si es negativa.
+
+### Pedido web (`WebOrder`)
+Lo que el cliente confirma desde el carrito de la tienda online (`HU-062`). **No es una venta**:
+se convierte en venta, con su factura y su egreso de stock, cuando está pagado (`EPIC-15`). No
+confundir con la *orden de compra*, que La Linda le emite a un proveedor.
+
+### Factura de venta (`Invoice`)
+El comprobante que La Linda le emite al cliente al confirmar una venta (`HU-042`): A si el cliente
+es responsable inscripto, B para el resto. Numeración correlativa propia por punto de venta y por
+tipo. Mientras no se integre ARCA (`SPIKE-01`) no tiene CAE. No confundir con la *factura de
+proveedor* (`SupplierVoucher`), que La Linda recibe y registra en compras.
+
+### Conflicto de stock en una venta
+La falta de existencia en el sistema no bloquea una venta: si el artículo está en la caja, se
+vende. Cuando la salida por venta deja una existencia negativa, esa línea queda marcada como
+conflicto y se regulariza después con un movimiento manual.
