@@ -123,6 +123,12 @@ class AddArticleToSale
             ]);
         }
 
+        if (! $article->vatRate->is_active) {
+            throw ValidationException::withMessages([
+                $field => "La alícuota de IVA del artículo \"{$article->description}\" no está activa.",
+            ]);
+        }
+
         $quantityString = number_format($quantity, 3, '.', '');
 
         return $sale->items()->create([

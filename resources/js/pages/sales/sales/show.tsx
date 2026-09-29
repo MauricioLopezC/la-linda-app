@@ -277,9 +277,12 @@ export default function SaleShow({ sale, customers = [] }: Props) {
             <TableHeader>
               <TableRow>
                 <TableHead>Artículo</TableHead>
-                <TableHead className="w-36">Cantidad</TableHead>
+                <TableHead className="w-32">Cantidad</TableHead>
                 <TableHead className="text-right">Precio unitario</TableHead>
                 <TableHead>Lista de origen</TableHead>
+                <TableHead className="text-right">Alícuota IVA</TableHead>
+                <TableHead className="text-right">Neto</TableHead>
+                <TableHead className="text-right">IVA</TableHead>
                 <TableHead className="text-right">Total</TableHead>
                 {sale.is_open && <TableHead className="w-12" />}
               </TableRow>
@@ -288,7 +291,7 @@ export default function SaleShow({ sale, customers = [] }: Props) {
               {sale.items.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={sale.is_open ? 6 : 5}
+                    colSpan={sale.is_open ? 9 : 8}
                     className="py-10 text-center text-muted-foreground"
                   >
                     Todavía no hay artículos en la venta.
@@ -308,8 +311,14 @@ export default function SaleShow({ sale, customers = [] }: Props) {
             </TableBody>
             <TableFooter>
               <TableRow>
-                <TableCell colSpan={4} className="text-right font-semibold">
-                  Total
+                <TableCell colSpan={5} className="text-right font-semibold">
+                  Subtotales
+                </TableCell>
+                <TableCell className="text-right font-mono font-semibold">
+                  {formatCurrency(sale.net_amount)}
+                </TableCell>
+                <TableCell className="text-right font-mono font-semibold">
+                  {formatCurrency(sale.vat_amount)}
                 </TableCell>
                 <TableCell className="text-right text-lg font-bold">
                   {formatCurrency(sale.total_amount)}
@@ -319,6 +328,61 @@ export default function SaleShow({ sale, customers = [] }: Props) {
             </TableFooter>
           </Table>
         </div>
+
+        {sale.items.length > 0 && sale.vat_breakdown.length > 0 && (
+          <div className="grid gap-4 lg:grid-cols-2">
+            <div className="rounded-xl border border-sidebar-border bg-card p-4 shadow-sm">
+              <h3 className="mb-3 text-sm font-semibold">
+                Desglose de IVA por alícuota
+              </h3>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Alícuota</TableHead>
+                      <TableHead className="text-right">Neto gravado</TableHead>
+                      <TableHead className="text-right">IVA</TableHead>
+                      <TableHead className="text-right">Subtotal</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {sale.vat_breakdown.map((row) => (
+                      <TableRow key={row.vat_rate_id}>
+                        <TableCell className="font-medium">
+                          {row.vat_rate_description} (
+                          {Number(row.vat_rate).toLocaleString('es-AR')}%)
+                        </TableCell>
+                        <TableCell className="text-right font-mono">
+                          {formatCurrency(row.net_amount)}
+                        </TableCell>
+                        <TableCell className="text-right font-mono">
+                          {formatCurrency(row.vat_amount)}
+                        </TableCell>
+                        <TableCell className="text-right font-mono font-semibold">
+                          {formatCurrency(row.total_amount)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                  <TableFooter>
+                    <TableRow>
+                      <TableCell className="font-semibold">Totales</TableCell>
+                      <TableCell className="text-right font-mono font-semibold">
+                        {formatCurrency(sale.net_amount)}
+                      </TableCell>
+                      <TableCell className="text-right font-mono font-semibold">
+                        {formatCurrency(sale.vat_amount)}
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-base font-bold">
+                        {formatCurrency(sale.total_amount)}
+                      </TableCell>
+                    </TableRow>
+                  </TableFooter>
+                </Table>
+              </div>
+            </div>
+          </div>
+        )}
 
         <p className="text-xs text-muted-foreground">
           Los precios de lista son finales con IVA incluido. El precio de cada
@@ -447,6 +511,17 @@ function SaleItemRow({
         >
           {item.price_origin_label}
         </Badge>
+      </TableCell>
+      <TableCell className="text-right">
+        <Badge variant="secondary" className="font-mono text-xs">
+          {Number(item.vat_rate).toLocaleString('es-AR')}%
+        </Badge>
+      </TableCell>
+      <TableCell className="text-right font-mono text-xs">
+        {formatCurrency(item.net_amount)}
+      </TableCell>
+      <TableCell className="text-right font-mono text-xs">
+        {formatCurrency(item.vat_amount)}
       </TableCell>
       <TableCell className="text-right font-medium">
         {formatCurrency(item.line_total)}
