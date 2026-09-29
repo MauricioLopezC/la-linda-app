@@ -74,6 +74,32 @@ test('vat rate percentage must be between 0 and 100', function () {
     ])->assertSessionHasErrors(['percentage']);
 });
 
+test('vat rate percentage is unique across rates', function () {
+    $user = User::factory()->create();
+    $existing = VatRate::factory()->create(['description' => 'General', 'percentage' => 21.0]);
+
+    // Creating another rate with 21.0 is rejected
+    $this->actingAs($user)->post(route('pricing.vat-rates.store'), [
+        'description' => 'Otra alícuota',
+        'percentage' => 21.0,
+    ])->assertSessionHasErrors(['percentage']);
+
+    // Updating existing rate keeping its own percentage is allowed
+    $this->actingAs($user)->put(route('pricing.vat-rates.update', $existing), [
+        'description' => 'General renombrada',
+        'percentage' => 21.0,
+        'is_active' => true,
+    ])->assertSessionHasNoErrors();
+
+    // Updating another rate to 21.0 is rejected
+    $another = VatRate::factory()->create(['description' => 'Reducida', 'percentage' => 10.5]);
+    $this->actingAs($user)->put(route('pricing.vat-rates.update', $another), [
+        'description' => 'Reducida a General',
+        'percentage' => 21.0,
+        'is_active' => true,
+    ])->assertSessionHasErrors(['percentage']);
+});
+
 test('vat rate status can be toggled', function () {
     $user = User::factory()->create();
     $vatRate = VatRate::factory()->create();
