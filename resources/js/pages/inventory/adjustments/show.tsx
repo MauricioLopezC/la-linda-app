@@ -4,6 +4,7 @@ import {
   ArrowUpRight,
   Calendar,
   FileText,
+  History,
   Printer,
   Plus,
   ShieldCheck,
@@ -32,6 +33,7 @@ import {
   create as adjustmentsCreate,
   show,
 } from '@/routes/inventory/adjustments';
+import { index as movementsIndex } from '@/routes/inventory/movements';
 import { index as stocksIndex } from '@/routes/inventory/stocks';
 import { show as showSupplierVoucher } from '@/routes/purchasing/vouchers';
 import type { BreadcrumbItem } from '@/types';
@@ -42,6 +44,46 @@ interface Props {
   movement: MovementDetail;
 }
 
+const AUTOMATIC_HEADINGS: Record<
+  string,
+  { title: string; description: string }
+> = {
+  purchase_entry: {
+    title: 'Comprobante de Entrada por Compra',
+    description: 'Ingreso de mercadería por remito de proveedor',
+  },
+  purchase_entry_reversal: {
+    title: 'Comprobante de Reversa de Compra',
+    description: 'Anulación del ingreso de mercadería de un remito',
+  },
+  sale_exit: {
+    title: 'Comprobante de Salida por Venta',
+    description: 'Egreso de mercadería por venta registrada',
+  },
+  customer_return: {
+    title: 'Comprobante de Devolución de Cliente',
+    description: 'Reingreso de mercadería devuelta por un cliente',
+  },
+  warehouse_transfer_out: {
+    title: 'Comprobante de Transferencia (Salida)',
+    description: 'Egreso de mercadería hacia otro depósito',
+  },
+  warehouse_transfer_in: {
+    title: 'Comprobante de Transferencia (Entrada)',
+    description: 'Ingreso de mercadería desde otro depósito',
+  },
+};
+
+const AUTOMATIC_FALLBACK_HEADING = {
+  title: 'Comprobante de Movimiento de Stock',
+  description: 'Movimiento generado automáticamente por el sistema',
+};
+
+const MANUAL_HEADING = {
+  title: 'Comprobante de Ajuste de Stock',
+  description: 'Documento respaldatorio de un ajuste manual de inventario',
+};
+
 export default function ShowStockAdjustment({ movement }: Props) {
   setLayoutProps({
     breadcrumbs: [
@@ -50,8 +92,8 @@ export default function ShowStockAdjustment({ movement }: Props) {
         href: '/inventory/stocks',
       },
       {
-        title: 'Ajustes',
-        href: '/inventory/adjustments/create',
+        title: 'Movimientos',
+        href: movementsIndex.url(),
       },
       {
         title: `Movimiento #${movement.id}`,
@@ -60,13 +102,17 @@ export default function ShowStockAdjustment({ movement }: Props) {
     ] satisfies BreadcrumbItem[],
   });
 
+  const heading = movement.is_automatic
+    ? (AUTOMATIC_HEADINGS[movement.type_code] ?? AUTOMATIC_FALLBACK_HEADING)
+    : MANUAL_HEADING;
+
   const handlePrint = () => {
     window.print();
   };
 
   return (
     <>
-      <Head title={`Comprobante de Ajuste #${movement.id}`} />
+      <Head title={`${heading.title} #${movement.id}`} />
 
       <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 p-4 md:p-6 print:max-w-full print:p-0">
         {/* Action buttons (hidden when printing) */}
@@ -90,12 +136,14 @@ export default function ShowStockAdjustment({ movement }: Props) {
               <Printer className="h-4 w-4" />
               Imprimir Comprobante
             </Button>
-            <Button asChild size="sm" className="gap-1.5">
-              <Link href={adjustmentsCreate()}>
-                <Plus className="h-4 w-4" />
-                Nuevo Ajuste
-              </Link>
-            </Button>
+            {!movement.is_automatic && (
+              <Button asChild size="sm" className="gap-1.5">
+                <Link href={adjustmentsCreate()}>
+                  <Plus className="h-4 w-4" />
+                  Nuevo Ajuste
+                </Link>
+              </Button>
+            )}
           </div>
         </div>
 
@@ -117,11 +165,10 @@ export default function ShowStockAdjustment({ movement }: Props) {
                   </Badge>
                 </div>
                 <CardTitle className="mt-1 text-2xl font-bold tracking-tight">
-                  Comprobante de Ajuste de Stock
+                  {heading.title}
                 </CardTitle>
                 <CardDescription className="text-sm">
-                  Documento respaldatorio de recuento físico e inventario
-                  oficial
+                  {heading.description}
                 </CardDescription>
               </div>
 
@@ -162,9 +209,6 @@ export default function ShowStockAdjustment({ movement }: Props) {
                 </div>
                 <div className="text-sm font-semibold">
                   {movement.type_name}
-                </div>
-                <div className="font-mono text-xs text-muted-foreground">
-                  {movement.type_code}
                 </div>
               </div>
 
@@ -290,7 +334,7 @@ export default function ShowStockAdjustment({ movement }: Props) {
                     <TableHead>Artículo / Categoría</TableHead>
                     <TableHead className="w-[100px]">Unidad</TableHead>
                     <TableHead className="w-[150px] text-right">
-                      Ajuste Aplicado
+                      Cantidad
                     </TableHead>
                   </TableRow>
                 </TableHeader>
@@ -311,6 +355,18 @@ export default function ShowStockAdjustment({ movement }: Props) {
                             {item.category_name}{' '}
                             {item.brand_name ? `• ${item.brand_name}` : ''}
                           </div>
+                          <Link
+                            href={movementsIndex({
+                              query: {
+                                article_id: item.article_id,
+                                warehouse_id: movement.warehouse_id,
+                              },
+                            })}
+                            className="mt-0.5 inline-flex items-center gap-1 text-xs text-primary hover:underline print:hidden"
+                          >
+                            <History className="size-3" />
+                            Ver kardex en {movement.warehouse_name}
+                          </Link>
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground">
                           {item.unit_of_measure_name}
@@ -322,20 +378,14 @@ export default function ShowStockAdjustment({ movement }: Props) {
                               {formatStockQuantity(
                                 delta,
                                 item.unit_of_measure_name,
-                              )}{' '}
-                              {movement.type_code === 'purchase_entry'
-                                ? '(Entrada remito)'
-                                : '(Sobrante)'}
+                              )}
                             </span>
                           ) : delta < -0.0001 ? (
                             <span className="font-semibold text-rose-600">
                               {formatStockQuantity(
                                 delta,
                                 item.unit_of_measure_name,
-                              )}{' '}
-                              {movement.type_code === 'purchase_entry_reversal'
-                                ? '(Reversa remito)'
-                                : '(Faltante)'}
+                              )}
                             </span>
                           ) : (
                             <span className="text-muted-foreground">

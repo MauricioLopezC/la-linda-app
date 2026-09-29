@@ -2,6 +2,7 @@
 
 use App\Models\Catalog\Article;
 use App\Models\Catalog\UnitOfMeasure;
+use App\Models\Inventory\StockBalance;
 use App\Models\Inventory\StockMovement;
 use App\Models\Inventory\StockMovementItem;
 use App\Models\Inventory\StockMovementType;
@@ -169,6 +170,113 @@ test('filter by article search', function () {
     // Search by description
     $response2 = $this->actingAs($user)->get(route('inventory.movements.index', ['search' => 'roz']));
     $response2->assertOk()->assertInertia(fn (Assert $page) => $page->has('movements.data', 1)->where('movements.data.0.id', $mov2->id));
+});
+
+test('filter by article id lists the movements that touched the article', function () {
+    $user = User::factory()->create();
+    $article = Article::factory()->create();
+    $otherArticle = Article::factory()->create();
+
+    $targetMovement = StockMovement::factory()->create();
+    StockMovementItem::factory()->create(['stock_movement_id' => $targetMovement->id, 'article_id' => $article->id]);
+
+    $otherMovement = StockMovement::factory()->create();
+    StockMovementItem::factory()->create(['stock_movement_id' => $otherMovement->id, 'article_id' => $otherArticle->id]);
+
+    $this->actingAs($user)->get(route('inventory.movements.index', ['article_id' => $article->id]))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('movements.data', 1)
+            ->where('movements.data.0.id', $targetMovement->id)
+            ->where('article.id', $article->id)
+            ->where('kardex', null)
+        );
+});
+
+test('article and warehouse together show the kardex with its running balance', function () {
+    $user = User::factory()->create();
+    $warehouse = Warehouse::factory()->create();
+    $otherWarehouse = Warehouse::factory()->create();
+    $article = Article::factory()->create();
+    $otherArticle = Article::factory()->create();
+
+    $recordMovement = function (Warehouse $warehouse, Article $article, string $quantity, string $date): StockMovement {
+        $movement = StockMovement::factory()->create([
+            'warehouse_id' => $warehouse->id,
+            'created_at' => Carbon::parse($date),
+        ]);
+        StockMovementItem::factory()->create([
+            'stock_movement_id' => $movement->id,
+            'article_id' => $article->id,
+            'quantity' => $quantity,
+        ]);
+
+        return $movement;
+    };
+
+    $recordMovement($warehouse, $article, '100', '2026-09-01 09:00:00');
+    $recordMovement($warehouse, $article, '-2', '2026-09-15 10:00:00');
+    $recordMovement($otherWarehouse, $article, '50', '2026-09-16 10:00:00');
+    $recordMovement($warehouse, $otherArticle, '7', '2026-09-17 10:00:00');
+    $purchase = $recordMovement($warehouse, $article, '240', '2026-09-29 15:00:00');
+
+    StockBalance::factory()->create([
+        'article_id' => $article->id,
+        'warehouse_id' => $warehouse->id,
+        'quantity' => '338',
+    ]);
+
+    $this->actingAs($user)->get(route('inventory.movements.index', [
+        'article_id' => $article->id,
+        'warehouse_id' => $warehouse->id,
+    ]))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('movements', null)
+            ->where('currentBalance', '338.000')
+            ->has('kardex.data', 3)
+            ->where('kardex.data.0.stock_movement_id', $purchase->id)
+            ->where('kardex.data.0.quantity', '240.000')
+            ->where('kardex.data.0.balance', '338.000')
+            ->where('kardex.data.1.quantity', '-2.000')
+            ->where('kardex.data.1.balance', '98.000')
+            ->where('kardex.data.2.balance', '100.000')
+        );
+
+    // A date filter narrows the rows but keeps the real balance at each point in time.
+    $this->actingAs($user)->get(route('inventory.movements.index', [
+        'article_id' => $article->id,
+        'warehouse_id' => $warehouse->id,
+        'date_from' => '2026-09-20',
+    ]))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('kardex.data', 1)
+            ->where('kardex.data.0.balance', '338.000')
+        );
+});
+
+test('article search for the history filter includes inactive articles', function () {
+    $user = User::factory()->create();
+    $active = Article::factory()->create(['internal_code' => 'KDX-001', 'description' => 'Duraznos en almíbar']);
+    $inactive = Article::factory()->inactive()->create(['internal_code' => 'KDX-002', 'description' => 'Duraznos light']);
+    Article::factory()->create(['internal_code' => 'OTR-001', 'description' => 'Arroz']);
+
+    $this->actingAs($user)
+        ->getJson(route('inventory.movements.articles', ['search' => 'durazn']))
+        ->assertOk()
+        ->assertJsonCount(2)
+        ->assertJsonFragment(['id' => $active->id, 'internal_code' => 'KDX-001'])
+        ->assertJsonFragment(['id' => $inactive->id, 'internal_code' => 'KDX-002']);
+});
+
+test('article search for the history filter requires at least two characters', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->getJson(route('inventory.movements.articles', ['search' => 'd']))
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('search');
 });
 
 test('filters combine', function () {

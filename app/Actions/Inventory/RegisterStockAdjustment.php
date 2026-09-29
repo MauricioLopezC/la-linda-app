@@ -78,6 +78,10 @@ class RegisterStockAdjustment
                     ->lockForUpdate()
                     ->firstOrFail();
 
+                if ($movementType->code === StockMovementType::CODE_INITIAL_LOAD) {
+                    $this->ensureIsFirstMovementOfArticle($articleId, $warehouse);
+                }
+
                 $systemQuantity = (float) $balance->quantity;
                 $delta = round($movementType->sign * $quantity, 3);
                 $newQuantity = round($systemQuantity + $delta, 3);
@@ -117,5 +121,28 @@ class RegisterStockAdjustment
 
             return $movement;
         });
+    }
+
+    /**
+     * An initial load opens the article's kardex in a warehouse, so it must be its first movement
+     * there. Any later untracked entry has to go through a count surplus instead. Called after the
+     * balance row is locked, so concurrent initial loads of the same article/warehouse serialize.
+     *
+     * @throws ValidationException
+     */
+    private function ensureIsFirstMovementOfArticle(int $articleId, Warehouse $warehouse): void
+    {
+        $hasPreviousMovements = StockMovementItem::query()
+            ->where('article_id', $articleId)
+            ->whereHas('stockMovement', fn ($query) => $query->where('warehouse_id', $warehouse->id))
+            ->exists();
+
+        if ($hasPreviousMovements) {
+            $article = Article::query()->findOrFail($articleId);
+
+            throw ValidationException::withMessages([
+                'items' => "El artículo '{$article->description}' ya tiene movimientos en el depósito '{$warehouse->name}': la carga inicial solo puede ser su primer movimiento. Usá un ajuste por sobrante de recuento.",
+            ]);
+        }
     }
 }

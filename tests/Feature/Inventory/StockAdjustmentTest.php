@@ -243,6 +243,58 @@ it('rejects a movement whose type is generated automatically by another module',
         ->assertSessionHasErrors('stock_movement_type_id');
 });
 
+it('accepts an initial load as the first movement of an article in each warehouse', function () {
+    $initialLoadType = StockMovementType::query()
+        ->where('code', StockMovementType::CODE_INITIAL_LOAD)
+        ->firstOrFail();
+    $otherWarehouse = Warehouse::factory()->create(['branch_id' => $this->branch->id, 'is_active' => true]);
+
+    foreach ([$this->warehouse, $otherWarehouse] as $warehouse) {
+        $this->actingAs($this->user)
+            ->post(route('inventory.adjustments.store'), [
+                'warehouse_id' => $warehouse->id,
+                'stock_movement_type_id' => $initialLoadType->id,
+                'notes' => 'Apertura del sistema',
+                'items' => [
+                    ['article_id' => $this->articleA->id, 'quantity' => 10],
+                ],
+            ])
+            ->assertSessionHasNoErrors();
+    }
+
+    expect(StockMovement::where('stock_movement_type_id', $initialLoadType->id)->count())->toBe(2);
+});
+
+it('rejects an initial load for an article that already has movements in the warehouse', function () {
+    $initialLoadType = StockMovementType::query()
+        ->where('code', StockMovementType::CODE_INITIAL_LOAD)
+        ->firstOrFail();
+
+    $this->actingAs($this->user)->post(route('inventory.adjustments.store'), [
+        'warehouse_id' => $this->warehouse->id,
+        'stock_movement_type_id' => $this->surplusType->id,
+        'notes' => 'Sobrante detectado en recuento',
+        'items' => [
+            ['article_id' => $this->articleA->id, 'quantity' => 4],
+        ],
+    ])->assertSessionHasNoErrors();
+
+    $this->actingAs($this->user)
+        ->post(route('inventory.adjustments.store'), [
+            'warehouse_id' => $this->warehouse->id,
+            'stock_movement_type_id' => $initialLoadType->id,
+            'notes' => 'Carga inicial tardía',
+            'items' => [
+                ['article_id' => $this->articleB->id, 'quantity' => 5],
+                ['article_id' => $this->articleA->id, 'quantity' => 10],
+            ],
+        ])
+        ->assertSessionHasErrors('items');
+
+    expect(StockMovement::where('stock_movement_type_id', $initialLoadType->id)->count())->toBe(0)
+        ->and(StockBalance::where('article_id', $this->articleB->id)->value('quantity'))->toBeNull();
+});
+
 it('rejects decimal quantities for articles measured in whole units', function () {
     $this->actingAs($this->user)
         ->post(route('inventory.adjustments.store'), [
@@ -404,6 +456,7 @@ it('renders the show receipt page with all movement details and formatted dates'
             ->component('inventory/adjustments/show')
             ->has('movement')
             ->where('movement.id', $movement->id)
+            ->where('movement.is_automatic', false)
             ->where('movement.notes', 'Comprobante de prueba')
             ->where('movement.warehouse_name', 'Depósito Principal')
         );
