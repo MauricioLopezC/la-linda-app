@@ -170,4 +170,73 @@ class Sale extends Model
 
         $this->update(['total_amount' => $this->centsToMoney($totalCents)]);
     }
+
+    /**
+     * Compute total net amount of the sale by summing item net amounts, in cents to avoid float drift.
+     */
+    public function netAmount(): string
+    {
+        $items = $this->relationLoaded('items') ? $this->items : $this->items()->get();
+
+        $netCents = $items->sum(fn (SaleItem $item): int => $this->moneyToCents($item->net_amount));
+
+        return $this->centsToMoney($netCents);
+    }
+
+    /**
+     * Compute total VAT amount of the sale by summing item VAT amounts, in cents to avoid float drift.
+     */
+    public function vatAmount(): string
+    {
+        $items = $this->relationLoaded('items') ? $this->items : $this->items()->get();
+
+        $vatCents = $items->sum(fn (SaleItem $item): int => $this->moneyToCents($item->vat_amount));
+
+        return $this->centsToMoney($vatCents);
+    }
+
+    /**
+     * Summary of net and VAT amounts grouped by VAT rate (HU-063).
+     *
+     * @return array<int, array{
+     *     vat_rate_id: int,
+     *     vat_rate: string,
+     *     vat_rate_description: string,
+     *     net_amount: string,
+     *     vat_amount: string,
+     *     total_amount: string,
+     * }>
+     */
+    public function getVatBreakdown(): array
+    {
+        $items = $this->relationLoaded('items') ? $this->items : $this->items()->with('vatRate')->get();
+
+        /** @var \Illuminate\Support\Collection<int, array{vat_rate_id: int, vat_rate: string, vat_rate_description: string, net_amount: string, vat_amount: string, total_amount: string}> $breakdown */
+        $breakdown = $items
+            ->groupBy('vat_rate_id')
+            ->map(function (Collection $groupItems, int|string $vatRateId): array {
+                /** @var SaleItem $first */
+                $first = $groupItems->first();
+
+                $netCents = $groupItems->sum(fn (SaleItem $item): int => $this->moneyToCents($item->net_amount));
+                $vatCents = $groupItems->sum(fn (SaleItem $item): int => $this->moneyToCents($item->vat_amount));
+                $totalCents = $groupItems->sum(fn (SaleItem $item): int => $this->moneyToCents($item->line_total));
+
+                $vatRate = $first->vat_rate;
+                $description = $first->vatRate->description;
+
+                return [
+                    'vat_rate_id' => (int) $vatRateId,
+                    'vat_rate' => $vatRate,
+                    'vat_rate_description' => $description,
+                    'net_amount' => $this->centsToMoney($netCents),
+                    'vat_amount' => $this->centsToMoney($vatCents),
+                    'total_amount' => $this->centsToMoney($totalCents),
+                ];
+            })
+            ->sortByDesc(fn (array $row): float => (float) $row['vat_rate'])
+            ->values();
+
+        return $breakdown->all();
+    }
 }
