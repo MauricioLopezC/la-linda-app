@@ -29,7 +29,11 @@ class SaleData extends Data
         public string $status_label,
         public bool $is_open,
         public string $total_amount,
+        public string $net_amount,
+        public string $vat_amount,
         public array $items,
+        /** @var array<int, SaleVatBreakdownData> */
+        public array $vat_breakdown,
     ) {}
 
     public static function fromModel(Sale $sale): self
@@ -41,6 +45,7 @@ class SaleData extends Data
             'items' => fn ($query) => $query->orderBy('id'),
             'items.article.unitOfMeasure',
             'items.priceList',
+            'items.vatRate',
         ]);
 
         return new self(
@@ -61,10 +66,13 @@ class SaleData extends Data
             status_label: $sale->status->label(),
             is_open: $sale->isOpen(),
             total_amount: $sale->total_amount,
+            net_amount: $sale->netAmount(),
+            vat_amount: $sale->vatAmount(),
             items: $sale->items
                 ->map(fn (SaleItem $item): SaleItemData => SaleItemData::fromModel($item))
                 ->values()
                 ->all(),
+            vat_breakdown: SaleVatBreakdownData::collect($sale->getVatBreakdown()),
         );
     }
 }

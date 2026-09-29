@@ -4,6 +4,7 @@ use App\Models\Catalog\Article;
 use App\Models\Catalog\Brand;
 use App\Models\Catalog\Category;
 use App\Models\Catalog\UnitOfMeasure;
+use App\Models\Pricing\VatRate;
 use App\Models\User;
 use Illuminate\Database\QueryException;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -17,6 +18,7 @@ function articlePayload(array $overrides = []): array
         'category_id' => Category::factory()->create()->id,
         'brand_id' => null,
         'unit_of_measure_id' => UnitOfMeasure::factory()->create()->id,
+        'vat_rate_id' => VatRate::factory()->create(['percentage' => 21, 'is_active' => true])->id,
         'status' => 'active',
         'is_online_publishable' => false,
     ], $overrides);
@@ -226,4 +228,37 @@ test('dar de baja an already inactive article keeps it inactive', function () {
         ->assertSessionHasNoErrors();
 
     expect($article->fresh()->status->value)->toBe('inactive');
+});
+
+test('creating an active article requires a vat rate', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)->post(route('catalog.articles.store'), articlePayload([
+        'vat_rate_id' => null,
+    ]))->assertSessionHasErrors(['vat_rate_id']);
+});
+
+test('cannot assign an inactive vat rate to an article', function () {
+    $user = User::factory()->create();
+    $inactiveRate = VatRate::factory()->create(['is_active' => false]);
+
+    $this->actingAs($user)->post(route('catalog.articles.store'), articlePayload([
+        'vat_rate_id' => $inactiveRate->id,
+    ]))->assertSessionHasErrors(['vat_rate_id']);
+});
+
+test('article management exposes active vat rates and article vat rate', function () {
+    $user = User::factory()->create();
+    $vatRate = VatRate::factory()->create(['percentage' => 21, 'is_active' => true]);
+    $inactiveRate = VatRate::factory()->create(['percentage' => 10.5, 'is_active' => false]);
+    $article = Article::factory()->create(['vat_rate_id' => $vatRate->id]);
+
+    $this->actingAs($user)->get(route('catalog.articles.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('catalog/articles/index')
+            ->has('vatRates', 1)
+            ->where('vatRates.0.id', $vatRate->id)
+            ->where('articles.0.vat_rate_percentage', 21)
+        );
 });

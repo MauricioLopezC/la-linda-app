@@ -6,6 +6,7 @@ use App\Models\Pricing\VatRate;
 use App\Rules\UniqueNormalizedValue;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateVatRateRequest extends FormRequest
 {
@@ -29,7 +30,7 @@ class UpdateVatRateRequest extends FormRequest
 
         return [
             'description' => ['required', 'string', 'min:2', 'max:100', new UniqueNormalizedValue(VatRate::class, 'description_normalized', $vatRateId)],
-            'percentage' => ['required', 'numeric', 'between:0,100'],
+            'percentage' => ['required', 'numeric', 'between:0,100', Rule::unique('vat_rates', 'percentage')->ignore($vatRateId)],
             'is_active' => ['nullable', 'boolean'],
         ];
     }

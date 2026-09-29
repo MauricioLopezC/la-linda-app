@@ -48,6 +48,7 @@ type Category = App.Data.Catalog.CategoryData;
 type Brand = App.Data.Catalog.BrandData;
 type UnitOfMeasure = App.Data.Catalog.UnitOfMeasureData;
 type Supplier = App.Data.Purchasing.SupplierData;
+type VatRate = App.Data.Pricing.VatRateData;
 
 type SortColumn =
   | 'internal_code'
@@ -62,6 +63,7 @@ type Props = {
   categories: Category[];
   brands: Brand[];
   unitsOfMeasure: UnitOfMeasure[];
+  vatRates?: VatRate[];
   availableSuppliers: Supplier[];
 };
 
@@ -73,6 +75,7 @@ type ArticleFormData = {
   subcategory_id: string;
   brand_id: string;
   unit_of_measure_id: string;
+  vat_rate_id: string;
   status: string;
   is_online_publishable: boolean;
 };
@@ -88,6 +91,7 @@ const emptyForm: ArticleFormData = {
   subcategory_id: '',
   brand_id: NO_BRAND,
   unit_of_measure_id: '',
+  vat_rate_id: '',
   status: 'active',
   is_online_publishable: false,
 };
@@ -101,6 +105,7 @@ export default function ArticlesIndex({
   categories = [],
   brands = [],
   unitsOfMeasure = [],
+  vatRates = [],
   availableSuppliers = [],
 }: Props) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -210,6 +215,7 @@ export default function ArticlesIndex({
       subcategory_id: subcategoryId,
       brand_id: article.brand_id ? String(article.brand_id) : NO_BRAND,
       unit_of_measure_id: String(article.unit_of_measure_id),
+      vat_rate_id: article.vat_rate_id ? String(article.vat_rate_id) : '',
       status: article.status,
       is_online_publishable: article.is_online_publishable,
     });
@@ -408,21 +414,45 @@ export default function ArticlesIndex({
         </div>
       </div>
 
-      <div className="grid gap-2">
-        <Label htmlFor={`${prefix}-article-status`}>Estado *</Label>
-        <Select
-          value={form.data.status}
-          onValueChange={(val) => form.setData('status', val)}
-        >
-          <SelectTrigger id={`${prefix}-article-status`}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="active">Activo</SelectItem>
-            <SelectItem value="inactive">Inactivo</SelectItem>
-          </SelectContent>
-        </Select>
-        <InputError message={form.errors.status} />
+      <div className="grid grid-cols-2 gap-4">
+        <div className="grid gap-2">
+          <Label htmlFor={`${prefix}-article-vat`}>
+            Alícuota de IVA {form.data.status === 'active' ? '*' : ''}
+          </Label>
+          <Select
+            value={form.data.vat_rate_id}
+            onValueChange={(val) => form.setData('vat_rate_id', val)}
+          >
+            <SelectTrigger id={`${prefix}-article-vat`}>
+              <SelectValue placeholder="Seleccioná una alícuota" />
+            </SelectTrigger>
+            <SelectContent>
+              {vatRates.map((vr) => (
+                <SelectItem key={vr.id} value={String(vr.id)}>
+                  {vr.description} ({vr.percentage}%)
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <InputError message={form.errors.vat_rate_id} />
+        </div>
+
+        <div className="grid gap-2">
+          <Label htmlFor={`${prefix}-article-status`}>Estado *</Label>
+          <Select
+            value={form.data.status}
+            onValueChange={(val) => form.setData('status', val)}
+          >
+            <SelectTrigger id={`${prefix}-article-status`}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="active">Activo</SelectItem>
+              <SelectItem value="inactive">Inactivo</SelectItem>
+            </SelectContent>
+          </Select>
+          <InputError message={form.errors.status} />
+        </div>
       </div>
 
       <div className="flex items-center gap-2">
@@ -511,6 +541,7 @@ export default function ArticlesIndex({
                   onSort={handleSort}
                   className="w-24"
                 />
+                <TableHead className="w-20">IVA</TableHead>
                 <SortableTableHead
                   column="status"
                   label="Estado"
@@ -526,7 +557,7 @@ export default function ArticlesIndex({
               {filteredArticles.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={7}
+                    colSpan={8}
                     className="py-12 text-center text-muted-foreground"
                   >
                     No se encontraron artículos registrados.
@@ -542,6 +573,12 @@ export default function ArticlesIndex({
                     <TableCell>{categoryPath(article.category_id)}</TableCell>
                     <TableCell>{article.brand_name ?? '—'}</TableCell>
                     <TableCell>{article.unit_of_measure_name}</TableCell>
+                    <TableCell>
+                      {article.vat_rate_percentage !== null &&
+                      article.vat_rate_percentage !== undefined
+                        ? `${article.vat_rate_percentage}%`
+                        : '—'}
+                    </TableCell>
                     <TableCell>
                       <Badge variant={statusBadgeVariant(article.status)}>
                         {article.status_label}

@@ -10,6 +10,7 @@ import {
   History,
   Landmark,
   Package,
+  Percent,
   ReceiptText,
   Ruler,
   ShoppingBag,
@@ -50,6 +51,7 @@ import { index as stocks } from '@/routes/inventory/stocks';
 import { index as warehouses } from '@/routes/inventory/warehouses';
 import { index as branches } from '@/routes/organization/branches';
 import { index as priceLists } from '@/routes/pricing/price-lists';
+import { index as vatRates } from '@/routes/pricing/vat-rates';
 import { index as accountStatement } from '@/routes/purchasing/account-statement';
 import { index as purchaseOrders } from '@/routes/purchasing/orders';
 import { index as paymentOrders } from '@/routes/purchasing/payment-orders';
@@ -57,9 +59,6 @@ import { index as suppliers } from '@/routes/purchasing/suppliers';
 import { index as supplierVouchers } from '@/routes/purchasing/vouchers';
 import { create as openCashSession } from '@/routes/sales/cash-sessions';
 import { index as paymentMethods } from '@/routes/sales/payment-methods';
-// El módulo "Alícuotas de IVA" no está en el
-// alcance de este sprint; se oculta del menú sin borrar el código que lo soporta.
-// import { index as vatRates } from '@/routes/pricing/vat-rates';
 import { index as pointsOfSale } from '@/routes/sales/points-of-sale';
 import { index as sales } from '@/routes/sales/sales';
 import type { NavGroup, NavItem } from '@/types';
@@ -208,12 +207,11 @@ const navGroups: NavGroup[] = [
         href: priceLists(),
         icon: Banknote,
       },
-      // Fuera de alcance de este sprint: ver nota sobre imports comentados arriba.
-      // {
-      //   title: 'Alícuotas de IVA',
-      //   href: vatRates(),
-      //   icon: Percent,
-      // },
+      {
+        title: 'Alícuotas de IVA',
+        href: vatRates(),
+        icon: Percent,
+      },
     ],
   },
 ];

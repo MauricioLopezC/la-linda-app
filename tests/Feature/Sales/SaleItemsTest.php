@@ -167,6 +167,60 @@ test('an article without a VAT rate is rejected', function () {
     expect(SaleItem::count())->toBe(0);
 });
 
+test('an article with an inactive VAT rate is rejected', function () {
+    $inactiveVat = VatRate::factory()->create(['percentage' => 21, 'is_active' => false]);
+    $article = articlePricedIn($this->mostradorList, '100.00', ['vat_rate_id' => $inactiveVat->id]);
+
+    $this->post(route('sales.sales.items.store', $this->sale), ['article_id' => $article->id])
+        ->assertSessionHasErrors(['article_id']);
+
+    expect(SaleItem::count())->toBe(0);
+});
+
+test('a sale with articles of different VAT rates discriminates net and VAT per line without rounding differences', function () {
+    $standardVat = VatRate::factory()->create(['description' => 'IVA 21%', 'percentage' => 21.0]);
+    $reducedVat = VatRate::factory()->create(['description' => 'IVA 10.5%', 'percentage' => 10.5]);
+
+    $article21 = articlePricedIn($this->mostradorList, '121.00', ['vat_rate_id' => $standardVat->id]);
+    $article105 = articlePricedIn($this->mostradorList, '110.50', ['vat_rate_id' => $reducedVat->id]);
+
+    $this->post(route('sales.sales.items.store', $this->sale), ['article_id' => $article21->id, 'quantity' => 2])
+        ->assertSessionHasNoErrors();
+    $this->post(route('sales.sales.items.store', $this->sale), ['article_id' => $article105->id, 'quantity' => 1])
+        ->assertSessionHasNoErrors();
+
+    $item21 = $this->sale->items()->where('article_id', $article21->id)->sole();
+    $item105 = $this->sale->items()->where('article_id', $article105->id)->sole();
+
+    // Line 1 (21%): total = 242.00, net = 242.00 / 1.21 = 200.00, vat = 42.00
+    expect($item21->line_total)->toBe('242.00')
+        ->and($item21->net_amount)->toBe('200.00')
+        ->and($item21->vat_amount)->toBe('42.00')
+        ->and((float) $item21->net_amount + (float) $item21->vat_amount)->toBe(242.00);
+
+    // Line 2 (10.5%): total = 110.50, net = 110.50 / 1.105 = 100.00, vat = 10.50
+    expect($item105->line_total)->toBe('110.50')
+        ->and($item105->net_amount)->toBe('100.00')
+        ->and($item105->vat_amount)->toBe('10.50')
+        ->and((float) $item105->net_amount + (float) $item105->vat_amount)->toBe(110.50);
+
+    $sale = $this->sale->fresh();
+    expect($sale->total_amount)->toBe('352.50')
+        ->and($sale->netAmount())->toBe('300.00')
+        ->and($sale->vatAmount())->toBe('52.50');
+
+    $breakdown = $sale->getVatBreakdown();
+    expect($breakdown)->toHaveCount(2)
+        ->and($breakdown[0]['vat_rate'])->toBe('21.00')
+        ->and($breakdown[0]['net_amount'])->toBe('200.00')
+        ->and($breakdown[0]['vat_amount'])->toBe('42.00')
+        ->and($breakdown[0]['total_amount'])->toBe('242.00')
+        ->and($breakdown[1]['vat_rate'])->toBe('10.50')
+        ->and($breakdown[1]['net_amount'])->toBe('100.00')
+        ->and($breakdown[1]['vat_amount'])->toBe('10.50')
+        ->and($breakdown[1]['total_amount'])->toBe('110.50');
+});
+
 test('changing the quantity recalculates the line and the sale total', function () {
     $article = articlePricedIn($this->mostradorList, '80.00');
     $this->post(route('sales.sales.items.store', $this->sale), ['article_id' => $article->id]);

@@ -24,6 +24,10 @@ class SaleItemData extends Data
         public string $price_list_scope,
         /** Label for the price origin badge, e.g. "Mostrador", "General", "Particular: Mayorista". */
         public string $price_origin_label,
+        public int $vat_rate_id,
+        public string $vat_rate,
+        public string $net_amount,
+        public string $vat_amount,
     ) {}
 
     public static function fromModel(SaleItem $item): self
@@ -49,6 +53,10 @@ class SaleItemData extends Data
             price_list_name: $priceList->name,
             price_list_scope: $priceList->scope->value,
             price_origin_label: $priceOriginLabel,
+            vat_rate_id: $item->vat_rate_id,
+            vat_rate: $item->vat_rate,
+            net_amount: $item->net_amount,
+            vat_amount: $item->vat_amount,
         );
     }
 }
