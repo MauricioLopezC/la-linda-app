@@ -36,6 +36,12 @@ class UpdateArticleRequest extends FormRequest
             'category_id' => ['required', 'integer', 'exists:categories,id'],
             'brand_id' => ['nullable', 'integer', 'exists:brands,id'],
             'unit_of_measure_id' => ['required', 'integer', 'exists:units_of_measure,id'],
+            'vat_rate_id' => [
+                Rule::requiredIf(fn () => $this->input('status', ArticleStatus::Active->value) === ArticleStatus::Active->value),
+                'nullable',
+                'integer',
+                Rule::exists('vat_rates', 'id')->where('is_active', true),
+            ],
             'status' => ['nullable', 'string', Rule::enum(ArticleStatus::class)],
             'is_online_publishable' => ['nullable', 'boolean'],
         ];
@@ -51,6 +57,7 @@ class UpdateArticleRequest extends FormRequest
             'category_id' => 'categoría',
             'brand_id' => 'marca',
             'unit_of_measure_id' => 'unidad de medida',
+            'vat_rate_id' => 'alícuota de IVA',
             'status' => 'estado',
             'is_online_publishable' => 'publicable en canal online',
         ];
@@ -63,6 +70,7 @@ class UpdateArticleRequest extends FormRequest
             'internal_code' => is_string($this->input('internal_code')) ? trim($this->input('internal_code')) : $this->input('internal_code'),
             'barcode' => $this->blankToNull($this->input('barcode')),
             'brand_id' => $this->blankToNull($this->input('brand_id')),
+            'vat_rate_id' => $this->blankToNull($this->input('vat_rate_id')),
         ]);
     }
 
