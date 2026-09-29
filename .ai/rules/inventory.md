@@ -24,3 +24,6 @@ Settled while building the HU-016/017/018 schema, revised in the HU-017 stock-mo
 - The manual action also rejects any line whose resulting balance would go negative (explicit `ValidationException`). **There is no database net anymore:** the `stock_balances` `CHECK (quantity >= 0)` was removed in Sprint 4 (`remove_quantity_check_from_stock_balances`) because a sale is never blocked by missing stock (EPIC-06, PO 28/09/2026) and may leave a balance negative. Every action that must not go negative (manual movements, transfers) has to check it explicitly, with the balance taken under `lockForUpdate()`.
 
 Pending, for whoever takes HU-019: the real transfer invariant is that the `out` and `in` lines' deltas sum to zero — enforce it in the transfer action, since the two fixed signs alone don't guarantee equal magnitudes.
+
+## Initial load must be the article's first movement in the warehouse
+`initial_load` is a manual type (not in AUTOMATIC_CODES) but `RegisterStockAdjustment` only accepts it for an article with no previous stock_movement_items in that warehouse — it opens the kardex. The check runs after the balance row is locked so concurrent loads serialize. Later untracked entries must use `count_surplus`. The WarehouseStockSeeder relies on this (it skips warehouses already seeded).
