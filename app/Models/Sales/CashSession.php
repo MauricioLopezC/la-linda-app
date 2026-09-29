@@ -123,6 +123,19 @@ class CashSession extends Model
         $query->where('status', CashSessionStatus::Open);
     }
 
+    /**
+     * The open session of a cashier (HU-057). A user has at most one, so `->first()` is the
+     * session: HU-039 takes the point of sale of a counter sale from it, and the layout shows it.
+     *
+     *     CashSession::query()->openForUser($userId)->first();
+     *
+     * @param  Builder<CashSession>  $query
+     */
+    public function scopeOpenForUser(Builder $query, int $userId): void
+    {
+        $query->open()->where('user_id', $userId);
+    }
+
     public function isOpen(): bool
     {
         return $this->status === CashSessionStatus::Open;

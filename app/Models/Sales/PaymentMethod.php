@@ -57,6 +57,18 @@ class PaymentMethod extends Model
         return $query->where('is_active', true);
     }
 
+    /**
+     * The payment method that moves cash in a session: the first active one of kind `efectivo`.
+     * Opening (HU-057), income/expense (HU-058) and cash collection (EPIC-04) all use it.
+     *
+     * @param  Builder<PaymentMethod>  $query
+     * @return Builder<PaymentMethod>
+     */
+    public function scopeCash(Builder $query): Builder
+    {
+        return $query->active()->where('kind', PaymentMethodKind::Cash)->orderBy('id');
+    }
+
     public function isInUse(): bool
     {
         if (Schema::hasTable('payment_order_methods') && DB::table('payment_order_methods')->where('payment_method_id', $this->id)->exists()) {

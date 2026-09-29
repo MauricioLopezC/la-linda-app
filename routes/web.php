@@ -20,6 +20,7 @@ use App\Http\Controllers\Purchasing\PurchaseOrderController;
 use App\Http\Controllers\Purchasing\SupplierAccountStatementController;
 use App\Http\Controllers\Purchasing\SupplierController;
 use App\Http\Controllers\Purchasing\SupplierVoucherController;
+use App\Http\Controllers\Sales\CashSessionController;
 use App\Http\Controllers\Sales\PaymentMethodController;
 use App\Http\Controllers\Sales\PointOfSaleController;
 use App\Http\Controllers\Sales\SaleController;
@@ -127,6 +128,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/', [PaymentMethodController::class, 'store'])->name('store');
         Route::put('{payment_method}', [PaymentMethodController::class, 'update'])->name('update');
         Route::patch('{payment_method}/toggle', [PaymentMethodController::class, 'toggleStatus'])->name('toggle');
+    });
+
+    Route::prefix('sales/cash-sessions')->name('sales.cash-sessions.')->group(function () {
+        Route::get('open', [CashSessionController::class, 'create'])->name('create');
+        Route::post('/', [CashSessionController::class, 'store'])->name('store');
     });
 
     Route::prefix('sales/sales')->name('sales.sales.')->group(function () {

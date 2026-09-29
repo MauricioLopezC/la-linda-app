@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 
 /**
@@ -20,6 +21,7 @@ use Illuminate\Support\Carbon;
  * @property bool $is_active
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
+ * @property CashSession|null $openCashSession
  */
 #[Table('points_of_sale')]
 #[Fillable(['number', 'warehouse_id', 'is_active'])]
@@ -72,6 +74,16 @@ class PointOfSale extends Model
     public function cashSessions(): HasMany
     {
         return $this->hasMany(CashSession::class);
+    }
+
+    /**
+     * Get the open cash session at this point of sale, if any (at most one, partial unique index).
+     *
+     * @return HasOne<CashSession, $this>
+     */
+    public function openCashSession(): HasOne
+    {
+        return $this->hasOne(CashSession::class)->open();
     }
 
     /**

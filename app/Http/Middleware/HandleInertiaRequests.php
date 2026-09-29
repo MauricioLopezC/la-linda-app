@@ -2,6 +2,8 @@
 
 namespace App\Http\Middleware;
 
+use App\Data\Sales\OpenCashSessionData;
+use App\Models\Sales\CashSession;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -48,6 +50,13 @@ class HandleInertiaRequests extends Middleware
                 return collect($keys)
                     ->mapWithKeys(fn (string $key) => [$key => $request->session()->get($key)])
                     ->toArray();
+            },
+            'cashSession' => function () use ($request): ?OpenCashSessionData {
+                $cashSession = $request->user() === null
+                    ? null
+                    : CashSession::query()->openForUser($request->user()->id)->with('pointOfSale.warehouse.branch')->first();
+
+                return $cashSession === null ? null : OpenCashSessionData::fromModel($cashSession);
             },
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
