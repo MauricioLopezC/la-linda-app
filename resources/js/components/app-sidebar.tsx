@@ -19,6 +19,7 @@ import {
   Sliders,
   Truck,
   Users,
+  Vault,
   Wallet,
   Warehouse,
   Store,
@@ -54,6 +55,7 @@ import { index as purchaseOrders } from '@/routes/purchasing/orders';
 import { index as paymentOrders } from '@/routes/purchasing/payment-orders';
 import { index as suppliers } from '@/routes/purchasing/suppliers';
 import { index as supplierVouchers } from '@/routes/purchasing/vouchers';
+import { create as openCashSession } from '@/routes/sales/cash-sessions';
 import { index as paymentMethods } from '@/routes/sales/payment-methods';
 // El módulo "Alícuotas de IVA" no está en el
 // alcance de este sprint; se oculta del menú sin borrar el código que lo soporta.
@@ -176,6 +178,11 @@ const navGroups: NavGroup[] = [
   {
     label: 'Ventas',
     items: [
+      {
+        title: 'Abrir caja',
+        href: openCashSession(),
+        icon: Vault,
+      },
       {
         title: 'Ventas',
         href: sales(),

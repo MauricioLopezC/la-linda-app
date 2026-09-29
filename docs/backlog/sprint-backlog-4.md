@@ -256,8 +256,10 @@ Lógica en `app/Actions/{Module}`, respuestas en `app/Data/{Module}`, validació
 
 ### HU-039 — Abrir una venta dentro del turno de caja (3 SP)
 - [ ] Columna `sales.cash_session_id` (obligatoria para `mostrador`, nula para `online`).
-- [ ] `OpenSale` toma el punto de venta del turno abierto del usuario; sin turno, rechaza y la
-      pantalla ofrece "Abrir caja". Se quita el diálogo de elegir punto de venta.
+- [ ] `OpenSale` toma el punto de venta del turno abierto del usuario
+      (`CashSession::query()->openForUser($userId)->first()`, contrato de `HU-057` en
+      `.ai/rules/sales.md`); sin turno, rechaza y la pantalla ofrece "Abrir caja"
+      (`sales.cash-sessions.create`). Se quita el diálogo de elegir punto de venta.
 - [ ] No se puede cerrar el turno con ventas `abiertas` (lo valida `HU-060`).
 - [ ] Ajustar `OpenSaleTest` y los tests que crean ventas sin turno.
 
