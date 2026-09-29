@@ -404,6 +404,7 @@ it('renders the show receipt page with all movement details and formatted dates'
             ->component('inventory/adjustments/show')
             ->has('movement')
             ->where('movement.id', $movement->id)
+            ->where('movement.is_automatic', false)
             ->where('movement.notes', 'Comprobante de prueba')
             ->where('movement.warehouse_name', 'Depósito Principal')
         );

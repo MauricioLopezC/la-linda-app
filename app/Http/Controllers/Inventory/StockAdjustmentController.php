@@ -72,17 +72,7 @@ class StockAdjustmentController extends Controller
 
         $articles = $query->orderBy('description')->limit(20)->get();
 
-        $data = $articles->map(fn (Article $article): ArticleStockOptionData => new ArticleStockOptionData(
-            id: $article->id,
-            description: $article->description,
-            internal_code: $article->internal_code,
-            barcode: $article->barcode,
-            category_name: $article->category->name,
-            brand_name: $article->brand?->name,
-            unit_of_measure_name: $article->unitOfMeasure->name,
-            unit_of_measure_abbreviation: $article->unitOfMeasure->abbreviation,
-            allows_decimals: $article->allowsDecimalQuantity(),
-        ));
+        $data = $articles->map(fn (Article $article): ArticleStockOptionData => ArticleStockOptionData::fromModel($article));
 
         return response()->json($data);
     }

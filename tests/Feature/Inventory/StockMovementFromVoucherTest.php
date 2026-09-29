@@ -302,6 +302,7 @@ test('stock movements history and detail pages display voucher and reversal navi
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('inventory/adjustments/show')
+            ->where('movement.is_automatic', true)
             ->where('movement.supplier_voucher_id', $voucher->id)
             ->where('movement.supplier_voucher_formatted_number', 'R 0001-00000013')
             ->has('movement.items.0', fn (Assert $item) => $item

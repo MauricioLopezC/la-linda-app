@@ -89,6 +89,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::prefix('inventory/movements')->name('inventory.movements.')->group(function () {
         Route::get('/', [StockMovementHistoryController::class, 'index'])->name('index');
+        Route::get('articles', [StockMovementHistoryController::class, 'searchArticles'])->name('articles');
     });
 
     Route::prefix('sales/points-of-sale')->name('sales.points-of-sale.')->group(function () {

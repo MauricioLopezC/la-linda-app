@@ -11,7 +11,7 @@ class ConsultStockMovements
     /**
      * Consult the paginated stock movement history with optional filters.
      *
-     * @param  array{search?: ?string, warehouse_id?: ?int, stock_movement_type_id?: ?int, user_id?: ?int, date_from?: ?string, date_to?: ?string}  $filters
+     * @param  array{search?: ?string, article_id?: ?int, warehouse_id?: ?int, stock_movement_type_id?: ?int, user_id?: ?int, date_from?: ?string, date_to?: ?string}  $filters
      * @return LengthAwarePaginator<int, StockMovement>
      */
     public function execute(array $filters = [], int $perPage = 25): LengthAwarePaginator
@@ -22,7 +22,7 @@ class ConsultStockMovements
     /**
      * Build the filtered, sorted query used to list stock movements.
      *
-     * @param  array{search?: ?string, warehouse_id?: ?int, stock_movement_type_id?: ?int, user_id?: ?int, date_from?: ?string, date_to?: ?string}  $filters
+     * @param  array{search?: ?string, article_id?: ?int, warehouse_id?: ?int, stock_movement_type_id?: ?int, user_id?: ?int, date_from?: ?string, date_to?: ?string}  $filters
      * @return Builder<StockMovement>
      */
     private function buildQuery(array $filters = []): Builder
@@ -45,12 +45,17 @@ class ConsultStockMovements
      * Apply optional filters to the query.
      *
      * @param  Builder<StockMovement>  $query
-     * @param  array{search?: ?string, warehouse_id?: ?int, stock_movement_type_id?: ?int, user_id?: ?int, date_from?: ?string, date_to?: ?string}  $filters
+     * @param  array{search?: ?string, article_id?: ?int, warehouse_id?: ?int, stock_movement_type_id?: ?int, user_id?: ?int, date_from?: ?string, date_to?: ?string}  $filters
      * @return Builder<StockMovement>
      */
     private function applyFilters(Builder $query, array $filters): Builder
     {
         return $query
+            ->when(! empty($filters['article_id']), function (Builder $query) use ($filters) {
+                $query->whereHas('items', function (Builder $q) use ($filters) {
+                    $q->where('article_id', (int) $filters['article_id']);
+                });
+            })
             ->when(! empty($filters['warehouse_id']), function (Builder $query) use ($filters) {
                 $query->where('warehouse_id', (int) $filters['warehouse_id']);
             })

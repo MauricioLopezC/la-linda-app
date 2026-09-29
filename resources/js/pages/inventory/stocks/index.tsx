@@ -1,7 +1,8 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import {
   Building2,
   CheckCircle2,
+  History,
   FilterX,
   Layers,
   Search,
@@ -39,6 +40,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { formatStockQuantity } from '@/lib/utils';
+import { index as movementsIndex } from '@/routes/inventory/movements';
 import { index } from '@/routes/inventory/stocks';
 import type { BreadcrumbItem } from '@/types';
 
@@ -441,6 +443,18 @@ export default function StockConsultationIndex({
                         {stock.brand_name ? `${stock.brand_name} · ` : ''}
                         {stock.unit_of_measure_name}
                       </div>
+                      <Link
+                        href={movementsIndex({
+                          query: {
+                            article_id: stock.article_id,
+                            warehouse_id: stock.warehouse_id,
+                          },
+                        })}
+                        className="mt-0.5 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                      >
+                        <History className="size-3" />
+                        Ver kardex
+                      </Link>
                     </TableCell>
                     <TableCell>
                       <Badge variant="secondary" className="font-normal">
