@@ -15,26 +15,13 @@ class StoreSaleRequest extends FormRequest
     }
 
     /**
-     * The channel is not an input: counter sales are always `mostrador` (see OpenSale).
+     * Opening a counter sale takes POS and customer from the user's open cash session (HU-039),
+     * so there are no client-provided inputs to validate.
      *
      * @return array<string, array<int, mixed>>
      */
     public function rules(): array
     {
-        return [
-            'point_of_sale_id' => ['required', 'integer', 'exists:points_of_sale,id'],
-            'customer_id' => ['nullable', 'integer', 'exists:customers,id'],
-        ];
-    }
-
-    /**
-     * @return array<string, string>
-     */
-    public function attributes(): array
-    {
-        return [
-            'point_of_sale_id' => 'punto de venta',
-            'customer_id' => 'cliente',
-        ];
+        return [];
     }
 }

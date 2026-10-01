@@ -29,11 +29,22 @@ class SaleFactory extends Factory
         return [
             'point_of_sale_id' => PointOfSale::factory(),
             'channel' => SaleChannel::Mostrador,
-            'cash_session_id' => fn (array $attributes): int => CashSession::query()
-                ->open()
-                ->where('point_of_sale_id', $attributes['point_of_sale_id'])
-                ->value('id')
-                ?? CashSession::factory()->create(['point_of_sale_id' => $attributes['point_of_sale_id']])->id,
+            'cash_session_id' => function (array $attributes): int {
+                $posId = $attributes['point_of_sale_id'];
+                $existing = CashSession::query()
+                    ->open()
+                    ->where('point_of_sale_id', $posId)
+                    ->first();
+
+                if ($existing !== null) {
+                    return $existing->id;
+                }
+
+                return CashSession::factory()->create([
+                    'point_of_sale_id' => $posId,
+                    'user_id' => $attributes['user_id'] ?? User::factory(),
+                ])->id;
+            },
             'customer_id' => Customer::factory(),
             'user_id' => User::factory(),
             'opened_at' => now(),
@@ -63,5 +74,24 @@ class SaleFactory extends Factory
         return $this->state(fn (): array => [
             'status' => SaleStatus::Discarded,
         ]);
+    }
+
+    public function closedSession(): static
+    {
+        return $this->state(function (array $attributes): array {
+            $pointOfSaleId = $attributes['point_of_sale_id'] ?? PointOfSale::factory();
+            $userId = $attributes['user_id'] ?? User::factory();
+
+            $session = CashSession::factory()->closed()->create([
+                'point_of_sale_id' => $pointOfSaleId,
+                'user_id' => $userId,
+            ]);
+
+            return [
+                'point_of_sale_id' => $session->point_of_sale_id,
+                'user_id' => $session->user_id,
+                'cash_session_id' => $session->id,
+            ];
+        });
     }
 }

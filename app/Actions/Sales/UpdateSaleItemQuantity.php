@@ -13,9 +13,9 @@ class UpdateSaleItemQuantity
      */
     public function handle(SaleItem $item, float $quantity): SaleItem
     {
-        if (! $item->sale->isOpen()) {
+        if (! $item->sale->acceptsChanges()) {
             throw ValidationException::withMessages([
-                'quantity' => 'La venta ya no está abierta y no admite cambios.',
+                'quantity' => 'La venta no admite cambios porque está cerrada o su turno de caja no está abierto.',
             ]);
         }
 

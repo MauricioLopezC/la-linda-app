@@ -179,13 +179,13 @@ export default function SaleShow({ sale, customers = [] }: Props) {
           <div className="flex items-center gap-3">
             <Heading
               title={`Venta N° ${sale.id}`}
-              description={`${sale.branch_name} · PDV ${sale.point_of_sale_number} · ${sale.opened_at_formatted}`}
+              description={`${sale.branch_name} · PDV ${sale.point_of_sale_number}${sale.cash_session_id ? ` · Turno #${sale.cash_session_id}` : ''} · ${sale.opened_at_formatted}`}
             />
             <Badge variant="outline" className={saleStatusClasses[sale.status]}>
               {sale.status_label}
             </Badge>
           </div>
-          {sale.is_open && (
+          {sale.accepts_changes && (
             <Button
               variant="outline"
               className="text-destructive"
@@ -197,13 +197,23 @@ export default function SaleShow({ sale, customers = [] }: Props) {
           )}
         </div>
 
+        {sale.is_open && !sale.accepts_changes && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
+            <p className="font-medium">Turno de caja cerrado</p>
+            <p className="text-xs text-amber-800/90 dark:text-amber-300/80">
+              Esta venta figura como abierta pero el turno de caja en el que fue
+              iniciada ya fue cerrado. La venta permanece en modo solo lectura.
+            </p>
+          </div>
+        )}
+
         <div className="grid gap-4 rounded-xl border border-sidebar-border bg-card p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-4">
           <InfoField label="Canal" value={sale.channel_label} />
           <InfoField label="Depósito" value={sale.warehouse_name} />
           <InfoField label="Vendedor" value={sale.user_name ?? '—'} />
           <div className="space-y-1.5">
             <Label>Cliente</Label>
-            {sale.is_open ? (
+            {sale.accepts_changes ? (
               <Select
                 value={String(sale.customer_id)}
                 onValueChange={handleChangeCustomer}
@@ -233,7 +243,7 @@ export default function SaleShow({ sale, customers = [] }: Props) {
           </div>
         </div>
 
-        {sale.is_open && (
+        {sale.accepts_changes && (
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start">
             <form onSubmit={handleScanSubmit} className="flex-1 space-y-1.5">
               <Label htmlFor="code">Código de barras o código interno</Label>
@@ -284,14 +294,14 @@ export default function SaleShow({ sale, customers = [] }: Props) {
                 <TableHead className="text-right">Neto</TableHead>
                 <TableHead className="text-right">IVA</TableHead>
                 <TableHead className="text-right">Total</TableHead>
-                {sale.is_open && <TableHead className="w-12" />}
+                {sale.accepts_changes && <TableHead className="w-12" />}
               </TableRow>
             </TableHeader>
             <TableBody>
               {sale.items.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={sale.is_open ? 9 : 8}
+                    colSpan={sale.accepts_changes ? 9 : 8}
                     className="py-10 text-center text-muted-foreground"
                   >
                     Todavía no hay artículos en la venta.
@@ -304,7 +314,7 @@ export default function SaleShow({ sale, customers = [] }: Props) {
                     key={`${item.id}-${item.quantity}`}
                     saleId={sale.id}
                     item={item}
-                    isEditable={sale.is_open}
+                    isEditable={sale.accepts_changes}
                   />
                 ))
               )}
@@ -323,7 +333,7 @@ export default function SaleShow({ sale, customers = [] }: Props) {
                 <TableCell className="text-right text-lg font-bold">
                   {formatCurrency(sale.total_amount)}
                 </TableCell>
-                {sale.is_open && <TableCell />}
+                {sale.accepts_changes && <TableCell />}
               </TableRow>
             </TableFooter>
           </Table>

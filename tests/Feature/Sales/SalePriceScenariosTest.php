@@ -42,12 +42,17 @@ beforeEach(function () {
  */
 function openCounterSale(PointOfSale $pointOfSale, ?Customer $customer = null): Sale
 {
-    test()->post(route('sales.sales.store'), [
-        'point_of_sale_id' => $pointOfSale->id,
-        'customer_id' => $customer?->id,
-    ])->assertSessionHasNoErrors();
+    test()->post(route('sales.sales.store'), [])->assertSessionHasNoErrors();
 
-    return Sale::query()->latest('id')->firstOrFail();
+    $sale = Sale::query()->latest('id')->firstOrFail();
+
+    if ($customer !== null) {
+        test()->patch(route('sales.sales.customer.update', $sale), [
+            'customer_id' => $customer->id,
+        ])->assertSessionHasNoErrors();
+    }
+
+    return $sale->fresh();
 }
 
 test('a customer with a particular list gets the particular price', function () {

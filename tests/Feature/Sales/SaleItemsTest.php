@@ -2,6 +2,7 @@
 
 use App\Enums\Catalog\ArticleStatus;
 use App\Enums\Pricing\PriceListChannel;
+use App\Enums\Sales\CashSessionStatus;
 use App\Models\Catalog\Article;
 use App\Models\Catalog\UnitOfMeasure;
 use App\Models\Pricing\PriceList;
@@ -271,4 +272,40 @@ test('the line keeps its price when the list price changes while the sale is ope
 
     expect(SaleItem::sole()->unit_price)->toBe('100.00')
         ->and($this->sale->fresh()->total_amount)->toBe('200.00');
+});
+
+test('adding an article is rejected if the sale cash session is closed', function () {
+    $article = articlePricedIn($this->mostradorList, '100.00');
+    $sale = Sale::factory()->closedSession()->create();
+
+    $this->post(route('sales.sales.items.store', $sale), ['article_id' => $article->id])
+        ->assertSessionHasErrors(['article_id']);
+
+    expect($sale->items()->count())->toBe(0);
+});
+
+test('updating line quantity is rejected if the sale cash session is closed', function () {
+    $article = articlePricedIn($this->mostradorList, '100.00');
+    $this->post(route('sales.sales.items.store', $this->sale), ['article_id' => $article->id, 'quantity' => 2]);
+    $item = SaleItem::sole();
+
+    $this->sale->cashSession->update(['status' => CashSessionStatus::Closed, 'closed_at' => now()]);
+
+    $this->patch(route('sales.sales.items.update', [$this->sale, $item]), ['quantity' => 5])
+        ->assertSessionHasErrors(['quantity']);
+
+    expect($item->fresh()->quantity)->toBe('2.000');
+});
+
+test('removing a line is rejected if the sale cash session is closed', function () {
+    $article = articlePricedIn($this->mostradorList, '100.00');
+    $this->post(route('sales.sales.items.store', $this->sale), ['article_id' => $article->id]);
+    $item = SaleItem::sole();
+
+    $this->sale->cashSession->update(['status' => CashSessionStatus::Closed, 'closed_at' => now()]);
+
+    $this->delete(route('sales.sales.items.destroy', [$this->sale, $item]))
+        ->assertSessionHasErrors(['sale']);
+
+    expect($this->sale->items()->count())->toBe(1);
 });

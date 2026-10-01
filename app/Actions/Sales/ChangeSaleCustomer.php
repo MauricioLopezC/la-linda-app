@@ -23,9 +23,9 @@ class ChangeSaleCustomer
      */
     public function handle(Sale $sale, Customer $customer): Sale
     {
-        if (! $sale->isOpen()) {
+        if (! $sale->acceptsChanges()) {
             throw ValidationException::withMessages([
-                'customer_id' => 'La venta ya no está abierta y no admite cambios.',
+                'customer_id' => 'La venta no admite cambios porque está cerrada o su turno de caja no está abierto.',
             ]);
         }
 

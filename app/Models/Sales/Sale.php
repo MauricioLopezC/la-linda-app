@@ -3,6 +3,7 @@
 namespace App\Models\Sales;
 
 use App\Concerns\ConvertsMoneyToCents;
+use App\Enums\Sales\CashSessionStatus;
 use App\Enums\Sales\SaleChannel;
 use App\Enums\Sales\SaleStatus;
 use App\Models\Customers\Customer;
@@ -154,6 +155,31 @@ class Sale extends Model
     public function isOpen(): bool
     {
         return $this->status === SaleStatus::Open;
+    }
+
+    /**
+     * Determine whether the sale accepts modifications (lines, customer, or discarding).
+     *
+     * A counter sale only accepts changes while both the sale and its cash session are open.
+     */
+    public function acceptsChanges(): bool
+    {
+        if (! $this->isOpen()) {
+            return false;
+        }
+
+        if ($this->channel !== SaleChannel::Mostrador) {
+            return true;
+        }
+
+        if ($this->cash_session_id === null) {
+            return false;
+        }
+
+        return CashSession::query()
+            ->whereKey($this->cash_session_id)
+            ->where('status', CashSessionStatus::Open)
+            ->exists();
     }
 
     /**

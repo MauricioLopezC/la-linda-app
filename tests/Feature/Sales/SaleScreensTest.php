@@ -3,6 +3,7 @@
 use App\Models\Catalog\Article;
 use App\Models\Customers\Customer;
 use App\Models\Pricing\VatRate;
+use App\Models\Sales\PointOfSale;
 use App\Models\Sales\Sale;
 use App\Models\Sales\SaleItem;
 use App\Models\User;
@@ -23,10 +24,70 @@ test('the sales index lists sales with their totals and line counts', function (
             ->component('sales/sales/index')
             ->has('sales.data', 1)
             ->where('sales.data.0.id', $sale->id)
+            ->where('sales.data.0.cash_session_id', $sale->cash_session_id)
             ->where('sales.data.0.items_count', 2)
             ->where('sales.data.0.total_amount', '150.00')
             ->has('pointsOfSale')
             ->missing('customers'));
+});
+
+test('the sales index filters by status, point of sale and date independently and combined', function () {
+    $posA = PointOfSale::factory()->create();
+    $posB = PointOfSale::factory()->create();
+
+    $sale1 = Sale::factory()->create([
+        'point_of_sale_id' => $posA->id,
+        'opened_at' => '2026-10-01 10:00:00',
+    ]);
+    $sale2 = Sale::factory()->discarded()->create([
+        'point_of_sale_id' => $posB->id,
+        'opened_at' => '2026-10-01 11:00:00',
+    ]);
+    $sale3 = Sale::factory()->create([
+        'point_of_sale_id' => $posA->id,
+        'opened_at' => '2026-09-25 10:00:00',
+    ]);
+
+    $user = User::factory()->create();
+
+    // Filter by status
+    $this->actingAs($user)
+        ->get(route('sales.sales.index', ['status' => 'abierta']))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('sales.data', 2)
+            ->where('sales.data.0.id', $sale1->id)
+            ->where('sales.data.1.id', $sale3->id));
+
+    // Filter by point of sale
+    $this->actingAs($user)
+        ->get(route('sales.sales.index', ['point_of_sale_id' => $posA->id]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('sales.data', 2)
+            ->where('sales.data.0.id', $sale1->id)
+            ->where('sales.data.1.id', $sale3->id));
+
+    // Filter by date
+    $this->actingAs($user)
+        ->get(route('sales.sales.index', ['date' => '2026-10-01']))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('sales.data', 2)
+            ->where('sales.data.0.id', $sale2->id)
+            ->where('sales.data.1.id', $sale1->id));
+
+    // Combined filter
+    $this->actingAs($user)
+        ->get(route('sales.sales.index', [
+            'status' => 'abierta',
+            'point_of_sale_id' => $posA->id,
+            'date' => '2026-10-01',
+        ]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('sales.data', 1)
+            ->where('sales.data.0.id', $sale1->id));
 });
 
 test('the sale screen shows the header, the lines and the customers to choose from', function () {
@@ -40,10 +101,25 @@ test('the sale screen shows the header, the lines and the customers to choose fr
         ->assertInertia(fn ($page) => $page
             ->component('sales/sales/show')
             ->where('sale.id', $sale->id)
+            ->where('sale.cash_session_id', $sale->cash_session_id)
             ->where('sale.channel_label', 'Mostrador')
             ->where('sale.is_open', true)
+            ->where('sale.accepts_changes', true)
             ->has('sale.items', 1)
             ->has('customers', 3));
+});
+
+test('the sale screen marks accepts_changes as false when the cash session is closed', function () {
+    $sale = Sale::factory()->closedSession()->create();
+
+    $this->actingAs(User::factory()->create())
+        ->get(route('sales.sales.show', $sale))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('sales/sales/show')
+            ->where('sale.id', $sale->id)
+            ->where('sale.is_open', true)
+            ->where('sale.accepts_changes', false));
 });
 
 test('the sale screen displays the VAT breakdown and net and VAT amounts for multiple rates', function () {

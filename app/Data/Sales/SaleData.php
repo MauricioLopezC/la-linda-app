@@ -13,6 +13,7 @@ class SaleData extends Data
      */
     public function __construct(
         public int $id,
+        public ?int $cash_session_id,
         public int $point_of_sale_id,
         public int $point_of_sale_number,
         public string $branch_name,
@@ -28,6 +29,7 @@ class SaleData extends Data
         public string $status,
         public string $status_label,
         public bool $is_open,
+        public bool $accepts_changes,
         public string $total_amount,
         public string $net_amount,
         public string $vat_amount,
@@ -50,6 +52,7 @@ class SaleData extends Data
 
         return new self(
             id: $sale->id,
+            cash_session_id: $sale->cash_session_id,
             point_of_sale_id: $sale->point_of_sale_id,
             point_of_sale_number: $sale->pointOfSale->number,
             branch_name: $sale->pointOfSale->warehouse->branch->name,
@@ -65,6 +68,7 @@ class SaleData extends Data
             status: $sale->status->value,
             status_label: $sale->status->label(),
             is_open: $sale->isOpen(),
+            accepts_changes: $sale->acceptsChanges(),
             total_amount: $sale->total_amount,
             net_amount: $sale->netAmount(),
             vat_amount: $sale->vatAmount(),
