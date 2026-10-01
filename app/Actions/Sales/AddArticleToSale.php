@@ -90,7 +90,9 @@ class AddArticleToSale
 
         if ($article === null) {
             throw ValidationException::withMessages([
-                $field => 'No se encontró ningún artículo con ese código.',
+                $field => $articleId !== null
+                    ? 'No se encontró el artículo seleccionado.'
+                    : 'No se encontró ningún artículo con el código "'.trim($code).'".',
             ]);
         }
 
