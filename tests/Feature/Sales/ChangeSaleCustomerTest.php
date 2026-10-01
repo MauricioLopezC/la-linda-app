@@ -50,6 +50,38 @@ test('switching to a customer with a particular list re-prices every line', func
         ->and($sale->fresh()->total_amount)->toBe('1600.00');
 });
 
+test('switching back to Consumidor Final re-prices every line from the mostrador or general list', function () {
+    $general = PriceList::factory()->forChannel(PriceListChannel::General)->create();
+    $mostrador = PriceList::factory()->forChannel(PriceListChannel::Mostrador)->create();
+    $mayorista = PriceList::factory()->particular()->create();
+    $inMostrador = Article::factory()->create();
+    $onlyInGeneral = Article::factory()->create();
+    priceArticleInList($mayorista, $inMostrador, '800.00');
+    priceArticleInList($mostrador, $inMostrador, '1000.00');
+    priceArticleInList($mayorista, $onlyInGeneral, '250.00');
+    priceArticleInList($general, $onlyInGeneral, '300.00');
+
+    $wholesaleCustomer = Customer::factory()->create(['price_list_id' => $mayorista->id]);
+    $consumidorFinal = Customer::factory()->defaultCustomer()->create();
+    $sale = Sale::factory()->create(['customer_id' => $wholesaleCustomer->id]);
+    $this->post(route('sales.sales.items.store', $sale), ['article_id' => $inMostrador->id]);
+    $this->post(route('sales.sales.items.store', $sale), ['article_id' => $onlyInGeneral->id]);
+
+    expect($sale->fresh()->total_amount)->toBe('1050.00');
+
+    $this->patch(route('sales.sales.customer.update', $sale), ['customer_id' => $consumidorFinal->id])
+        ->assertSessionHasNoErrors();
+
+    $mostradorLine = $sale->items()->where('article_id', $inMostrador->id)->sole();
+    $generalLine = $sale->items()->where('article_id', $onlyInGeneral->id)->sole();
+
+    expect($mostradorLine->unit_price)->toBe('1000.00')
+        ->and($mostradorLine->price_list_id)->toBe($mostrador->id)
+        ->and($generalLine->unit_price)->toBe('300.00')
+        ->and($generalLine->price_list_id)->toBe($general->id)
+        ->and($sale->fresh()->total_amount)->toBe('1300.00');
+});
+
 test('the change is rejected as a whole if an article has no price for the new customer', function () {
     $mayorista = PriceList::factory()->particular()->create();
     $mostrador = PriceList::factory()->forChannel(PriceListChannel::Mostrador)->create();

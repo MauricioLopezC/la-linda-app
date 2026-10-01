@@ -160,6 +160,21 @@ test('a weighed article accepts decimal quantities and rounds the line total to 
         ->and($this->sale->fresh()->total_amount)->toBe('2516.66');
 });
 
+test('the sale total is the exact sum of several weighed lines rounded to cents', function () {
+    $kilo = UnitOfMeasure::factory()->create(['allows_decimal_quantity' => true]);
+    $cheese = articlePricedIn($this->mostradorList, '999.99', ['unit_of_measure_id' => $kilo->id]);
+    $ham = articlePricedIn($this->mostradorList, '33.33', ['unit_of_measure_id' => $kilo->id]);
+    $olives = articlePricedIn($this->mostradorList, '0.10', ['unit_of_measure_id' => $kilo->id]);
+
+    $this->post(route('sales.sales.items.store', $this->sale), ['article_id' => $cheese->id, 'quantity' => '0.333']);
+    $this->post(route('sales.sales.items.store', $this->sale), ['article_id' => $ham->id, 'quantity' => '1.275']);
+    $this->post(route('sales.sales.items.store', $this->sale), ['article_id' => $olives->id, 'quantity' => '0.300']);
+
+    // 0.333 × 999.99 = 332.99667 → 333.00; 1.275 × 33.33 = 42.49575 → 42.50; 0.3 × 0.10 = 0.03
+    expect($this->sale->items()->orderBy('id')->pluck('line_total')->all())->toBe(['333.00', '42.50', '0.03'])
+        ->and($this->sale->fresh()->total_amount)->toBe('375.53');
+});
+
 test('an article sold by unit rejects decimal quantities', function () {
     $article = articlePricedIn($this->mostradorList, '100.00');
 
@@ -313,6 +328,40 @@ test('the line keeps its price when the list price changes while the sale is ope
 
     expect(SaleItem::sole()->unit_price)->toBe('100.00')
         ->and($this->sale->fresh()->total_amount)->toBe('200.00');
+});
+
+test('the price is never taken from the request but resolved from the price lists', function () {
+    $article = articlePricedIn($this->mostradorList, '100.00');
+    $otherList = PriceList::factory()->forChannel(PriceListChannel::General)->create();
+
+    $this->post(route('sales.sales.items.store', $this->sale), [
+        'article_id' => $article->id,
+        'unit_price' => '1.00',
+        'price_list_id' => $otherList->id,
+        'line_total' => '1.00',
+    ])->assertSessionHasNoErrors();
+
+    $item = SaleItem::sole();
+
+    expect($item->unit_price)->toBe('100.00')
+        ->and($item->price_list_id)->toBe($this->mostradorList->id)
+        ->and($item->line_total)->toBe('100.00')
+        ->and($this->sale->fresh()->total_amount)->toBe('100.00');
+});
+
+test('changing the quantity keeps the line price even if the list price changed', function () {
+    $article = articlePricedIn($this->mostradorList, '100.00');
+    $this->post(route('sales.sales.items.store', $this->sale), ['article_id' => $article->id]);
+
+    PriceListItem::query()->where('article_id', $article->id)->update(['price' => '500.00']);
+
+    $item = SaleItem::sole();
+    $this->patch(route('sales.sales.items.update', [$this->sale, $item]), ['quantity' => 3])
+        ->assertSessionHasNoErrors();
+
+    expect($item->fresh()->unit_price)->toBe('100.00')
+        ->and($item->fresh()->line_total)->toBe('300.00')
+        ->and($this->sale->fresh()->total_amount)->toBe('300.00');
 });
 
 test('adding an article is rejected if the sale cash session is closed', function () {

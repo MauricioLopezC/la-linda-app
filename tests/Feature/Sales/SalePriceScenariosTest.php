@@ -88,3 +88,20 @@ test('an article missing from the mostrador list falls back to the general list'
         ->where('sale.items.0.price_origin_label', 'General')
         ->where('sale.items.0.price_list_id', $this->general->id));
 });
+
+test('a sale with a mostrador-priced article and a general-only article shows each price, its list and the total', function () {
+    $sale = openCounterSale($this->pointOfSale);
+
+    $this->post(route('sales.sales.items.store', $sale), ['code' => '7790000000011'])->assertSessionHasNoErrors();
+    $this->post(route('sales.sales.items.store', $sale), ['code' => '7790000000028'])->assertSessionHasNoErrors();
+
+    $this->get(route('sales.sales.show', $sale))->assertInertia(fn ($page) => $page
+        ->has('sale.items', 2)
+        ->where('sale.items.0.unit_price', '1000.00')
+        ->where('sale.items.0.line_total', '1000.00')
+        ->where('sale.items.0.price_origin_label', 'Mostrador')
+        ->where('sale.items.1.unit_price', '300.00')
+        ->where('sale.items.1.line_total', '300.00')
+        ->where('sale.items.1.price_origin_label', 'General')
+        ->where('sale.total_amount', '1300.00'));
+});
