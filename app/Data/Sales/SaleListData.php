@@ -9,6 +9,7 @@ class SaleListData extends Data
 {
     public function __construct(
         public int $id,
+        public ?int $cash_session_id,
         public string $opened_at_formatted,
         public int $point_of_sale_number,
         public string $branch_name,
@@ -27,6 +28,7 @@ class SaleListData extends Data
     {
         return new self(
             id: $sale->id,
+            cash_session_id: $sale->cash_session_id,
             opened_at_formatted: $sale->opened_at->format('d/m/Y H:i'),
             point_of_sale_number: $sale->pointOfSale->number,
             branch_name: $sale->pointOfSale->warehouse->branch->name,

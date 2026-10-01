@@ -79,3 +79,10 @@ test('the customer of a discarded sale cannot be changed', function () {
     $this->patch(route('sales.sales.customer.update', $sale), ['customer_id' => Customer::factory()->create()->id])
         ->assertSessionHasErrors(['customer_id']);
 });
+
+test('the customer of a sale with closed cash session cannot be changed', function () {
+    $sale = Sale::factory()->closedSession()->create();
+
+    $this->patch(route('sales.sales.customer.update', $sale), ['customer_id' => Customer::factory()->create()->id])
+        ->assertSessionHasErrors(['customer_id']);
+});

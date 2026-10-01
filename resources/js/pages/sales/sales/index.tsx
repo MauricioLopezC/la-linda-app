@@ -1,20 +1,11 @@
-import { Head, Link, router, useForm } from '@inertiajs/react';
-import { Eye, Plus } from 'lucide-react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Eye, Loader2, Plus, Store } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import Heading from '@/components/heading';
-import InputError from '@/components/input-error';
 import TablePagination from '@/components/table-pagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -34,6 +25,7 @@ import {
 } from '@/components/ui/table';
 import { formatCurrency } from '@/lib/utils';
 import { dashboard } from '@/routes';
+import { create as createCashSession } from '@/routes/sales/cash-sessions';
 import { index, show, store } from '@/routes/sales/sales';
 import type { BreadcrumbItem } from '@/types';
 
@@ -73,18 +65,13 @@ export default function SalesIndex({
   statuses = [],
   filters,
 }: Props) {
+  const { cashSession } = usePage().props;
   const [status, setStatus] = useState(filters.status ?? 'all');
   const [pointOfSaleId, setPointOfSaleId] = useState(
     filters.point_of_sale_id ?? 'all',
   );
   const [date, setDate] = useState(filters.date ?? '');
-  const [isOpenDialogVisible, setIsOpenDialogVisible] = useState(false);
-
-  const activePointsOfSale = pointsOfSale.filter((pos) => pos.is_active);
-
-  const openSaleForm = useForm({
-    point_of_sale_id: '',
-  });
+  const [isOpening, setIsOpening] = useState(false);
 
   const visit = (query: Record<string, string | number | undefined>) => {
     router.get(index.url({ query }), {}, { preserveState: true });
@@ -106,29 +93,19 @@ export default function SalesIndex({
     visit({});
   };
 
-  const openSale = (selectedPointOfSaleId: string) => {
-    openSaleForm.transform(() => ({ point_of_sale_id: selectedPointOfSaleId }));
-    openSaleForm.post(store.url(), {
-      onError: () => toast.error('No se pudo abrir la venta'),
-    });
-  };
-
-  const handleOpenSaleClick = () => {
-    openSaleForm.clearErrors();
-
-    if (activePointsOfSale.length === 1) {
-      openSale(String(activePointsOfSale[0].id));
-
-      return;
-    }
-
-    openSaleForm.setData('point_of_sale_id', '');
-    setIsOpenDialogVisible(true);
-  };
-
-  const handleOpenSale = (e: React.FormEvent) => {
-    e.preventDefault();
-    openSale(openSaleForm.data.point_of_sale_id);
+  const handleOpenSale = () => {
+    setIsOpening(true);
+    router.post(
+      store.url(),
+      {},
+      {
+        onError: (errors) => {
+          const message = Object.values(errors)[0] as string | undefined;
+          toast.error(message ?? 'No se pudo abrir la venta');
+        },
+        onFinish: () => setIsOpening(false),
+      },
+    );
   };
 
   return (
@@ -141,22 +118,43 @@ export default function SalesIndex({
             title="Ventas"
             description="Ventas de mostrador abiertas y descartadas."
           />
-          <Button
-            onClick={handleOpenSaleClick}
-            disabled={
-              activePointsOfSale.length === 0 || openSaleForm.processing
-            }
-          >
-            <Plus className="mr-1.5 size-4" />
-            Abrir venta
-          </Button>
+          {cashSession !== null ? (
+            <Button onClick={handleOpenSale} disabled={isOpening}>
+              {isOpening ? (
+                <Loader2 className="mr-1.5 size-4 animate-spin" />
+              ) : (
+                <Plus className="mr-1.5 size-4" />
+              )}
+              Abrir venta
+            </Button>
+          ) : (
+            <Button asChild>
+              <Link href={createCashSession.url()}>
+                <Store className="mr-1.5 size-4" />
+                Abrir caja
+              </Link>
+            </Button>
+          )}
         </div>
 
-        {activePointsOfSale.length === 0 && (
-          <p className="text-sm text-muted-foreground">
-            Primero registrá al menos un punto de venta activo para poder abrir
-            ventas.
-          </p>
+        {cashSession === null && (
+          <div className="flex flex-col gap-2 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 sm:flex-row sm:items-center sm:justify-between dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
+            <div>
+              <p className="font-medium">No tenés un turno de caja abierto</p>
+              <p className="text-xs text-amber-800/90 dark:text-amber-300/80">
+                Para abrir ventas de mostrador es necesario abrir primero tu
+                turno de caja.
+              </p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-amber-300 dark:border-amber-800"
+              asChild
+            >
+              <Link href={createCashSession.url()}>Abrir caja</Link>
+            </Button>
+          </div>
         )}
 
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
@@ -177,16 +175,16 @@ export default function SalesIndex({
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label>Punto de venta</Label>
+            <Label>Caja</Label>
             <Select value={pointOfSaleId} onValueChange={setPointOfSaleId}>
               <SelectTrigger className="w-full sm:w-56">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="all">Todas</SelectItem>
                 {pointsOfSale.map((pos) => (
                   <SelectItem key={pos.id} value={String(pos.id)}>
-                    PDV {pos.number} · {pos.branch_name}
+                    Caja {pos.number} · {pos.branch_name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -217,8 +215,9 @@ export default function SalesIndex({
             <TableHeader>
               <TableRow>
                 <TableHead>N°</TableHead>
+                <TableHead>Turno</TableHead>
                 <TableHead>Fecha y hora</TableHead>
-                <TableHead>Punto de venta</TableHead>
+                <TableHead>Caja</TableHead>
                 <TableHead>Cliente</TableHead>
                 <TableHead>Vendedor</TableHead>
                 <TableHead className="text-right">Líneas</TableHead>
@@ -231,7 +230,7 @@ export default function SalesIndex({
               {sales.data.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={9}
+                    colSpan={10}
                     className="py-10 text-center text-muted-foreground"
                   >
                     No hay ventas para los filtros seleccionados.
@@ -241,9 +240,14 @@ export default function SalesIndex({
                 sales.data.map((sale) => (
                   <TableRow key={sale.id}>
                     <TableCell className="font-mono">{sale.id}</TableCell>
+                    <TableCell>
+                      {sale.cash_session_id
+                        ? `Turno #${sale.cash_session_id}`
+                        : '—'}
+                    </TableCell>
                     <TableCell>{sale.opened_at_formatted}</TableCell>
                     <TableCell>
-                      PDV {sale.point_of_sale_number} · {sale.branch_name}
+                      Caja {sale.point_of_sale_number} · {sale.branch_name}
                     </TableCell>
                     <TableCell>{sale.customer_name}</TableCell>
                     <TableCell>{sale.user_name ?? '—'}</TableCell>
@@ -285,66 +289,6 @@ export default function SalesIndex({
           entityName="ventas"
         />
       </div>
-
-      <Dialog open={isOpenDialogVisible} onOpenChange={setIsOpenDialogVisible}>
-        <DialogContent>
-          <form onSubmit={handleOpenSale} className="space-y-4">
-            <DialogHeader>
-              <DialogTitle>Abrir venta de mostrador</DialogTitle>
-              <DialogDescription>
-                La venta arranca con Consumidor Final; el cliente se puede
-                cambiar después desde la pantalla de venta.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-1.5">
-              <Label>Punto de venta</Label>
-              <Select
-                value={openSaleForm.data.point_of_sale_id}
-                onValueChange={(value) =>
-                  openSaleForm.setData('point_of_sale_id', value)
-                }
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Seleccioná un punto de venta" />
-                </SelectTrigger>
-                <SelectContent>
-                  {activePointsOfSale.map((pos) => (
-                    <SelectItem key={pos.id} value={String(pos.id)}>
-                      PDV {pos.number} · {pos.branch_name} ({pos.warehouse_name}
-                      )
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <InputError message={openSaleForm.errors.point_of_sale_id} />
-            </div>
-
-            <p className="text-sm text-muted-foreground">
-              Canal: <span className="font-medium">Mostrador</span>
-            </p>
-
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsOpenDialogVisible(false)}
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                disabled={
-                  openSaleForm.processing ||
-                  openSaleForm.data.point_of_sale_id === ''
-                }
-              >
-                Abrir venta
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }

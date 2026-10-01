@@ -28,9 +28,9 @@ class AddArticleToSale
     {
         $field = empty($data['article_id']) ? 'code' : 'article_id';
 
-        if (! $sale->isOpen()) {
+        if (! $sale->acceptsChanges()) {
             throw ValidationException::withMessages([
-                $field => 'La venta ya no está abierta y no admite cambios.',
+                $field => 'La venta no admite cambios porque está cerrada o su turno de caja no está abierto.',
             ]);
         }
 

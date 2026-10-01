@@ -13,9 +13,9 @@ class DiscardSale
      */
     public function handle(Sale $sale): Sale
     {
-        if (! $sale->isOpen()) {
+        if (! $sale->acceptsChanges()) {
             throw ValidationException::withMessages([
-                'sale' => 'Solo se puede descartar una venta abierta.',
+                'sale' => 'Solo se puede descartar una venta abierta con turno de caja abierto.',
             ]);
         }
 

@@ -15,9 +15,9 @@ class RemoveSaleItem
     {
         $sale = $item->sale;
 
-        if (! $sale->isOpen()) {
+        if (! $sale->acceptsChanges()) {
             throw ValidationException::withMessages([
-                'sale' => 'La venta ya no está abierta y no admite cambios.',
+                'sale' => 'La venta no admite cambios porque está cerrada o su turno de caja no está abierto.',
             ]);
         }
 

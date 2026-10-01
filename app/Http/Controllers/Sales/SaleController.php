@@ -24,6 +24,7 @@ use App\Models\Customers\Customer;
 use App\Models\Sales\PointOfSale;
 use App\Models\Sales\Sale;
 use App\Models\Sales\SaleItem;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
@@ -75,7 +76,10 @@ class SaleController extends Controller
      */
     public function store(StoreSaleRequest $request, OpenSale $action): RedirectResponse
     {
-        $sale = $action->handle($request->validated());
+        /** @var User $user */
+        $user = $request->user();
+
+        $sale = $action->handle($user);
 
         return to_route('sales.sales.show', $sale)->with('success', 'Venta abierta correctamente.');
     }
