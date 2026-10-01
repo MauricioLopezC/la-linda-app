@@ -315,6 +315,7 @@ export default function SaleShow({ sale, customers = [] }: Props) {
                     saleId={sale.id}
                     item={item}
                     isEditable={sale.accepts_changes}
+                    onDone={focusCodeInput}
                   />
                 ))
               )}
@@ -439,15 +440,27 @@ function SaleItemRow({
   saleId,
   item,
   isEditable,
+  onDone,
 }: {
   saleId: number;
   item: SaleItem;
   isEditable: boolean;
+  onDone: () => void;
 }) {
   const [quantity, setQuantity] = useState(Number(item.quantity).toString());
+  // Only a confirmed edit (Enter) returns focus to the scanner; a plain blur
+  // means the cashier moved elsewhere on purpose.
+  const confirmedWithEnterRef = useRef(false);
 
   const saveQuantity = () => {
+    const returnFocus = confirmedWithEnterRef.current;
+    confirmedWithEnterRef.current = false;
+
     if (Number(quantity) === Number(item.quantity)) {
+      if (returnFocus) {
+        onDone();
+      }
+
       return;
     }
 
@@ -460,6 +473,11 @@ function SaleItemRow({
           setQuantity(Number(item.quantity).toString());
           toastFirstError(errors);
         },
+        onFinish: () => {
+          if (returnFocus) {
+            onDone();
+          }
+        },
       },
     );
   };
@@ -468,6 +486,7 @@ function SaleItemRow({
     router.delete(destroyItem.url({ sale: saleId, item: item.id }), {
       preserveScroll: true,
       onError: toastFirstError,
+      onFinish: onDone,
     });
   };
 
@@ -493,6 +512,7 @@ function SaleItemRow({
               onBlur={saveQuantity}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
+                  confirmedWithEnterRef.current = true;
                   e.currentTarget.blur();
                 }
               }}

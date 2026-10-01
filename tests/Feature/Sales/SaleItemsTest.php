@@ -62,11 +62,52 @@ test('an article can be added by its internal code or by id', function () {
         ->and($this->sale->fresh()->total_amount)->toBe('300.00');
 });
 
-test('an unknown code is rejected', function () {
-    $this->post(route('sales.sales.items.store', $this->sale), ['code' => 'NO-EXISTE'])
-        ->assertSessionHasErrors(['code']);
+test('an unknown code is rejected with a message that identifies it, keeping the sale open', function () {
+    $this->post(route('sales.sales.items.store', $this->sale), ['code' => ' NO-EXISTE '])
+        ->assertSessionHasErrors(['code' => 'No se encontró ningún artículo con el código "NO-EXISTE".']);
 
-    expect(SaleItem::count())->toBe(0);
+    expect(SaleItem::count())->toBe(0)
+        ->and($this->sale->fresh()->acceptsChanges())->toBeTrue();
+});
+
+test('a scanned code matches the barcode before the internal code', function () {
+    $byBarcode = articlePricedIn($this->mostradorList, '100.00', ['barcode' => 'X-100']);
+    articlePricedIn($this->mostradorList, '200.00', ['internal_code' => 'X-100']);
+
+    $this->post(route('sales.sales.items.store', $this->sale), ['code' => 'X-100'])
+        ->assertSessionHasNoErrors();
+
+    expect(SaleItem::sole()->article_id)->toBe($byBarcode->id);
+});
+
+test('a weighed article accepts 0.750 when added and when its quantity changes', function () {
+    $kilo = UnitOfMeasure::factory()->create(['allows_decimal_quantity' => true]);
+    $article = articlePricedIn($this->mostradorList, '2000.00', ['unit_of_measure_id' => $kilo->id]);
+
+    $this->post(route('sales.sales.items.store', $this->sale), ['article_id' => $article->id, 'quantity' => '0.750'])
+        ->assertSessionHasNoErrors();
+
+    $item = SaleItem::sole();
+
+    expect($item->quantity)->toBe('0.750')
+        ->and($item->line_total)->toBe('1500.00');
+
+    $this->patch(route('sales.sales.items.update', [$this->sale, $item]), ['quantity' => '1.250'])
+        ->assertSessionHasNoErrors();
+
+    expect($item->fresh()->quantity)->toBe('1.250')
+        ->and($this->sale->fresh()->total_amount)->toBe('2500.00');
+});
+
+test('an article sold by unit rejects a decimal quantity when its quantity changes', function () {
+    $article = articlePricedIn($this->mostradorList, '100.00');
+    $this->post(route('sales.sales.items.store', $this->sale), ['article_id' => $article->id]);
+    $item = SaleItem::sole();
+
+    $this->patch(route('sales.sales.items.update', [$this->sale, $item]), ['quantity' => '1.5'])
+        ->assertSessionHasErrors(['quantity']);
+
+    expect($item->fresh()->quantity)->toBe('1.000');
 });
 
 test('scanning the same article again adds to its quantity instead of a new line', function () {
