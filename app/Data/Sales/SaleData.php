@@ -23,6 +23,13 @@ class SaleData extends Data
         public int $customer_id,
         public string $customer_name,
         public ?string $customer_price_list_name,
+        public string $customer_tax_condition,
+        public string $customer_tax_condition_label,
+        public string $customer_id_type,
+        public string $customer_id_type_label,
+        public ?string $customer_id_number,
+        public string $invoice_type,
+        public string $invoice_type_label,
         public ?string $user_name,
         public string $opened_at,
         public string $opened_at_formatted,
@@ -50,6 +57,8 @@ class SaleData extends Data
             'items.vatRate',
         ]);
 
+        $invoiceType = $sale->invoiceType();
+
         return new self(
             id: $sale->id,
             cash_session_id: $sale->cash_session_id,
@@ -62,6 +71,13 @@ class SaleData extends Data
             customer_id: $sale->customer_id,
             customer_name: $sale->customer->name,
             customer_price_list_name: $sale->customer->priceList?->name,
+            customer_tax_condition: $sale->customer->tax_condition->value,
+            customer_tax_condition_label: $sale->customer->tax_condition->label(),
+            customer_id_type: $sale->customer->id_type->value,
+            customer_id_type_label: $sale->customer->id_type->label(),
+            customer_id_number: $sale->customer->formattedIdNumber(),
+            invoice_type: $invoiceType->value,
+            invoice_type_label: $invoiceType->label(),
             user_name: $sale->user?->name,
             opened_at: $sale->opened_at->toIso8601String(),
             opened_at_formatted: $sale->opened_at->format('d/m/Y H:i'),

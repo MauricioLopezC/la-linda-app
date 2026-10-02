@@ -17,6 +17,8 @@ class SaleListData extends Data
         public ?string $user_name,
         public string $status,
         public string $status_label,
+        public string $invoice_type,
+        public string $invoice_type_label,
         public int $items_count,
         public string $total_amount,
     ) {}
@@ -26,6 +28,8 @@ class SaleListData extends Data
      */
     public static function fromModel(Sale $sale): self
     {
+        $invoiceType = $sale->invoiceType();
+
         return new self(
             id: $sale->id,
             cash_session_id: $sale->cash_session_id,
@@ -36,6 +40,8 @@ class SaleListData extends Data
             user_name: $sale->user?->name,
             status: $sale->status->value,
             status_label: $sale->status->label(),
+            invoice_type: $invoiceType->value,
+            invoice_type_label: $invoiceType->label(),
             items_count: (int) $sale->getAttribute('items_count'),
             total_amount: $sale->total_amount,
         );

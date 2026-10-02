@@ -4,6 +4,7 @@ namespace App\Models\Sales;
 
 use App\Concerns\ConvertsMoneyToCents;
 use App\Enums\Sales\CashSessionStatus;
+use App\Enums\Sales\InvoiceType;
 use App\Enums\Sales\SaleChannel;
 use App\Enums\Sales\SaleStatus;
 use App\Models\Customers\Customer;
@@ -264,5 +265,13 @@ class Sale extends Model
             ->values();
 
         return $breakdown->all();
+    }
+
+    /**
+     * Determine the expected invoice type for this sale based on its customer (EPIC-03).
+     */
+    public function invoiceType(): InvoiceType
+    {
+        return InvoiceType::forCustomer($this->customer);
     }
 }
