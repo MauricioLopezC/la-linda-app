@@ -35,13 +35,6 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
   Table,
   TableBody,
   TableCell,
@@ -184,6 +177,16 @@ export default function SaleShow({ sale, customers = [] }: Props) {
             <Badge variant="outline" className={saleStatusClasses[sale.status]}>
               {sale.status_label}
             </Badge>
+            <Badge
+              variant="outline"
+              className={
+                sale.invoice_type === 'A'
+                  ? 'border-blue-500/30 bg-blue-500/10 font-semibold text-blue-700 dark:text-blue-400'
+                  : 'border-emerald-500/30 bg-emerald-500/10 font-semibold text-emerald-700 dark:text-emerald-400'
+              }
+            >
+              {sale.invoice_type_label}
+            </Badge>
           </div>
           {sale.accepts_changes && (
             <Button
@@ -212,33 +215,71 @@ export default function SaleShow({ sale, customers = [] }: Props) {
           <InfoField label="Depósito" value={sale.warehouse_name} />
           <InfoField label="Vendedor" value={sale.user_name ?? '—'} />
           <div className="space-y-1.5">
-            <Label>Cliente</Label>
-            {sale.accepts_changes ? (
-              <Select
-                value={String(sale.customer_id)}
-                onValueChange={handleChangeCustomer}
+            <p className="text-sm font-medium text-muted-foreground">
+              Comprobante
+            </p>
+            <div className="flex items-center gap-2">
+              <Badge
+                variant="outline"
+                className={
+                  sale.invoice_type === 'A'
+                    ? 'border-blue-500/30 bg-blue-500/10 font-semibold text-blue-700 dark:text-blue-400'
+                    : 'border-emerald-500/30 bg-emerald-500/10 font-semibold text-emerald-700 dark:text-emerald-400'
+                }
               >
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {customers.map((customer) => (
-                    <SelectItem key={customer.id} value={String(customer.id)}>
-                      {customer.name}
-                      {customer.price_list_name
-                        ? ` · ${customer.price_list_name}`
-                        : ''}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : (
-              <p className="text-sm font-medium">{sale.customer_name}</p>
-            )}
-            {sale.customer_price_list_name && (
-              <p className="text-xs text-muted-foreground">
-                Lista asignada: {sale.customer_price_list_name}
-              </p>
+                {sale.invoice_type_label}
+              </Badge>
+              <span className="text-xs text-muted-foreground">
+                ({sale.customer_tax_condition_label})
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-sidebar-border bg-card p-4 shadow-sm">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <Label className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+                  Cliente de la venta
+                </Label>
+                {sale.customer_price_list_name && (
+                  <Badge variant="secondary" className="text-xs">
+                    Lista: {sale.customer_price_list_name}
+                  </Badge>
+                )}
+              </div>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <p className="text-base font-semibold text-foreground">
+                  {sale.customer_name}
+                </p>
+                <span className="text-sm text-muted-foreground">·</span>
+                <p className="text-sm text-muted-foreground">
+                  {sale.customer_tax_condition_label}
+                </p>
+                {sale.customer_id_number && (
+                  <>
+                    <span className="text-sm text-muted-foreground">·</span>
+                    <p className="font-mono text-sm text-muted-foreground">
+                      {sale.customer_id_type_label ?? 'Doc'}:{' '}
+                      {sale.customer_id_number}
+                    </p>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {sale.accepts_changes && (
+              <div className="w-full sm:w-80">
+                <SearchCustomerPopover
+                  customers={customers}
+                  selectedCustomerId={sale.customer_id}
+                  disabled={!sale.accepts_changes}
+                  onSelect={(customerId) =>
+                    handleChangeCustomer(String(customerId))
+                  }
+                />
+              </div>
             )}
           </div>
         </div>
@@ -390,6 +431,40 @@ export default function SaleShow({ sale, customers = [] }: Props) {
                     </TableRow>
                   </TableFooter>
                 </Table>
+
+                <div className="flex flex-col gap-2 rounded-lg border border-sidebar-border bg-muted/40 p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+                  <div className="space-y-0.5">
+                    <span className="text-xs font-medium text-muted-foreground">
+                      Comprobante a emitir al cobrar
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-foreground">
+                        {sale.invoice_type_label}
+                      </span>
+                      <Badge
+                        variant="outline"
+                        className={
+                          sale.invoice_type === 'A'
+                            ? 'border-blue-500/30 bg-blue-500/10 text-xs font-semibold text-blue-700 dark:text-blue-400'
+                            : 'border-emerald-500/30 bg-emerald-500/10 text-xs font-semibold text-emerald-700 dark:text-emerald-400'
+                        }
+                      >
+                        {sale.invoice_type === 'A'
+                          ? 'IVA Discriminado'
+                          : 'IVA Incluido'}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div className="text-xs text-muted-foreground sm:text-right">
+                    <p>Condición fiscal: {sale.customer_tax_condition_label}</p>
+                    {sale.customer_id_number && (
+                      <p className="font-mono">
+                        {sale.customer_id_type_label ?? 'Doc'}:{' '}
+                        {sale.customer_id_number}
+                      </p>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -699,6 +774,135 @@ function ArticleSearch({
                 <span className="text-sm">{article.description}</span>
               </CommandItem>
             ))}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function SearchCustomerPopover({
+  customers,
+  selectedCustomerId,
+  disabled,
+  onSelect,
+}: {
+  customers: CustomerOption[];
+  selectedCustomerId: number;
+  disabled: boolean;
+  onSelect: (customerId: number) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+
+  const selectedCustomer = customers.find((c) => c.id === selectedCustomerId);
+
+  const filteredCustomers = customers.filter((customer) => {
+    if (search.trim() === '') {
+      return true;
+    }
+
+    const term = search.toLowerCase().trim();
+    const nameMatch = customer.name.toLowerCase().includes(term);
+    const idMatch = customer.id_number
+      ? customer.id_number
+          .toLowerCase()
+          .replace(/[^0-9]/g, '')
+          .includes(term.replace(/[^0-9]/g, '')) ||
+        customer.id_number.toLowerCase().includes(term)
+      : false;
+    const taxMatch = customer.tax_condition_label.toLowerCase().includes(term);
+
+    return nameMatch || idMatch || taxMatch;
+  });
+
+  const chooseCustomer = (customer: CustomerOption) => {
+    onSelect(customer.id);
+    setOpen(false);
+    setSearch('');
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          disabled={disabled}
+          className="w-full justify-between font-normal"
+        >
+          <span className="flex items-center gap-2 truncate">
+            <Search className="size-4 shrink-0 text-muted-foreground" />
+            <span className="truncate font-medium">
+              {selectedCustomer ? selectedCustomer.name : 'Cambiar cliente...'}
+            </span>
+          </span>
+          <ChevronsUpDown className="size-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[340px] p-0 sm:w-[420px]" align="end">
+        <Command shouldFilter={false}>
+          <CommandInput
+            value={search}
+            onValueChange={setSearch}
+            placeholder="Buscar por nombre o documento..."
+          />
+          <CommandList className="max-h-72">
+            {filteredCustomers.length === 0 && (
+              <p className="px-3 py-4 text-center text-sm text-muted-foreground">
+                No se encontraron clientes activos con ese criterio.
+              </p>
+            )}
+            {filteredCustomers.map((customer) => {
+              const isSelected = customer.id === selectedCustomerId;
+
+              return (
+                <CommandItem
+                  key={customer.id}
+                  value={String(customer.id)}
+                  onSelect={() => chooseCustomer(customer)}
+                  className={`flex flex-col items-start gap-1 p-2.5 ${isSelected ? 'bg-accent' : ''}`}
+                >
+                  <div className="flex w-full items-center justify-between gap-2">
+                    <span className="font-medium text-foreground">
+                      {customer.name}
+                    </span>
+                    <Badge
+                      variant="outline"
+                      className={
+                        customer.invoice_type === 'A'
+                          ? 'border-blue-500/30 bg-blue-500/10 text-[10px] font-semibold text-blue-700 dark:text-blue-400'
+                          : 'border-emerald-500/30 bg-emerald-500/10 text-[10px] font-semibold text-emerald-700 dark:text-emerald-400'
+                      }
+                    >
+                      {customer.invoice_type_label}
+                    </Badge>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
+                    <span>{customer.tax_condition_label}</span>
+                    {customer.id_number && (
+                      <>
+                        <span>·</span>
+                        <span className="font-mono">
+                          {customer.id_type_label ?? 'Doc'}:{' '}
+                          {customer.id_number}
+                        </span>
+                      </>
+                    )}
+                    {customer.price_list_name && (
+                      <>
+                        <span>·</span>
+                        <span className="font-medium text-primary">
+                          {customer.price_list_name}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </CommandItem>
+              );
+            })}
           </CommandList>
         </Command>
       </PopoverContent>

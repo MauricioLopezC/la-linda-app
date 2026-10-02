@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\Customers\CustomerIdType;
 use App\Models\Catalog\Article;
 use App\Models\Customers\Customer;
 use App\Models\Pricing\VatRate;
@@ -183,4 +184,74 @@ test('article search matches description, internal code and barcode', function (
 
     $this->getJson(route('sales.sales.search-articles', ['search' => '7790387']))
         ->assertJsonPath('0.id', $article->id);
+});
+
+test('the sale screen displays the invoice type and customer tax info', function () {
+    $riCustomer = Customer::factory()->responsableInscripto()->create([
+        'name' => 'Empresa Test SA',
+    ]);
+    $saleA = Sale::factory()->create(['customer_id' => $riCustomer->id]);
+
+    $this->actingAs(User::factory()->create())
+        ->get(route('sales.sales.show', $saleA))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('sale.invoice_type', 'A')
+            ->where('sale.invoice_type_label', 'Factura A')
+            ->where('sale.customer_tax_condition', 'responsable_inscripto')
+            ->where('sale.customer_tax_condition_label', 'IVA Responsable Inscripto')
+            ->where('sale.customer_id_number', $riCustomer->formattedIdNumber()));
+
+    $cfCustomer = Customer::factory()->defaultCustomer()->create();
+    $saleB = Sale::factory()->create(['customer_id' => $cfCustomer->id]);
+
+    $this->actingAs(User::factory()->create())
+        ->get(route('sales.sales.show', $saleB))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('sale.invoice_type', 'B')
+            ->where('sale.invoice_type_label', 'Factura B')
+            ->where('sale.customer_tax_condition', 'consumidor_final'));
+});
+
+test('customer search matches name and document and excludes inactive customers', function () {
+    $activeCuit = Customer::factory()->create([
+        'name' => 'Distribuidora Los Andes',
+        'id_type' => CustomerIdType::Cuit,
+        'id_number' => '30502793175',
+        'is_active' => true,
+    ]);
+
+    $activeDni = Customer::factory()->create([
+        'name' => 'Pedro Gomez',
+        'id_type' => CustomerIdType::Dni,
+        'id_number' => '28945612',
+        'is_active' => true,
+    ]);
+
+    $inactive = Customer::factory()->create([
+        'name' => 'Distribuidora Inactiva',
+        'id_type' => CustomerIdType::Cuit,
+        'id_number' => '30500511849',
+        'is_active' => false,
+    ]);
+
+    $this->actingAs(User::factory()->create());
+
+    // Search by name
+    $this->getJson(route('sales.sales.search-customers', ['search' => 'Distribuidora']))
+        ->assertOk()
+        ->assertJsonCount(1)
+        ->assertJsonPath('0.id', $activeCuit->id);
+
+    // Search by document
+    $this->getJson(route('sales.sales.search-customers', ['search' => '28945612']))
+        ->assertOk()
+        ->assertJsonCount(1)
+        ->assertJsonPath('0.id', $activeDni->id);
+
+    // Inactive customer is not found
+    $this->getJson(route('sales.sales.search-customers', ['search' => 'Inactiva']))
+        ->assertOk()
+        ->assertJsonCount(0);
 });

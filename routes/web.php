@@ -140,6 +140,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/', [SaleController::class, 'index'])->name('index');
         Route::post('/', [SaleController::class, 'store'])->name('store');
         Route::get('search-articles', [SaleController::class, 'searchArticles'])->name('search-articles');
+        Route::get('search-customers', [SaleController::class, 'searchCustomers'])->name('search-customers');
         Route::post('{sale}/items', [SaleController::class, 'storeItem'])->name('items.store');
         Route::patch('{sale}/items/{item}', [SaleController::class, 'updateItem'])->name('items.update')->scopeBindings();
         Route::delete('{sale}/items/{item}', [SaleController::class, 'destroyItem'])->name('items.destroy')->scopeBindings();
