@@ -82,4 +82,18 @@ class CashMovement extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    /**
+     * Calculate change (vuelto) if tendered amount exceeds amount.
+     */
+    public function changeAmount(): float
+    {
+        if ($this->tendered_amount === null) {
+            return 0.0;
+        }
+
+        $change = (float) $this->tendered_amount - (float) $this->amount;
+
+        return max(0.0, round($change, 2));
+    }
 }

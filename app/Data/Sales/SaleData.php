@@ -2,6 +2,8 @@
 
 namespace App\Data\Sales;
 
+use App\Enums\Sales\CashMovementType;
+use App\Models\Sales\CashMovement;
 use App\Models\Sales\Sale;
 use App\Models\Sales\SaleItem;
 use Spatie\LaravelData\Data;
@@ -10,6 +12,8 @@ class SaleData extends Data
 {
     /**
      * @param  array<int, SaleItemData>  $items
+     * @param  array<int, SaleVatBreakdownData>  $vat_breakdown
+     * @param  array<int, SalePaymentData>  $payments
      */
     public function __construct(
         public int $id,
@@ -33,6 +37,8 @@ class SaleData extends Data
         public ?string $user_name,
         public string $opened_at,
         public string $opened_at_formatted,
+        public ?string $confirmed_at,
+        public ?string $confirmed_at_formatted,
         public string $status,
         public string $status_label,
         public bool $is_open,
@@ -41,8 +47,10 @@ class SaleData extends Data
         public string $net_amount,
         public string $vat_amount,
         public array $items,
-        /** @var array<int, SaleVatBreakdownData> */
         public array $vat_breakdown,
+        public array $payments,
+        public ?string $total_tendered,
+        public ?string $change_amount,
     ) {}
 
     public static function fromModel(Sale $sale): self
@@ -55,9 +63,36 @@ class SaleData extends Data
             'items.article.unitOfMeasure',
             'items.priceList',
             'items.vatRate',
+            'cashMovements.paymentMethod',
         ]);
 
         $invoiceType = $sale->invoiceType();
+
+        $saleMovements = $sale->cashMovements
+            ->where('type', CashMovementType::Sale)
+            ->values();
+
+        $payments = $saleMovements
+            ->map(fn (CashMovement $movement): SalePaymentData => SalePaymentData::fromModel($movement))
+            ->all();
+
+        $totalTenderedCents = $saleMovements->sum(function (CashMovement $m): int {
+            $amountCents = (int) round((float) $m->amount * 100);
+            $tenderedCents = $m->tendered_amount !== null ? (int) round((float) $m->tendered_amount * 100) : $amountCents;
+
+            return $tenderedCents;
+        });
+
+        $totalChangeCents = $saleMovements->sum(function (CashMovement $m): int {
+            if ($m->tendered_amount === null) {
+                return 0;
+            }
+
+            return max(0, (int) round(((float) $m->tendered_amount - (float) $m->amount) * 100));
+        });
+
+        $totalTendered = $saleMovements->isNotEmpty() ? number_format($totalTenderedCents / 100, 2, '.', '') : null;
+        $changeAmount = $saleMovements->isNotEmpty() && $totalChangeCents > 0 ? number_format($totalChangeCents / 100, 2, '.', '') : null;
 
         return new self(
             id: $sale->id,
@@ -81,6 +116,8 @@ class SaleData extends Data
             user_name: $sale->user?->name,
             opened_at: $sale->opened_at->toIso8601String(),
             opened_at_formatted: $sale->opened_at->format('d/m/Y H:i'),
+            confirmed_at: $sale->confirmed_at?->toIso8601String(),
+            confirmed_at_formatted: $sale->confirmed_at?->format('d/m/Y H:i'),
             status: $sale->status->value,
             status_label: $sale->status->label(),
             is_open: $sale->isOpen(),
@@ -93,6 +130,9 @@ class SaleData extends Data
                 ->values()
                 ->all(),
             vat_breakdown: SaleVatBreakdownData::collect($sale->getVatBreakdown()),
+            payments: $payments,
+            total_tendered: $totalTendered,
+            change_amount: $changeAmount,
         );
     }
 }
