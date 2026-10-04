@@ -65,21 +65,15 @@ function ArticleCardImage({
 
   if (src && !hasError) {
     return (
-      <div
-        className={`flex size-full items-center justify-center ${
-          size === 'card' ? 'p-4' : 'p-6'
+      <img
+        src={src}
+        alt={alt}
+        className={`size-full object-cover transition-transform duration-300 ${
+          size === 'card' ? 'group-hover:scale-105' : ''
         }`}
-      >
-        <img
-          src={src}
-          alt={alt}
-          className={`size-full object-contain transition-transform duration-300 ${
-            size === 'card' ? 'group-hover:scale-105' : ''
-          }`}
-          loading="lazy"
-          onError={() => setHasError(true)}
-        />
-      </div>
+        loading="lazy"
+        onError={() => setHasError(true)}
+      />
     );
   }
 
@@ -406,10 +400,6 @@ export default function StoreHome({ articles, categories, filters }: Props) {
                     >
                       <Search className="size-4" />
                     </Button>
-
-                    <span className="absolute bottom-2 left-3 text-[10px] tracking-wider text-muted-foreground/50">
-                      Imagen ilustrativa
-                    </span>
                   </div>
 
                   {/* Article Info Body */}
@@ -581,10 +571,6 @@ export default function StoreHome({ articles, categories, filters }: Props) {
                     Precio preferencial
                   </Badge>
                 )}
-
-                <span className="absolute bottom-3 left-4 text-xs text-muted-foreground/60">
-                  Imagen ilustrativa
-                </span>
               </div>
 
               {/* Modal Right: Full Information */}

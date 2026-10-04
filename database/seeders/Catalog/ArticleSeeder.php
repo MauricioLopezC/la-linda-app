@@ -170,7 +170,7 @@ class ArticleSeeder extends Seeder
                 'unit' => 'Unidad',
                 'barcode' => '7790123456789',
                 'is_online_publishable' => true,
-                'image_url' => 'https://images.unsplash.com/photo-1581441363689-1f3c3c414635?auto=format&fit=crop&w=600&q=80',
+                'image_url' => 'https://images.unsplash.com/photo-1587735243615-c03f25aaff15?auto=format&fit=crop&w=600&q=80',
             ],
             [
                 'description' => 'Galletitas Dulces Sabor Vainilla Terrabusi Paquete 300 g',
@@ -218,7 +218,7 @@ class ArticleSeeder extends Seeder
                 'unit' => 'Unidad',
                 'barcode' => '7799012876543',
                 'is_online_publishable' => true,
-                'image_url' => 'https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=600&q=80',
+                'image_url' => 'https://images.unsplash.com/photo-1592394533824-9440e5d68530?auto=format&fit=crop&w=600&q=80',
             ],
             [
                 'description' => 'Fideos Guiseros Tirabuzón Lucchetti Paquete 500 g',
