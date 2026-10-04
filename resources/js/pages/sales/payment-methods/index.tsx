@@ -23,6 +23,13 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   Table,
   TableBody,
   TableCell,
@@ -35,14 +42,22 @@ import { index } from '@/routes/sales/payment-methods';
 import type { BreadcrumbItem } from '@/types';
 
 type PaymentMethod = App.Data.Sales.PaymentMethodData;
-type Props = { paymentMethods: PaymentMethod[] };
+type KindOption = { value: string; label: string };
+type Props = {
+  paymentMethods: PaymentMethod[];
+  kinds: KindOption[];
+};
 type PaymentMethodFormData = {
   name: string;
+  kind: string;
   is_enabled_online: boolean;
   is_active: boolean;
 };
 
-export default function PaymentMethodsIndex({ paymentMethods = [] }: Props) {
+export default function PaymentMethodsIndex({
+  paymentMethods = [],
+  kinds = [],
+}: Props) {
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingPaymentMethod, setEditingPaymentMethod] =
@@ -52,11 +67,13 @@ export default function PaymentMethodsIndex({ paymentMethods = [] }: Props) {
 
   const createForm = useForm<PaymentMethodFormData>({
     name: '',
+    kind: kinds[0]?.value ?? 'efectivo',
     is_enabled_online: false,
     is_active: true,
   });
   const editForm = useForm<PaymentMethodFormData>({
     name: '',
+    kind: 'efectivo',
     is_enabled_online: false,
     is_active: true,
   });
@@ -84,6 +101,7 @@ export default function PaymentMethodsIndex({ paymentMethods = [] }: Props) {
   const openEdit = (paymentMethod: PaymentMethod) => {
     editForm.setData({
       name: paymentMethod.name,
+      kind: paymentMethod.kind,
       is_enabled_online: paymentMethod.is_enabled_online,
       is_active: paymentMethod.is_active,
     });
@@ -148,6 +166,25 @@ export default function PaymentMethodsIndex({ paymentMethods = [] }: Props) {
         />
         <InputError message={form.errors.name} />
       </div>
+      <div className="grid gap-2">
+        <Label htmlFor={`${prefix}-payment-method-kind`}>Clase *</Label>
+        <Select
+          value={form.data.kind}
+          onValueChange={(value) => form.setData('kind', value)}
+        >
+          <SelectTrigger id={`${prefix}-payment-method-kind`}>
+            <SelectValue placeholder="Seleccioná una clase" />
+          </SelectTrigger>
+          <SelectContent>
+            {kinds.map((k) => (
+              <SelectItem key={k.value} value={k.value}>
+                {k.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <InputError message={form.errors.kind} />
+      </div>
       <div className="flex items-center gap-2">
         <Checkbox
           id={`${prefix}-payment-method-online`}
@@ -208,6 +245,7 @@ export default function PaymentMethodsIndex({ paymentMethods = [] }: Props) {
             <TableHeader>
               <TableRow>
                 <TableHead>Nombre</TableHead>
+                <TableHead>Clase</TableHead>
                 <TableHead>Canal online</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
@@ -217,7 +255,7 @@ export default function PaymentMethodsIndex({ paymentMethods = [] }: Props) {
               {filteredPaymentMethods.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={4}
+                    colSpan={5}
                     className="py-12 text-center text-muted-foreground"
                   >
                     No se encontraron medios de pago registrados.
@@ -228,6 +266,11 @@ export default function PaymentMethodsIndex({ paymentMethods = [] }: Props) {
                   <TableRow key={paymentMethod.id}>
                     <TableCell className="font-medium">
                       {paymentMethod.name}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">
+                        {paymentMethod.kind_label}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       <Badge

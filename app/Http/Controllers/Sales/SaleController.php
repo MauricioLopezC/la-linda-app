@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Sales;
 
 use App\Actions\Sales\AddArticleToSale;
 use App\Actions\Sales\ChangeSaleCustomer;
+use App\Actions\Sales\ConfirmSalePayment;
 use App\Actions\Sales\DiscardSale;
 use App\Actions\Sales\OpenSale;
 use App\Actions\Sales\RemoveSaleItem;
 use App\Actions\Sales\UpdateSaleItemQuantity;
+use App\Data\Sales\PaymentMethodData;
 use App\Data\Sales\PointOfSaleData;
 use App\Data\Sales\SaleArticleOptionData;
 use App\Data\Sales\SaleCustomerOptionData;
@@ -15,12 +17,14 @@ use App\Data\Sales\SaleData;
 use App\Data\Sales\SaleListData;
 use App\Enums\Sales\SaleStatus;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Sales\ConfirmSalePaymentRequest;
 use App\Http\Requests\Sales\StoreSaleItemRequest;
 use App\Http\Requests\Sales\StoreSaleRequest;
 use App\Http\Requests\Sales\UpdateSaleCustomerRequest;
 use App\Http\Requests\Sales\UpdateSaleItemRequest;
 use App\Models\Catalog\Article;
 use App\Models\Customers\Customer;
+use App\Models\Sales\PaymentMethod;
 use App\Models\Sales\PointOfSale;
 use App\Models\Sales\Sale;
 use App\Models\Sales\SaleItem;
@@ -139,6 +143,7 @@ class SaleController extends Controller
         return Inertia::render('sales/sales/show', [
             'sale' => SaleData::fromModel($sale),
             'customers' => SaleCustomerOptionData::collect($this->activeCustomers()),
+            'activePaymentMethods' => PaymentMethodData::collect($this->activePaymentMethods()),
         ]);
     }
 
@@ -183,6 +188,19 @@ class SaleController extends Controller
     }
 
     /**
+     * Confirm the sale payment (EPIC-04).
+     */
+    public function confirmPayment(ConfirmSalePaymentRequest $request, Sale $sale, ConfirmSalePayment $action): RedirectResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        $action->handle($sale, (array) $request->validated('payments'), $user);
+
+        return to_route('sales.sales.show', $sale)->with('success', 'Venta cobrada y confirmada correctamente.');
+    }
+
+    /**
      * Discard an open sale.
      */
     public function discard(Sale $sale, DiscardSale $action): RedirectResponse
@@ -201,6 +219,17 @@ class SaleController extends Controller
             ->active()
             ->with('priceList')
             ->orderByDesc('is_default')
+            ->orderBy('name')
+            ->get();
+    }
+
+    /**
+     * @return Collection<int, PaymentMethod>
+     */
+    private function activePaymentMethods(): Collection
+    {
+        return PaymentMethod::query()
+            ->active()
             ->orderBy('name')
             ->get();
     }

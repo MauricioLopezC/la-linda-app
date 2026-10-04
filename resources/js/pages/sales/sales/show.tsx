@@ -1,11 +1,15 @@
 import { Head, router } from '@inertiajs/react';
 import {
   Ban,
+  CheckCircle2,
   ChevronsUpDown,
+  CreditCard,
   Loader2,
+  Plus,
   ScanBarcode,
   Search,
   Trash2,
+  Zap,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -35,6 +39,13 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   Table,
   TableBody,
   TableCell,
@@ -45,7 +56,13 @@ import {
 } from '@/components/ui/table';
 import { formatCurrency } from '@/lib/utils';
 import { dashboard } from '@/routes';
-import { discard, index, searchArticles } from '@/routes/sales/sales';
+import {
+  confirmPayment,
+  discard,
+  index,
+  searchArticles,
+  store as storeSale,
+} from '@/routes/sales/sales';
 import { update as updateCustomer } from '@/routes/sales/sales/customer';
 import {
   destroy as destroyItem,
@@ -58,10 +75,12 @@ type Sale = App.Data.Sales.SaleData;
 type SaleItem = App.Data.Sales.SaleItemData;
 type ArticleOption = App.Data.Sales.SaleArticleOptionData;
 type CustomerOption = App.Data.Sales.SaleCustomerOptionData;
+type PaymentMethod = App.Data.Sales.PaymentMethodData;
 
 type Props = {
   sale: Sale;
   customers: CustomerOption[];
+  activePaymentMethods?: PaymentMethod[];
 };
 
 const saleStatusClasses: Record<string, string> = {
@@ -69,6 +88,8 @@ const saleStatusClasses: Record<string, string> = {
     'border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300',
   descartada:
     'border-rose-300 bg-rose-50 text-rose-800 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300',
+  confirmada:
+    'border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400 font-semibold',
 };
 
 const priceOriginClasses: Record<string, string> = {
@@ -94,7 +115,11 @@ function formatQuantity(quantity: string, allowsDecimal: boolean): string {
   });
 }
 
-export default function SaleShow({ sale, customers = [] }: Props) {
+export default function SaleShow({
+  sale,
+  customers = [],
+  activePaymentMethods = [],
+}: Props) {
   const [code, setCode] = useState('');
   const [codeError, setCodeError] = useState<string | undefined>();
   const [isAdding, setIsAdding] = useState(false);
@@ -199,6 +224,41 @@ export default function SaleShow({ sale, customers = [] }: Props) {
             </Button>
           )}
         </div>
+
+        {sale.status === 'confirmada' && (
+          <div className="flex flex-col items-start justify-between gap-4 rounded-xl border border-blue-500/30 bg-blue-500/10 p-4 text-blue-950 sm:flex-row sm:items-center dark:text-blue-100">
+            <div className="flex items-center gap-3">
+              <CheckCircle2 className="size-6 shrink-0 text-blue-600 dark:text-blue-400" />
+              <div>
+                <h3 className="text-base font-semibold">Venta confirmada</h3>
+                <p className="text-xs text-muted-foreground">
+                  Confirmada{' '}
+                  {sale.confirmed_at_formatted
+                    ? `el ${sale.confirmed_at_formatted}`
+                    : ''}
+                  . La venta y sus movimientos de caja son inmutables.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => router.post(storeSale.url())}
+              >
+                <Plus className="mr-1.5 size-4" />
+                Nueva venta
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => router.get(index.url())}
+              >
+                Volver al listado
+              </Button>
+            </div>
+          </div>
+        )}
 
         {sale.is_open && !sale.accepts_changes && (
           <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
@@ -468,6 +528,17 @@ export default function SaleShow({ sale, customers = [] }: Props) {
               </div>
             </div>
           </div>
+        )}
+
+        {sale.is_open && sale.accepts_changes && (
+          <PaymentSection
+            sale={sale}
+            activePaymentMethods={activePaymentMethods}
+          />
+        )}
+
+        {sale.status === 'confirmada' && (
+          <ConfirmedPaymentSection sale={sale} />
         )}
 
         <p className="text-xs text-muted-foreground">
@@ -907,6 +978,517 @@ function SearchCustomerPopover({
         </Command>
       </PopoverContent>
     </Popover>
+  );
+}
+
+type PaymentRow = {
+  id: string;
+  payment_method_id: number;
+  amount: string;
+  tendered_amount: string;
+};
+
+function PaymentSection({
+  sale,
+  activePaymentMethods = [],
+}: {
+  sale: Sale;
+  activePaymentMethods: PaymentMethod[];
+}) {
+  const cashMethod =
+    activePaymentMethods.find((m) => m.kind === 'efectivo') ??
+    activePaymentMethods[0];
+
+  const [paymentRows, setPaymentRows] = useState<PaymentRow[]>(() => {
+    if (activePaymentMethods.length === 0) {
+      return [];
+    }
+
+    return [
+      {
+        id: '1',
+        payment_method_id: cashMethod?.id ?? activePaymentMethods[0]?.id ?? 0,
+        amount:
+          Number(sale.total_amount) > 0
+            ? Number(sale.total_amount).toString()
+            : '',
+        tendered_amount: '',
+      },
+    ];
+  });
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const prevTotalRef = useRef(sale.total_amount);
+  useEffect(() => {
+    if (prevTotalRef.current !== sale.total_amount) {
+      prevTotalRef.current = sale.total_amount;
+      setPaymentRows((prev) => {
+        if (prev.length === 1 && prev[0].tendered_amount === '') {
+          return [
+            {
+              ...prev[0],
+              amount:
+                Number(sale.total_amount) > 0
+                  ? Number(sale.total_amount).toString()
+                  : '',
+            },
+          ];
+        }
+
+        return prev;
+      });
+    }
+  }, [sale.total_amount]);
+
+  const totalSaleCents = Math.round(Number(sale.total_amount || 0) * 100);
+  const totalAssignedCents = paymentRows.reduce(
+    (acc, row) => acc + Math.round(Number(row.amount || 0) * 100),
+    0,
+  );
+  const remainingCents = totalSaleCents - totalAssignedCents;
+
+  const totalChangeCents = paymentRows.reduce((acc, row) => {
+    const method = activePaymentMethods.find(
+      (m) => m.id === row.payment_method_id,
+    );
+
+    if (
+      method?.kind === 'efectivo' &&
+      row.tendered_amount &&
+      Number(row.tendered_amount) > Number(row.amount)
+    ) {
+      const amtCents = Math.round(Number(row.amount || 0) * 100);
+      const tendCents = Math.round(Number(row.tendered_amount || 0) * 100);
+
+      return acc + Math.max(0, tendCents - amtCents);
+    }
+
+    return acc;
+  }, 0);
+
+  const handleShortcutCashAll = () => {
+    if (!cashMethod) {
+      return;
+    }
+
+    setPaymentRows([
+      {
+        id: '1',
+        payment_method_id: cashMethod.id,
+        amount: Number(sale.total_amount).toString(),
+        tendered_amount: '',
+      },
+    ]);
+  };
+
+  const handleAddRow = () => {
+    const nextMethod =
+      activePaymentMethods.find(
+        (m) => !paymentRows.some((r) => r.payment_method_id === m.id),
+      ) ?? activePaymentMethods[0];
+
+    const defaultAmount =
+      remainingCents > 0 ? (remainingCents / 100).toFixed(2) : '';
+
+    setPaymentRows((prev) => [
+      ...prev,
+      {
+        id: String(Date.now()),
+        payment_method_id: nextMethod?.id ?? 0,
+        amount: defaultAmount,
+        tendered_amount: '',
+      },
+    ]);
+  };
+
+  const handleRemoveRow = (index: number) => {
+    setPaymentRows((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleRowChange = (
+    index: number,
+    field: keyof PaymentRow,
+    value: string | number,
+  ) => {
+    setPaymentRows((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+
+      return updated;
+    });
+  };
+
+  const isValid =
+    sale.items.length > 0 &&
+    remainingCents === 0 &&
+    paymentRows.length > 0 &&
+    paymentRows.every((r) => {
+      const method = activePaymentMethods.find(
+        (m) => m.id === r.payment_method_id,
+      );
+      const amt = Number(r.amount);
+
+      if (!r.payment_method_id || isNaN(amt) || amt <= 0) {
+        return false;
+      }
+
+      if (method?.kind === 'efectivo' && r.tendered_amount) {
+        const tend = Number(r.tendered_amount);
+
+        if (isNaN(tend) || tend < amt) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+
+  const handleConfirm = () => {
+    if (!isValid || isSubmitting) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    const payload = paymentRows.map((r) => {
+      const method = activePaymentMethods.find(
+        (m) => m.id === r.payment_method_id,
+      );
+
+      return {
+        payment_method_id: r.payment_method_id,
+        amount: Number(r.amount),
+        tendered_amount:
+          method?.kind === 'efectivo' &&
+          r.tendered_amount !== '' &&
+          Number(r.tendered_amount) > 0
+            ? Number(r.tendered_amount)
+            : null,
+      };
+    });
+
+    router.post(
+      confirmPayment.url(sale.id),
+      { payments: payload },
+      {
+        preserveScroll: true,
+        onSuccess: () => {
+          if (totalChangeCents > 0) {
+            toast.success(
+              `¡Venta N° ${sale.id} confirmada! Vuelto a entregar: ${formatCurrency(totalChangeCents / 100)}`,
+            );
+          } else {
+            toast.success(
+              `¡Venta N° ${sale.id} cobrada y confirmada correctamente!`,
+            );
+          }
+        },
+        onError: toastFirstError,
+        onFinish: () => setIsSubmitting(false),
+      },
+    );
+  };
+
+  return (
+    <div className="space-y-6 rounded-xl border border-sidebar-border bg-card p-6 shadow-sm">
+      <div className="flex flex-col justify-between gap-3 border-b pb-4 sm:flex-row sm:items-center">
+        <div>
+          <h3 className="flex items-center gap-2 text-lg font-semibold">
+            <CreditCard className="size-5 text-primary" />
+            Cobro de la venta
+          </h3>
+          <p className="text-xs text-muted-foreground">
+            Distribuí el total de la venta entre uno o varios medios de pago.
+          </p>
+        </div>
+        {cashMethod && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleShortcutCashAll}
+            className="text-xs font-medium"
+            disabled={sale.items.length === 0}
+          >
+            <Zap className="mr-1.5 size-3.5 fill-amber-500 text-amber-500" />
+            Todo en efectivo
+          </Button>
+        )}
+      </div>
+
+      <div className="space-y-3">
+        {paymentRows.map((row, index) => {
+          const selectedMethod = activePaymentMethods.find(
+            (m) => m.id === row.payment_method_id,
+          );
+          const isCash = selectedMethod?.kind === 'efectivo';
+          const amt = Number(row.amount || 0);
+          const tend = Number(row.tendered_amount || 0);
+          const rowChange = isCash && tend > amt ? tend - amt : 0;
+
+          return (
+            <div
+              key={row.id}
+              className="flex flex-col items-start gap-3 rounded-lg border bg-muted/20 p-3 sm:flex-row sm:items-center"
+            >
+              <div className="w-full sm:w-1/3">
+                <Label className="mb-1 block text-xs text-muted-foreground">
+                  Medio de pago
+                </Label>
+                <Select
+                  value={
+                    row.payment_method_id ? String(row.payment_method_id) : ''
+                  }
+                  onValueChange={(val) =>
+                    handleRowChange(index, 'payment_method_id', Number(val))
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Elegí medio de pago" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {activePaymentMethods.map((m) => (
+                      <SelectItem key={m.id} value={String(m.id)}>
+                        <span className="flex items-center gap-2">
+                          <span>{m.name}</span>
+                          <span className="text-[10px] text-muted-foreground">
+                            ({m.kind_label})
+                          </span>
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="w-full sm:w-1/4">
+                <Label className="mb-1 block text-xs text-muted-foreground">
+                  Importe *
+                </Label>
+                <div className="relative">
+                  <span className="absolute top-1/2 left-2.5 -translate-y-1/2 text-xs text-muted-foreground">
+                    $
+                  </span>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    value={row.amount}
+                    onChange={(e) =>
+                      handleRowChange(index, 'amount', e.target.value)
+                    }
+                    className="pl-6"
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+
+              {isCash && (
+                <div className="w-full sm:w-1/4">
+                  <Label className="mb-1 block text-xs text-muted-foreground">
+                    Entregado por cliente
+                  </Label>
+                  <div className="relative">
+                    <span className="absolute top-1/2 left-2.5 -translate-y-1/2 text-xs text-muted-foreground">
+                      $
+                    </span>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min={row.amount || '0'}
+                      value={row.tendered_amount}
+                      onChange={(e) =>
+                        handleRowChange(
+                          index,
+                          'tendered_amount',
+                          e.target.value,
+                        )
+                      }
+                      className="pl-6"
+                      placeholder="Monto entregado"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {isCash && rowChange > 0 && (
+                <div className="w-full self-end pb-2 sm:w-auto">
+                  <Badge
+                    variant="outline"
+                    className="border-emerald-500/30 bg-emerald-500/10 font-semibold text-emerald-700 dark:text-emerald-400"
+                  >
+                    Vuelto: {formatCurrency(rowChange)}
+                  </Badge>
+                </div>
+              )}
+
+              {paymentRows.length > 1 && (
+                <div className="ml-auto self-end pt-2 sm:self-center sm:pt-4">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="size-8 text-muted-foreground hover:text-destructive"
+                    onClick={() => handleRemoveRow(index)}
+                    aria-label="Quitar medio de pago"
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={handleAddRow}
+          disabled={sale.items.length === 0}
+          className="text-xs"
+        >
+          <Plus className="mr-1.5 size-3.5" />
+          Agregar otro medio de pago
+        </Button>
+      </div>
+
+      <div className="flex flex-col items-stretch justify-between gap-4 rounded-lg border bg-muted/10 p-4 pt-4 sm:flex-row sm:items-center">
+        <div className="grid grid-cols-2 gap-4 text-sm sm:flex sm:items-center">
+          <div>
+            <p className="text-xs text-muted-foreground">Total venta</p>
+            <p className="font-semibold">{formatCurrency(sale.total_amount)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Total asignado</p>
+            <p className="font-semibold">
+              {formatCurrency(totalAssignedCents / 100)}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Saldo restante</p>
+            <p
+              className={`font-semibold ${
+                remainingCents === 0 ? 'text-emerald-600' : 'text-rose-600'
+              }`}
+            >
+              {formatCurrency(remainingCents / 100)}
+            </p>
+          </div>
+          {totalChangeCents > 0 && (
+            <div>
+              <p className="text-xs text-muted-foreground">Vuelto a entregar</p>
+              <p className="text-base font-bold text-emerald-600 dark:text-emerald-400">
+                {formatCurrency(totalChangeCents / 100)}
+              </p>
+            </div>
+          )}
+        </div>
+
+        <Button
+          type="button"
+          size="lg"
+          onClick={handleConfirm}
+          disabled={!isValid || isSubmitting}
+          className="bg-emerald-600 font-medium text-white hover:bg-emerald-700"
+        >
+          {isSubmitting ? (
+            <>
+              <Loader2 className="mr-2 size-4 animate-spin" />
+              Confirmando cobro...
+            </>
+          ) : (
+            <>
+              <CheckCircle2 className="mr-2 size-4" />
+              Confirmar cobro
+            </>
+          )}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function ConfirmedPaymentSection({ sale }: { sale: Sale }) {
+  return (
+    <div className="space-y-4 rounded-xl border border-sidebar-border bg-card p-6 shadow-sm">
+      <div className="flex items-center justify-between border-b pb-3">
+        <h3 className="flex items-center gap-2 text-base font-semibold">
+          <CreditCard className="size-5 text-primary" />
+          Cobro registrado
+        </h3>
+        <span className="font-mono text-xs text-muted-foreground">
+          {sale.payments?.length ?? 0}{' '}
+          {sale.payments?.length === 1 ? 'medio de pago' : 'medios de pago'}
+        </span>
+      </div>
+
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Medio de pago</TableHead>
+            <TableHead>Clase</TableHead>
+            <TableHead className="text-right">Importe cobrado</TableHead>
+            <TableHead className="text-right">Entregado</TableHead>
+            <TableHead className="text-right">Vuelto</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {sale.payments && sale.payments.length > 0 ? (
+            sale.payments.map((payment) => (
+              <TableRow key={payment.id}>
+                <TableCell className="font-medium">
+                  {payment.payment_method_name}
+                </TableCell>
+                <TableCell>
+                  <Badge variant="outline">
+                    {payment.payment_method_kind_label}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-right font-medium">
+                  {formatCurrency(payment.amount)}
+                </TableCell>
+                <TableCell className="text-right text-muted-foreground">
+                  {payment.tendered_amount
+                    ? formatCurrency(payment.tendered_amount)
+                    : '—'}
+                </TableCell>
+                <TableCell className="text-right font-medium text-emerald-600 dark:text-emerald-400">
+                  {payment.change_amount
+                    ? formatCurrency(payment.change_amount)
+                    : '—'}
+                </TableCell>
+              </TableRow>
+            ))
+          ) : (
+            <TableRow>
+              <TableCell
+                colSpan={5}
+                className="py-6 text-center text-muted-foreground"
+              >
+                No hay registros de cobro asociados.
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+        <TableFooter>
+          <TableRow>
+            <TableCell colSpan={2} className="font-semibold">
+              Total cobrado
+            </TableCell>
+            <TableCell className="text-right text-base font-bold">
+              {formatCurrency(sale.total_amount)}
+            </TableCell>
+            <TableCell className="text-right text-muted-foreground">
+              {sale.total_tendered ? formatCurrency(sale.total_tendered) : '—'}
+            </TableCell>
+            <TableCell className="text-right font-bold text-emerald-600 dark:text-emerald-400">
+              {sale.change_amount ? formatCurrency(sale.change_amount) : '—'}
+            </TableCell>
+          </TableRow>
+        </TableFooter>
+      </Table>
+    </div>
   );
 }
 
