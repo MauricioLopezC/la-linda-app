@@ -25,6 +25,7 @@ class PriceListItemSeeder extends Seeder
         $general = PriceList::query()->where('name_normalized', 'lista general')->first();
         $mostrador = PriceList::query()->where('name_normalized', 'lista mostrador')->first();
         $mayorista = PriceList::query()->where('name_normalized', 'mayorista')->first();
+        $online = PriceList::query()->where('name_normalized', 'lista online')->first();
 
         if ($general === null || $mostrador === null || $mayorista === null) {
             return;
@@ -38,6 +39,10 @@ class PriceListItemSeeder extends Seeder
 
             $this->setPrice($general, $article, $generalPrice);
             $this->setPrice($mayorista, $article, $this->roundToTen($generalPrice * 0.85));
+
+            if ($online !== null) {
+                $this->setPrice($online, $article, $this->roundToTen($generalPrice * 0.95));
+            }
 
             if ($index % 2 === 0) {
                 $this->setPrice($mostrador, $article, $this->roundToTen($generalPrice * 0.95));

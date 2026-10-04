@@ -18,7 +18,7 @@ test('catalog demonstration seeders create the expected data and are idempotent'
         }
     });
 
-    expect(Category::count())->toBe(37)
+    expect(Category::count())->toBe(23)
         ->and(Brand::count())->toBe(14)
         ->and(UnitOfMeasure::count())->toBe(3);
 

@@ -52,6 +52,46 @@ type Props = {
   };
 };
 
+function ArticleCardImage({
+  src,
+  alt,
+  size = 'card',
+}: {
+  src?: string | null;
+  alt: string;
+  size?: 'card' | 'modal';
+}) {
+  const [hasError, setHasError] = useState(false);
+
+  if (src && !hasError) {
+    return (
+      <img
+        src={src}
+        alt={alt}
+        className={
+          size === 'card'
+            ? 'size-full object-contain p-4 transition-transform duration-300 group-hover:scale-105'
+            : 'max-h-72 w-full object-contain p-4'
+        }
+        loading="lazy"
+        onError={() => setHasError(true)}
+      />
+    );
+  }
+
+  return (
+    <div
+      className={`flex items-center justify-center bg-muted/50 text-muted-foreground/60 shadow-inner transition-transform duration-200 ${
+        size === 'card'
+          ? 'size-20 rounded-2xl group-hover:scale-105'
+          : 'size-32 rounded-3xl'
+      }`}
+    >
+      <Package className={size === 'card' ? 'size-10' : 'size-16'} />
+    </div>
+  );
+}
+
 export default function StoreHome({ articles, categories, filters }: Props) {
   const { auth, flash } = usePage().props;
   const user = auth?.user;
@@ -325,11 +365,14 @@ export default function StoreHome({ articles, categories, filters }: Props) {
                   key={article.id}
                   className="group flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-2xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
                 >
-                  {/* Image Placeholder Area */}
-                  <div className="relative flex aspect-square w-full items-center justify-center border-b border-border bg-muted/20 p-6 select-none">
-                    <div className="flex size-20 items-center justify-center rounded-2xl bg-muted/50 text-muted-foreground/60 shadow-inner transition-transform duration-200 group-hover:scale-105">
-                      <Package className="size-10" />
-                    </div>
+                  {/* Image Area */}
+                  <div className="relative flex aspect-square w-full items-center justify-center border-b border-border bg-muted/20 select-none">
+                    <ArticleCardImage
+                      key={article.id}
+                      src={article.image_url}
+                      alt={article.description}
+                      size="card"
+                    />
 
                     {/* Category Badge */}
                     <Badge
@@ -513,10 +556,13 @@ export default function StoreHome({ articles, categories, filters }: Props) {
           <DialogContent className="overflow-hidden p-0 sm:max-w-xl md:max-w-2xl">
             <div className="grid grid-cols-1 md:grid-cols-2">
               {/* Modal Left: Product Graphic */}
-              <div className="relative flex aspect-square items-center justify-center border-b border-border bg-muted/20 p-8 md:border-r md:border-b-0">
-                <div className="flex size-32 items-center justify-center rounded-3xl bg-muted/50 text-muted-foreground/60 shadow-inner">
-                  <Package className="size-16" />
-                </div>
+              <div className="relative flex aspect-square items-center justify-center border-b border-border bg-muted/20 md:border-r md:border-b-0">
+                <ArticleCardImage
+                  key={previewArticle.id}
+                  src={previewArticle.image_url}
+                  alt={previewArticle.description}
+                  size="modal"
+                />
 
                 <Badge
                   variant="secondary"

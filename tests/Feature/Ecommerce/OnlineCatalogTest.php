@@ -563,3 +563,56 @@ test('pagination divides articles and total excludes unpriced or non-publishable
         ->where('articles.total', 20)
     );
 });
+
+test('article with image_url provides image_url in catalog props and null when not set', function () {
+    $onlineList = PriceList::factory()
+        ->forChannel(PriceListChannel::Online)
+        ->create();
+
+    $articleWithImage = Article::factory()->create([
+        'description' => 'Producto Con Imagen',
+        'status' => ArticleStatus::Active,
+        'is_online_publishable' => true,
+        'image_url' => 'https://images.unsplash.com/photo-example.jpg',
+    ]);
+
+    $articleWithoutImage = Article::factory()->create([
+        'description' => 'Producto Sin Imagen',
+        'status' => ArticleStatus::Active,
+        'is_online_publishable' => true,
+        'image_url' => null,
+    ]);
+
+    foreach ([$articleWithImage, $articleWithoutImage] as $art) {
+        PriceListItem::factory()->create([
+            'price_list_id' => $onlineList->id,
+            'article_id' => $art->id,
+            'price' => '850.00',
+        ]);
+    }
+
+    $response = $this->get(route('tienda.home'));
+
+    $response->assertOk();
+    $response->assertInertia(fn (Assert $page) => $page
+        ->component('ecommerce/index')
+        ->where('articles.data.0.image_url', 'https://images.unsplash.com/photo-example.jpg')
+        ->where('articles.data.1.image_url', null)
+    );
+});
+
+test('catalog categories prop only includes root categories for navigation', function () {
+    $rootCatA = Category::factory()->create(['name' => 'Almacén', 'parent_id' => null, 'is_active' => true]);
+    $rootCatB = Category::factory()->create(['name' => 'Bebidas', 'parent_id' => null, 'is_active' => true]);
+    $childCat = Category::factory()->create(['name' => 'Conservas', 'parent_id' => $rootCatA->id, 'is_active' => true]);
+
+    $response = $this->get(route('tienda.home'));
+
+    $response->assertOk();
+    $response->assertInertia(fn (Assert $page) => $page
+        ->component('ecommerce/index')
+        ->has('categories', 2)
+        ->where('categories.0.name', 'Almacén')
+        ->where('categories.1.name', 'Bebidas')
+    );
+});

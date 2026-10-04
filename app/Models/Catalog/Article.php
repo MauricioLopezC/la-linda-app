@@ -32,11 +32,12 @@ use Illuminate\Support\Carbon;
  * @property int|null $vat_rate_id
  * @property ArticleStatus $status
  * @property bool $is_online_publishable
+ * @property string|null $image_url
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property VatRate|null $vatRate
  */
-#[Fillable(['description', 'internal_code', 'barcode', 'category_id', 'brand_id', 'unit_of_measure_id', 'vat_rate_id', 'status', 'is_online_publishable'])]
+#[Fillable(['description', 'internal_code', 'barcode', 'category_id', 'brand_id', 'unit_of_measure_id', 'vat_rate_id', 'status', 'is_online_publishable', 'image_url'])]
 class Article extends Model
 {
     /** @use HasFactory<ArticleFactory> */

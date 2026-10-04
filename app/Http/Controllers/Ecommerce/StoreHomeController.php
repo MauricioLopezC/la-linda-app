@@ -30,7 +30,11 @@ class StoreHomeController extends Controller
         ];
 
         $articles = $action->execute($filters, $customer, perPage: 16);
-        $categories = Category::query()->active()->orderBy('name')->get();
+        $categories = Category::query()
+            ->active()
+            ->whereNull('parent_id')
+            ->orderBy('name')
+            ->get();
 
         return Inertia::render('ecommerce/index', [
             'articles' => $articles,
