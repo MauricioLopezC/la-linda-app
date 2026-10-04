@@ -41,5 +41,5 @@ it('seeds demo prices that exercise every step of the price cascade', function (
     expect($general->items()->count())->toBe($activeArticles - 1)
         ->and($mostrador->items()->count())->toBeGreaterThan(0)->toBeLessThan($general->items()->count())
         ->and($mayorista->items()->count())->toBe($general->items()->count())
-        ->and(Customer::query()->where('id_number', '30500858628')->value('price_list_id'))->toBe($mayorista->id);
+        ->and(Customer::query()->where('id_number', '30716485273')->value('price_list_id'))->toBe($mayorista->id);
 });
