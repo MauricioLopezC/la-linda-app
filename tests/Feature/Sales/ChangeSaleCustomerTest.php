@@ -1,6 +1,9 @@
 <?php
 
+use App\Enums\Customers\CustomerIdType;
+use App\Enums\Customers\CustomerTaxCondition;
 use App\Enums\Pricing\PriceListChannel;
+use App\Enums\Sales\InvoiceType;
 use App\Models\Catalog\Article;
 use App\Models\Customers\Customer;
 use App\Models\Pricing\PriceList;
@@ -116,5 +119,78 @@ test('the customer of a sale with closed cash session cannot be changed', functi
     $sale = Sale::factory()->closedSession()->create();
 
     $this->patch(route('sales.sales.customer.update', $sale), ['customer_id' => Customer::factory()->create()->id])
+        ->assertSessionHasErrors(['customer_id']);
+});
+
+test('assigning a responsable inscripto with cuit determines Factura A and changing back to Consumidor Final passes to Factura B', function () {
+    $sale = Sale::factory()->create();
+    $consumidorFinal = Customer::factory()->defaultCustomer()->create();
+    $sale->update(['customer_id' => $consumidorFinal->id]);
+
+    expect($sale->fresh()->invoiceType())->toBe(InvoiceType::B);
+
+    $responsableInscripto = Customer::factory()->responsableInscripto()->create();
+
+    $this->patch(route('sales.sales.customer.update', $sale), ['customer_id' => $responsableInscripto->id])
+        ->assertSessionHasNoErrors();
+
+    expect($sale->fresh()->customer_id)->toBe($responsableInscripto->id)
+        ->and($sale->fresh()->invoiceType())->toBe(InvoiceType::A);
+
+    $this->patch(route('sales.sales.customer.update', $sale), ['customer_id' => $consumidorFinal->id])
+        ->assertSessionHasNoErrors();
+
+    expect($sale->fresh()->customer_id)->toBe($consumidorFinal->id)
+        ->and($sale->fresh()->invoiceType())->toBe(InvoiceType::B);
+});
+
+test('assigning a monotributista or exento determines Factura B', function () {
+    $sale = Sale::factory()->create();
+
+    $monotributo = Customer::factory()->monotributo()->create();
+    $this->patch(route('sales.sales.customer.update', $sale), ['customer_id' => $monotributo->id])
+        ->assertSessionHasNoErrors();
+
+    expect($sale->fresh()->invoiceType())->toBe(InvoiceType::B);
+
+    $exento = Customer::factory()->create([
+        'tax_condition' => CustomerTaxCondition::Exento,
+        'id_type' => CustomerIdType::Cuit,
+        'id_number' => '30500858628',
+    ]);
+    $this->patch(route('sales.sales.customer.update', $sale), ['customer_id' => $exento->id])
+        ->assertSessionHasNoErrors();
+
+    expect($sale->fresh()->invoiceType())->toBe(InvoiceType::B);
+});
+
+test('a responsable inscripto without cuit loaded is rejected when changing customer', function () {
+    $sale = Sale::factory()->create();
+
+    $riSinCuit = Customer::factory()->create([
+        'tax_condition' => CustomerTaxCondition::ResponsibleInscripto,
+        'id_type' => CustomerIdType::SinIdentificar,
+        'id_number' => null,
+    ]);
+
+    $this->patch(route('sales.sales.customer.update', $sale), ['customer_id' => $riSinCuit->id])
+        ->assertSessionHasErrors([
+            'customer_id' => 'La factura A exige que el cliente sea responsable inscripto y tenga CUIT cargado.',
+        ]);
+});
+
+test('an inactive customer cannot be assigned to a sale', function () {
+    $sale = Sale::factory()->create();
+    $inactiveCustomer = Customer::factory()->create(['is_active' => false]);
+
+    $this->patch(route('sales.sales.customer.update', $sale), ['customer_id' => $inactiveCustomer->id])
+        ->assertSessionHasErrors(['customer_id']);
+});
+
+test('the customer of a confirmed sale cannot be changed', function () {
+    $sale = Sale::factory()->confirmed()->create();
+    $customer = Customer::factory()->create();
+
+    $this->patch(route('sales.sales.customer.update', $sale), ['customer_id' => $customer->id])
         ->assertSessionHasErrors(['customer_id']);
 });

@@ -3,6 +3,8 @@
 namespace App\Actions\Sales;
 
 use App\Actions\Pricing\ResolveArticlePrice;
+use App\Enums\Customers\CustomerIdType;
+use App\Enums\Customers\CustomerTaxCondition;
 use App\Exceptions\Pricing\ArticleNotPricedException;
 use App\Models\Customers\Customer;
 use App\Models\Sales\Sale;
@@ -33,6 +35,14 @@ class ChangeSaleCustomer
             throw ValidationException::withMessages([
                 'customer_id' => 'El cliente seleccionado no está activo.',
             ]);
+        }
+
+        if ($customer->tax_condition === CustomerTaxCondition::ResponsibleInscripto) {
+            if ($customer->id_type !== CustomerIdType::Cuit || blank($customer->id_number)) {
+                throw ValidationException::withMessages([
+                    'customer_id' => 'La factura A exige que el cliente sea responsable inscripto y tenga CUIT cargado.',
+                ]);
+            }
         }
 
         return DB::transaction(function () use ($sale, $customer): Sale {

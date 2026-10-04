@@ -107,6 +107,31 @@ class SaleController extends Controller
     }
 
     /**
+     * Search active customers by name or document number (EPIC-03).
+     */
+    public function searchCustomers(Request $request): JsonResponse
+    {
+        $search = trim((string) $request->query('search', ''));
+        $query = Customer::query()->active()->with('priceList');
+
+        if ($search !== '') {
+            $lower = mb_strtolower($search);
+            $query->where(function (Builder $q) use ($lower) {
+                $q->whereRaw('LOWER(name) LIKE ?', ["%{$lower}%"])
+                    ->orWhereRaw('LOWER(id_number) LIKE ?', ["%{$lower}%"]);
+            });
+        }
+
+        $customers = $query
+            ->orderByDesc('is_default')
+            ->orderBy('name')
+            ->limit(20)
+            ->get();
+
+        return response()->json(SaleCustomerOptionData::collect($customers));
+    }
+
+    /**
      * Display the sale screen.
      */
     public function show(Sale $sale): Response
