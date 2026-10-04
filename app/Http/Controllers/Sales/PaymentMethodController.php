@@ -6,6 +6,7 @@ use App\Actions\Sales\CreatePaymentMethod;
 use App\Actions\Sales\TogglePaymentMethodStatus;
 use App\Actions\Sales\UpdatePaymentMethod;
 use App\Data\Sales\PaymentMethodData;
+use App\Enums\Sales\PaymentMethodKind;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Sales\StorePaymentMethodRequest;
 use App\Http\Requests\Sales\UpdatePaymentMethodRequest;
@@ -22,6 +23,7 @@ class PaymentMethodController extends Controller
 
         return Inertia::render('sales/payment-methods/index', [
             'paymentMethods' => PaymentMethodData::collect($paymentMethods),
+            'kinds' => PaymentMethodKind::toOptions(),
         ]);
     }
 

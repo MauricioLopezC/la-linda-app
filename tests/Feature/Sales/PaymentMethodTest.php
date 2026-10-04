@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\Sales\PaymentMethodKind;
 use App\Models\Purchasing\PaymentOrder;
 use App\Models\Purchasing\PaymentOrderMethod;
 use App\Models\Sales\PaymentMethod;
@@ -91,4 +92,46 @@ test('payment method cannot be deactivated if it has been used in a payment orde
     ])->assertSessionHasErrors(['payment_method']);
 
     expect($paymentMethod->fresh()->is_active)->toBeTrue();
+});
+
+test('user can create payment method with kind and update kind', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)->post(route('sales.payment-methods.store'), [
+        'name' => 'Tarjeta Visa',
+        'kind' => 'tarjeta',
+        'is_enabled_online' => true,
+        'is_active' => true,
+    ])->assertSessionHasNoErrors();
+
+    $paymentMethod = PaymentMethod::where('name', 'Tarjeta Visa')->firstOrFail();
+    expect($paymentMethod->kind)->toBe(PaymentMethodKind::Card);
+
+    $this->actingAs($user)->put(route('sales.payment-methods.update', $paymentMethod), [
+        'name' => 'Tarjeta Visa Débito',
+        'kind' => 'billetera_virtual',
+        'is_enabled_online' => true,
+        'is_active' => true,
+    ])->assertSessionHasNoErrors();
+
+    expect($paymentMethod->fresh()->kind)->toBe(PaymentMethodKind::VirtualWallet);
+});
+
+test('payment method kind cannot be changed if it has been used', function () {
+    $user = User::factory()->create();
+    $paymentMethod = PaymentMethod::factory()->cash()->create();
+
+    $paymentOrder = PaymentOrder::factory()->create();
+    PaymentOrderMethod::factory()->create([
+        'payment_order_id' => $paymentOrder->id,
+        'payment_method_id' => $paymentMethod->id,
+    ]);
+
+    $this->actingAs($user)->put(route('sales.payment-methods.update', $paymentMethod), [
+        'name' => $paymentMethod->name,
+        'kind' => 'tarjeta',
+        'is_active' => true,
+    ])->assertSessionHasErrors(['kind']);
+
+    expect($paymentMethod->fresh()->kind)->toBe(PaymentMethodKind::Cash);
 });
