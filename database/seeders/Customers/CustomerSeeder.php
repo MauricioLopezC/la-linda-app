@@ -37,13 +37,13 @@ class CustomerSeeder extends Seeder
         $demoCustomers = [
             [
                 'person_type' => PersonType::Juridica,
-                'name' => 'Distribuidora del Norte S.A.',
+                'name' => 'Rotisería La Esquina S.R.L.',
                 'id_type' => CustomerIdType::Cuit,
-                'id_number' => '30500858628',
+                'id_number' => '30716485273',
                 'tax_condition' => CustomerTaxCondition::ResponsibleInscripto,
                 'address' => 'Av. Independencia 1250, Salta',
                 'phone' => '+54 387 431-2200',
-                'email' => 'ventas@distribuidoranorte.com.ar',
+                'email' => 'compras@rotiserialaesquina.com.ar',
                 'is_active' => true,
                 'is_default' => false,
             ],
@@ -92,13 +92,13 @@ class CustomerSeeder extends Seeder
             );
         }
 
-        // 3. La distribuidora compra con la lista particular "Mayorista" (HU-022), para
+        // 3. La rotisería compra con la lista particular "Mayorista" (HU-022), para
         //    mostrar el paso 1 de la cascada de precios en la venta de mostrador.
         $mayorista = PriceList::query()->where('name_normalized', 'mayorista')->first();
 
         if ($mayorista !== null) {
             Customer::query()
-                ->where('id_number', '30500858628')
+                ->where('id_number', '30716485273')
                 ->update(['price_list_id' => $mayorista->id]);
         }
     }
