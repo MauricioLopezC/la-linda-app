@@ -9,7 +9,11 @@ import { create } from '@/routes/sales/cash-sessions';
  * cash session when they have none.
  */
 export function CashSessionIndicator() {
-  const { cashSession } = usePage().props;
+  const { auth, cashSession } = usePage().props;
+
+  if (auth?.user?.role !== 'personal_interno') {
+    return null;
+  }
 
   if (cashSession === null) {
     return (

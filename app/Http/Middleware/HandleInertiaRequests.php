@@ -43,18 +43,19 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
-            'flash' => function () use ($request) {
-                /** @var array<int, string> $keys */
-                $keys = $request->session()->get('_flash.old', []);
-
-                return collect($keys)
-                    ->mapWithKeys(fn (string $key) => [$key => $request->session()->get($key)])
-                    ->toArray();
-            },
+            'flash' => [
+                'success' => $request->session()->get('success'),
+                'error' => $request->session()->get('error'),
+                'warning' => $request->session()->get('warning'),
+                'info' => $request->session()->get('info'),
+                'status' => $request->session()->get('status'),
+            ],
             'cashSession' => function () use ($request): ?OpenCashSessionData {
-                $cashSession = $request->user() === null
-                    ? null
-                    : CashSession::query()->openForUser($request->user()->id)->with('pointOfSale.warehouse.branch')->first();
+                if (! $request->user()?->isInternal()) {
+                    return null;
+                }
+
+                $cashSession = CashSession::query()->openForUser($request->user()->id)->with('pointOfSale.warehouse.branch')->first();
 
                 return $cashSession === null ? null : OpenCashSessionData::fromModel($cashSession);
             },

@@ -13,9 +13,14 @@ import { request } from '@/routes/password';
 type Props = {
   status?: string;
   canResetPassword: boolean;
+  canRegister?: boolean;
 };
 
-export default function Login({ status, canResetPassword }: Props) {
+export default function Login({
+  status,
+  canResetPassword,
+  canRegister,
+}: Props) {
   return (
     <>
       <Head title="Iniciar sesión" />
@@ -82,6 +87,15 @@ export default function Login({ status, canResetPassword }: Props) {
                 {processing && <Spinner />}
                 Iniciar sesión
               </Button>
+
+              {canRegister && (
+                <div className="text-center text-sm text-muted-foreground">
+                  ¿Sos cliente y no tenés cuenta?{' '}
+                  <TextLink href="/register" tabIndex={6}>
+                    Registrate en la tienda online
+                  </TextLink>
+                </div>
+              )}
             </div>
           </>
         )}

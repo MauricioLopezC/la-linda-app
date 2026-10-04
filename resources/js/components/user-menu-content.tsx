@@ -18,6 +18,7 @@ type Props = {
 
 export function UserMenuContent({ user }: Props) {
   const cleanup = useMobileNavigation();
+  const isClient = user.role === 'cliente';
 
   const handleLogout = () => {
     cleanup();
@@ -36,12 +37,12 @@ export function UserMenuContent({ user }: Props) {
         <DropdownMenuItem asChild>
           <Link
             className="block w-full cursor-pointer"
-            href={edit()}
+            href={isClient ? '/tienda/mi-cuenta' : edit()}
             prefetch
             onClick={cleanup}
           >
             <Settings className="mr-2" />
-            Configuración
+            {isClient ? 'Mi cuenta' : 'Configuración'}
           </Link>
         </DropdownMenuItem>
       </DropdownMenuGroup>

@@ -1,4 +1,4 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import {
   Banknote,
   Boxes,
@@ -24,6 +24,8 @@ import {
   Wallet,
   Warehouse,
   Store,
+  LogIn,
+  UserPlus,
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
@@ -38,7 +40,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { dashboard } from '@/routes';
+import { dashboard, login, register } from '@/routes';
 import { index as articles } from '@/routes/catalog/articles';
 import { index as brands } from '@/routes/catalog/brands';
 import { index as categories } from '@/routes/catalog/categories';
@@ -214,6 +216,57 @@ const navGroups: NavGroup[] = [
       },
     ],
   },
+  {
+    label: 'Tienda Online',
+    items: [
+      {
+        title: 'Ir a la tienda online',
+        href: '/tienda',
+        icon: Store,
+      },
+    ],
+  },
+];
+
+const clientNavGroups: NavGroup[] = [
+  {
+    label: 'Tienda Online',
+    items: [
+      {
+        title: 'Tienda Online',
+        href: '/tienda',
+        icon: Store,
+      },
+      {
+        title: 'Mi cuenta',
+        href: '/tienda/mi-cuenta',
+        icon: Users,
+      },
+    ],
+  },
+];
+
+const guestNavGroups: NavGroup[] = [
+  {
+    label: 'Tienda Online',
+    items: [
+      {
+        title: 'Tienda Online',
+        href: '/tienda',
+        icon: Store,
+      },
+      {
+        title: 'Iniciar sesión',
+        href: login(),
+        icon: LogIn,
+      },
+      {
+        title: 'Registrarse',
+        href: register(),
+        icon: UserPlus,
+      },
+    ],
+  },
 ];
 
 const footerNavItems: NavItem[] = [
@@ -231,13 +284,23 @@ const footerNavItems: NavItem[] = [
 ];
 
 export function AppSidebar() {
+  const { auth } = usePage().props;
+  const isInternalStaff = auth?.user?.role === 'personal_interno';
+  const isClient = auth?.user?.role === 'cliente';
+
+  const groups = isInternalStaff
+    ? navGroups
+    : isClient
+      ? clientNavGroups
+      : guestNavGroups;
+
   return (
     <Sidebar collapsible="icon" variant="inset">
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
-              <Link href={dashboard()} prefetch>
+              <Link href={isInternalStaff ? dashboard() : '/tienda'} prefetch>
                 <AppLogo />
               </Link>
             </SidebarMenuButton>
@@ -246,7 +309,7 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
-        <NavMain groups={navGroups} />
+        <NavMain groups={groups} />
       </SidebarContent>
 
       <SidebarFooter>
