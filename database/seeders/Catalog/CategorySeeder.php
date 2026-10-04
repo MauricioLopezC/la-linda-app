@@ -24,36 +24,19 @@ class CategorySeeder extends Seeder
                 'Gaseosas',
                 'Aguas y Saborizadas',
                 'Cervezas',
-                'Jugos',
             ],
             'Lácteos y Frescos' => [
                 'Leches',
                 'Yogures',
                 'Quesos',
-                'Mantecas y Cremas',
             ],
-            'Infusiones y Desayuno' => [
+            'Desayuno y Merienda' => [
                 'Yerba Mate',
-                'Café y Té',
                 'Galletitas y Snacks',
             ],
-            'Limpieza' => [
+            'Limpieza y Cuidado' => [
                 'Cuidado de la Ropa',
-                'Lavandinas y Desinfectantes',
-                'Lavavajillas',
-            ],
-            'Perfumería y Cuidado Personal' => [
-                'Higiene Bucal',
-                'Jabones y Champús',
-                'Desodorantes',
-            ],
-            'Congelados' => [
-                'Verduras Congeladas',
-                'Hamburguesas y Rebozados',
-            ],
-            'Panadería y Confitería' => [
-                'Panificados',
-                'Repostería',
+                'Desinfectantes y Lavavajillas',
             ],
             'Frutas y Verduras' => [
                 'Frutas',

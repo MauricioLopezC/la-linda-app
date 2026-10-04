@@ -24,6 +24,9 @@ class UpdateArticle
                 : $article->vat_rate_id,
             'status' => isset($data['status']) ? ArticleStatus::from($data['status']) : $article->status,
             'is_online_publishable' => isset($data['is_online_publishable']) ? (bool) $data['is_online_publishable'] : false,
+            'image_url' => array_key_exists('image_url', $data)
+                ? (! empty($data['image_url']) ? (string) $data['image_url'] : null)
+                : $article->image_url,
         ]);
 
         return $article;

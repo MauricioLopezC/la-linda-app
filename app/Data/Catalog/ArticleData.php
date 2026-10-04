@@ -24,6 +24,7 @@ class ArticleData extends Data
         public string $status,
         public string $status_label,
         public bool $is_online_publishable,
+        public ?string $image_url,
         /** @var array<ArticleSupplierData> */
         public array $suppliers = [],
     ) {}
@@ -47,6 +48,7 @@ class ArticleData extends Data
             status: $article->status->value,
             status_label: $article->status->label(),
             is_online_publishable: $article->is_online_publishable,
+            image_url: $article->image_url,
             suppliers: $article->relationLoaded('articleSuppliers')
                 ? $article->articleSuppliers->map(function ($pivot) use ($article) {
                     $pivot->setRelation('article', $article);

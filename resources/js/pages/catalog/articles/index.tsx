@@ -78,6 +78,7 @@ type ArticleFormData = {
   vat_rate_id: string;
   status: string;
   is_online_publishable: boolean;
+  image_url: string;
 };
 
 const NO_BRAND = 'none';
@@ -94,6 +95,7 @@ const emptyForm: ArticleFormData = {
   vat_rate_id: '',
   status: 'active',
   is_online_publishable: false,
+  image_url: '',
 };
 
 const statusBadgeVariant = (status: string) => {
@@ -218,6 +220,7 @@ export default function ArticlesIndex({
       vat_rate_id: article.vat_rate_id ? String(article.vat_rate_id) : '',
       status: article.status,
       is_online_publishable: article.is_online_publishable,
+      image_url: article.image_url ?? '',
     });
     editForm.clearErrors();
     setEditingArticle(article);
@@ -468,6 +471,36 @@ export default function ArticlesIndex({
         </Label>
       </div>
       <InputError message={form.errors.is_online_publishable} />
+
+      <div className="grid gap-2">
+        <Label htmlFor={`${prefix}-article-image-url`}>
+          URL de la imagen del producto
+        </Label>
+        <Input
+          id={`${prefix}-article-image-url`}
+          type="url"
+          placeholder="https://ejemplo.com/imagenes/producto.jpg"
+          value={form.data.image_url}
+          onChange={(e) => form.setData('image_url', e.target.value)}
+        />
+        <InputError message={form.errors.image_url} />
+
+        {form.data.image_url && (
+          <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/20 p-2.5">
+            <img
+              src={form.data.image_url}
+              alt="Vista previa"
+              className="size-12 rounded-md border border-border bg-background object-contain p-1"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+              }}
+            />
+            <span className="text-xs text-muted-foreground">
+              Vista previa de la imagen cargada
+            </span>
+          </div>
+        )}
+      </div>
     </div>
   );
 
