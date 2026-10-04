@@ -41,6 +41,7 @@ class StoreArticleRequest extends FormRequest
             ],
             'status' => ['nullable', 'string', Rule::enum(ArticleStatus::class)],
             'is_online_publishable' => ['nullable', 'boolean'],
+            'image_url' => ['nullable', 'string', 'max:500'],
         ];
     }
 
@@ -57,6 +58,7 @@ class StoreArticleRequest extends FormRequest
             'vat_rate_id' => 'alícuota de IVA',
             'status' => 'estado',
             'is_online_publishable' => 'publicable en canal online',
+            'image_url' => 'URL de imagen',
         ];
     }
 
@@ -68,6 +70,7 @@ class StoreArticleRequest extends FormRequest
             'barcode' => $this->blankToNull($this->input('barcode')),
             'brand_id' => $this->blankToNull($this->input('brand_id')),
             'vat_rate_id' => $this->blankToNull($this->input('vat_rate_id')),
+            'image_url' => $this->blankToNull($this->input('image_url')),
         ]);
     }
 

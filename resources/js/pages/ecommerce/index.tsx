@@ -65,17 +65,21 @@ function ArticleCardImage({
 
   if (src && !hasError) {
     return (
-      <img
-        src={src}
-        alt={alt}
-        className={
-          size === 'card'
-            ? 'size-full object-contain p-4 transition-transform duration-300 group-hover:scale-105'
-            : 'max-h-72 w-full object-contain p-4'
-        }
-        loading="lazy"
-        onError={() => setHasError(true)}
-      />
+      <div
+        className={`flex size-full items-center justify-center ${
+          size === 'card' ? 'p-4' : 'p-6'
+        }`}
+      >
+        <img
+          src={src}
+          alt={alt}
+          className={`size-full object-contain transition-transform duration-300 ${
+            size === 'card' ? 'group-hover:scale-105' : ''
+          }`}
+          loading="lazy"
+          onError={() => setHasError(true)}
+        />
+      </div>
     );
   }
 
@@ -366,7 +370,7 @@ export default function StoreHome({ articles, categories, filters }: Props) {
                   className="group flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-2xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
                 >
                   {/* Image Area */}
-                  <div className="relative flex aspect-square w-full items-center justify-center border-b border-border bg-muted/20 select-none">
+                  <div className="relative flex aspect-square w-full items-center justify-center overflow-hidden border-b border-border bg-muted/20 select-none">
                     <ArticleCardImage
                       key={article.id}
                       src={article.image_url}
@@ -556,7 +560,7 @@ export default function StoreHome({ articles, categories, filters }: Props) {
           <DialogContent className="overflow-hidden p-0 sm:max-w-xl md:max-w-2xl">
             <div className="grid grid-cols-1 md:grid-cols-2">
               {/* Modal Left: Product Graphic */}
-              <div className="relative flex aspect-square items-center justify-center border-b border-border bg-muted/20 md:border-r md:border-b-0">
+              <div className="relative flex aspect-square w-full items-center justify-center overflow-hidden border-b border-border bg-muted/20 md:border-r md:border-b-0">
                 <ArticleCardImage
                   key={previewArticle.id}
                   src={previewArticle.image_url}
