@@ -5,6 +5,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from '@/components/ui/sidebar';
 import { toUrl } from '@/lib/utils';
 import type { NavItem } from '@/types';
@@ -16,6 +17,9 @@ export function NavFooter({
 }: ComponentPropsWithoutRef<typeof SidebarGroup> & {
   items: NavItem[];
 }) {
+  const { state } = useSidebar();
+  const isCollapsed = state === 'collapsed';
+
   return (
     <SidebarGroup
       {...props}
@@ -35,7 +39,7 @@ export function NavFooter({
                   rel="noopener noreferrer"
                 >
                   {item.icon && <item.icon className="h-5 w-5" />}
-                  <span>{item.title}</span>
+                  {!isCollapsed && <span>{item.title}</span>}
                 </a>
               </SidebarMenuButton>
             </SidebarMenuItem>
