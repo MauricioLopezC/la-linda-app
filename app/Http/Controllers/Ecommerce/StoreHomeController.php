@@ -36,8 +36,14 @@ class StoreHomeController extends Controller
             ->orderBy('name')
             ->get();
 
+        $suggestedArticles = [];
+        if ($articles->isEmpty() && (! empty($filters['search']) || ! empty($filters['category_id']))) {
+            $suggestedArticles = $action->execute([], $customer, perPage: 8)->items();
+        }
+
         return Inertia::render('ecommerce/index', [
             'articles' => $articles,
+            'suggestedArticles' => $suggestedArticles,
             'categories' => CategoryData::collect($categories),
             'filters' => [
                 'search' => (string) ($filters['search'] ?? ''),

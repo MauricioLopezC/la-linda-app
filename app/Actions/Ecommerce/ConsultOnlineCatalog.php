@@ -13,6 +13,7 @@ use App\Models\Customers\Customer;
 use App\Models\Pricing\PriceList;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Str;
 
 class ConsultOnlineCatalog
 {
@@ -140,6 +141,8 @@ class ConsultOnlineCatalog
             ->orderBy('articles.id');
     }
 
+    private const NORMALIZED_DESCRIPTION_SQL = "REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(articles.description), 'á', 'a'), 'é', 'e'), 'í', 'i'), 'ó', 'o'), 'ú', 'u'), 'ü', 'u'), 'Á', 'a'), 'É', 'e'), 'Í', 'i'), 'Ó', 'o'), 'Ú', 'u'), 'Ü', 'u'), 'ñ', 'n'), 'Ñ', 'n')";
+
     /**
      * @param  Builder<Article>  $query
      * @param  array{search?: ?string, category_id?: ?int}  $filters
@@ -148,8 +151,13 @@ class ConsultOnlineCatalog
     private function applyFilters(Builder $query, array $filters): Builder
     {
         if (! empty($filters['search'])) {
-            $search = mb_strtolower(trim((string) $filters['search']));
-            $query->whereRaw('LOWER(articles.description) LIKE ?', ["%{$search}%"]);
+            $search = Str::of((string) $filters['search'])
+                ->trim()
+                ->transliterate()
+                ->lower()
+                ->toString();
+
+            $query->whereRaw(self::NORMALIZED_DESCRIPTION_SQL.' LIKE ?', ["%{$search}%"]);
         }
 
         if (! empty($filters['category_id'])) {

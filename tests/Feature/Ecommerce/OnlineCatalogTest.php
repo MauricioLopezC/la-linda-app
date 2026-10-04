@@ -616,3 +616,120 @@ test('catalog categories prop only includes root categories for navigation', fun
         ->where('categories.1.name', 'Bebidas')
     );
 });
+
+test('search by description is accent-insensitive and case-insensitive', function () {
+    $onlineList = PriceList::factory()
+        ->forChannel(PriceListChannel::Online)
+        ->create();
+
+    $sugarArticle = Article::factory()->create([
+        'description' => 'Azúcar Blanco Ledesma 1kg',
+        'status' => ArticleStatus::Active,
+        'is_online_publishable' => true,
+    ]);
+
+    $coffeeArticle = Article::factory()->create([
+        'description' => 'Café Molido La Virginia 500g',
+        'status' => ArticleStatus::Active,
+        'is_online_publishable' => true,
+    ]);
+
+    PriceListItem::factory()->create([
+        'price_list_id' => $onlineList->id,
+        'article_id' => $sugarArticle->id,
+        'price' => '1200.00',
+    ]);
+
+    PriceListItem::factory()->create([
+        'price_list_id' => $onlineList->id,
+        'article_id' => $coffeeArticle->id,
+        'price' => '3500.00',
+    ]);
+
+    // Search without accents for an accented word in DB
+    $resWithoutAccent = $this->get(route('tienda.home', ['search' => 'azucar']));
+    $resWithoutAccent->assertOk();
+    $resWithoutAccent->assertInertia(fn (Assert $page) => $page
+        ->has('articles.data', 1)
+        ->where('articles.data.0.id', $sugarArticle->id)
+    );
+
+    // Search with uppercase and accents
+    $resUppercase = $this->get(route('tienda.home', ['search' => 'AZÚCAR']));
+    $resUppercase->assertOk();
+    $resUppercase->assertInertia(fn (Assert $page) => $page
+        ->has('articles.data', 1)
+        ->where('articles.data.0.id', $sugarArticle->id)
+    );
+
+    // Search without accents for café
+    $resCoffee = $this->get(route('tienda.home', ['search' => 'cafe']));
+    $resCoffee->assertOk();
+    $resCoffee->assertInertia(fn (Assert $page) => $page
+        ->has('articles.data', 1)
+        ->where('articles.data.0.id', $coffeeArticle->id)
+    );
+});
+
+test('when search or category filter yields no articles, suggested articles are returned', function () {
+    $onlineList = PriceList::factory()
+        ->forChannel(PriceListChannel::Online)
+        ->create();
+
+    $milkArticle = Article::factory()->create([
+        'description' => 'Leche Entera 1L',
+        'status' => ArticleStatus::Active,
+        'is_online_publishable' => true,
+    ]);
+
+    $breadArticle = Article::factory()->create([
+        'description' => 'Pan Blanco 500g',
+        'status' => ArticleStatus::Active,
+        'is_online_publishable' => true,
+    ]);
+
+    foreach ([$milkArticle, $breadArticle] as $art) {
+        PriceListItem::factory()->create([
+            'price_list_id' => $onlineList->id,
+            'article_id' => $art->id,
+            'price' => '1000.00',
+        ]);
+    }
+
+    $response = $this->get(route('tienda.home', ['search' => 'articulo-inexistente-xyz']));
+
+    $response->assertOk();
+    $response->assertInertia(fn (Assert $page) => $page
+        ->component('ecommerce/index')
+        ->has('articles.data', 0)
+        ->where('articles.total', 0)
+        ->has('suggestedArticles', 2)
+    );
+});
+
+test('when articles are found in catalog, suggested articles is empty', function () {
+    $onlineList = PriceList::factory()
+        ->forChannel(PriceListChannel::Online)
+        ->create();
+
+    $article = Article::factory()->create([
+        'description' => 'Arroz Blanco 1kg',
+        'status' => ArticleStatus::Active,
+        'is_online_publishable' => true,
+    ]);
+
+    PriceListItem::factory()->create([
+        'price_list_id' => $onlineList->id,
+        'article_id' => $article->id,
+        'price' => '1200.00',
+    ]);
+
+    $response = $this->get(route('tienda.home'));
+
+    $response->assertOk();
+    $response->assertInertia(fn (Assert $page) => $page
+        ->component('ecommerce/index')
+        ->has('articles.data', 1)
+        ->has('suggestedArticles', 0)
+    );
+});

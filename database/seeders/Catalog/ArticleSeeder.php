@@ -140,7 +140,7 @@ class ArticleSeeder extends Seeder
                 'unit' => 'Unidad',
                 'barcode' => '7797890123456',
                 'is_online_publishable' => true,
-                'image_url' => 'https://images.unsplash.com/photo-1621996346565-e3d5d6281084?auto=format&fit=crop&w=600&q=80',
+                'image_url' => 'https://images.unsplash.com/photo-1612927601601-6638404737ce?auto=format&fit=crop&w=600&q=80',
             ],
             [
                 'description' => 'Cerveza Rubia Clásica Lager Quilmes Botella 1 L',
@@ -150,7 +150,7 @@ class ArticleSeeder extends Seeder
                 'unit' => 'Unidad',
                 'barcode' => '7798901234567',
                 'is_online_publishable' => true,
-                'image_url' => 'https://images.unsplash.com/photo-1608270104193-4a0bfa93433a?auto=format&fit=crop&w=600&q=80',
+                'image_url' => 'https://images.unsplash.com/photo-1600788886242-5c96aabe3757?auto=format&fit=crop&w=600&q=80',
             ],
             [
                 'description' => 'Tomate Pelado Entero en Jugo Marolio Lata 400 g',
@@ -228,7 +228,7 @@ class ArticleSeeder extends Seeder
                 'unit' => 'Unidad',
                 'barcode' => '7797890654321',
                 'is_online_publishable' => true,
-                'image_url' => 'https://images.unsplash.com/photo-1551462147-ff29053fad31?auto=format&fit=crop&w=600&q=80',
+                'image_url' => 'https://images.unsplash.com/photo-1546549032-9571cd6b27df?auto=format&fit=crop&w=600&q=80',
             ],
             [
                 'description' => 'Arroz Doble Carolina Especial Gallo Bolsa 1 kg',

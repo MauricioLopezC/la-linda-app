@@ -11,6 +11,7 @@ import {
   Search,
   ShieldCheck,
   ShoppingCart,
+  Sparkles,
   Tag,
   UserCheck,
   X,
@@ -45,6 +46,7 @@ type PaginationProps = {
 
 type Props = {
   articles: PaginationProps;
+  suggestedArticles?: Article[];
   categories: Category[];
   filters: {
     search: string;
@@ -90,7 +92,159 @@ function ArticleCardImage({
   );
 }
 
-export default function StoreHome({ articles, categories, filters }: Props) {
+function ArticleCard({
+  article,
+  qty,
+  onUpdateQuantity,
+  onAddToCart,
+  onPreview,
+}: {
+  article: Article;
+  qty: number;
+  onUpdateQuantity: (
+    id: number,
+    delta: number,
+    allowsDecimals: boolean,
+  ) => void;
+  onAddToCart: (article: Article, qty: number) => void;
+  onPreview: (article: Article) => void;
+}) {
+  return (
+    <div className="group flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-2xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
+      {/* Image Area */}
+      <div className="relative flex aspect-square w-full items-center justify-center overflow-hidden border-b border-border bg-muted/20 select-none">
+        <ArticleCardImage
+          key={article.id}
+          src={article.image_url}
+          alt={article.description}
+          size="card"
+        />
+
+        {/* Category Badge */}
+        <Badge
+          variant="secondary"
+          className="absolute top-3 left-3 border border-border/60 bg-background/90 text-xs font-normal backdrop-blur-xs"
+        >
+          {article.category_name}
+        </Badge>
+
+        {/* Particular Price Badge */}
+        {article.is_particular_price && (
+          <Badge className="absolute top-9 left-3 gap-1 bg-primary text-[10px] font-medium text-primary-foreground shadow-xs">
+            <Tag className="size-2.5" />
+            Precio preferencial
+          </Badge>
+        )}
+
+        {/* Quick View Button (Magnifying Glass) */}
+        <Button
+          type="button"
+          variant="secondary"
+          size="icon"
+          onClick={() => onPreview(article)}
+          title="Ver información del producto"
+          aria-label="Ver detalles del producto"
+          className="absolute top-3 right-3 size-8 rounded-full border border-border/60 bg-background/90 text-muted-foreground shadow-xs backdrop-blur-xs hover:bg-background hover:text-foreground"
+        >
+          <Search className="size-4" />
+        </Button>
+      </div>
+
+      {/* Article Info Body */}
+      <div className="flex flex-1 flex-col justify-between gap-3 p-4">
+        <div className="space-y-1">
+          {article.brand_name ? (
+            <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+              {article.brand_name}
+            </span>
+          ) : (
+            <span className="text-xs text-transparent select-none">-</span>
+          )}
+          <h3
+            className="line-clamp-2 min-h-[2.75rem] cursor-pointer text-base leading-snug font-bold text-foreground transition-colors hover:text-primary"
+            title={article.description}
+            onClick={() => onPreview(article)}
+          >
+            {article.description}
+          </h3>
+          <p className="text-xs text-muted-foreground">
+            Venta por {article.unit_of_measure_name.toLowerCase()}
+          </p>
+        </div>
+
+        {/* Price and Add to Cart Section */}
+        <div className="space-y-3 border-t border-border/50 pt-2.5">
+          <div>
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="text-2xl font-extrabold tracking-tight text-foreground">
+                {article.formatted_price}
+              </span>
+              <span className="text-xs font-medium text-muted-foreground">
+                /{article.unit_of_measure_abbreviation || 'u'}
+              </span>
+            </div>
+            {article.is_particular_price && (
+              <p className="mt-0.5 flex items-center gap-1 text-[11px] font-medium text-primary">
+                <Tag className="size-3" />
+                Precio de tu lista particular
+              </p>
+            )}
+          </div>
+
+          {/* Quantity Stepper and Add Button */}
+          <div className="flex items-center gap-2">
+            <div className="flex items-center rounded-lg border border-border bg-muted/30 p-0.5">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-7 rounded-md text-muted-foreground hover:text-foreground"
+                onClick={() =>
+                  onUpdateQuantity(article.id, -1, article.allows_decimals)
+                }
+                disabled={qty <= (article.allows_decimals ? 0.5 : 1)}
+                title="Disminuir cantidad"
+              >
+                <Minus className="size-3" />
+              </Button>
+              <span className="w-8 text-center text-xs font-semibold tabular-nums">
+                {qty}
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-7 rounded-md text-muted-foreground hover:text-foreground"
+                onClick={() =>
+                  onUpdateQuantity(article.id, 1, article.allows_decimals)
+                }
+                title="Aumentar cantidad"
+              >
+                <Plus className="size-3" />
+              </Button>
+            </div>
+
+            <Button
+              type="button"
+              className="h-8 flex-1 gap-1.5 text-xs font-semibold"
+              onClick={() => onAddToCart(article, qty)}
+            >
+              <ShoppingCart className="size-3.5" />
+              Añadir
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function StoreHome({
+  articles,
+  suggestedArticles = [],
+  categories,
+  filters,
+}: Props) {
   const { auth, flash } = usePage().props;
   const user = auth?.user;
   const flashSuccess =
@@ -355,176 +509,64 @@ export default function StoreHome({ articles, categories, filters }: Props) {
         {/* Catalog Grid */}
         {articles.data.length > 0 ? (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            {articles.data.map((article) => {
-              const qty = getArticleQty(article.id, article.allows_decimals);
-
-              return (
-                <div
-                  key={article.id}
-                  className="group flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-2xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
-                >
-                  {/* Image Area */}
-                  <div className="relative flex aspect-square w-full items-center justify-center overflow-hidden border-b border-border bg-muted/20 select-none">
-                    <ArticleCardImage
-                      key={article.id}
-                      src={article.image_url}
-                      alt={article.description}
-                      size="card"
-                    />
-
-                    {/* Category Badge */}
-                    <Badge
-                      variant="secondary"
-                      className="absolute top-3 left-3 border border-border/60 bg-background/90 text-xs font-normal backdrop-blur-xs"
-                    >
-                      {article.category_name}
-                    </Badge>
-
-                    {/* Particular Price Badge */}
-                    {article.is_particular_price && (
-                      <Badge className="absolute top-9 left-3 gap-1 bg-primary text-[10px] font-medium text-primary-foreground shadow-xs">
-                        <Tag className="size-2.5" />
-                        Precio preferencial
-                      </Badge>
-                    )}
-
-                    {/* Quick View Button (Magnifying Glass) */}
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="icon"
-                      onClick={() => setPreviewArticle(article)}
-                      title="Ver información del producto"
-                      aria-label="Ver detalles del producto"
-                      className="absolute top-3 right-3 size-8 rounded-full border border-border/60 bg-background/90 text-muted-foreground shadow-xs backdrop-blur-xs hover:bg-background hover:text-foreground"
-                    >
-                      <Search className="size-4" />
-                    </Button>
-                  </div>
-
-                  {/* Article Info Body */}
-                  <div className="flex flex-1 flex-col justify-between gap-3 p-4">
-                    <div className="space-y-1">
-                      {article.brand_name ? (
-                        <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                          {article.brand_name}
-                        </span>
-                      ) : (
-                        <span className="text-xs text-transparent select-none">
-                          -
-                        </span>
-                      )}
-                      <h3
-                        className="line-clamp-2 min-h-[2.75rem] cursor-pointer text-base leading-snug font-bold text-foreground transition-colors hover:text-primary"
-                        title={article.description}
-                        onClick={() => setPreviewArticle(article)}
-                      >
-                        {article.description}
-                      </h3>
-                      <p className="text-xs text-muted-foreground">
-                        Venta por {article.unit_of_measure_name.toLowerCase()}
-                      </p>
-                    </div>
-
-                    {/* Price and Add to Cart Section */}
-                    <div className="space-y-3 border-t border-border/50 pt-2.5">
-                      <div>
-                        <div className="flex items-baseline justify-between gap-2">
-                          <span className="text-2xl font-extrabold tracking-tight text-foreground">
-                            {article.formatted_price}
-                          </span>
-                          <span className="text-xs font-medium text-muted-foreground">
-                            /{article.unit_of_measure_abbreviation || 'u'}
-                          </span>
-                        </div>
-                        {article.is_particular_price && (
-                          <p className="mt-0.5 flex items-center gap-1 text-[11px] font-medium text-primary">
-                            <Tag className="size-3" />
-                            Precio de tu lista particular
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Quantity Stepper and Add Button */}
-                      <div className="flex items-center gap-2">
-                        <div className="flex items-center rounded-lg border border-border bg-muted/30 p-0.5">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="size-7 rounded-md text-muted-foreground hover:text-foreground"
-                            onClick={() =>
-                              updateQuantity(
-                                article.id,
-                                -1,
-                                article.allows_decimals,
-                              )
-                            }
-                            disabled={
-                              qty <= (article.allows_decimals ? 0.5 : 1)
-                            }
-                            title="Disminuir cantidad"
-                          >
-                            <Minus className="size-3" />
-                          </Button>
-                          <span className="w-8 text-center text-xs font-semibold tabular-nums">
-                            {qty}
-                          </span>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="size-7 rounded-md text-muted-foreground hover:text-foreground"
-                            onClick={() =>
-                              updateQuantity(
-                                article.id,
-                                1,
-                                article.allows_decimals,
-                              )
-                            }
-                            title="Aumentar cantidad"
-                          >
-                            <Plus className="size-3" />
-                          </Button>
-                        </div>
-
-                        <Button
-                          type="button"
-                          className="h-8 flex-1 gap-1.5 text-xs font-semibold"
-                          onClick={() => handleAddToCart(article, qty)}
-                        >
-                          <ShoppingCart className="size-3.5" />
-                          Añadir
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+            {articles.data.map((article) => (
+              <ArticleCard
+                key={article.id}
+                article={article}
+                qty={getArticleQty(article.id, article.allows_decimals)}
+                onUpdateQuantity={updateQuantity}
+                onAddToCart={handleAddToCart}
+                onPreview={setPreviewArticle}
+              />
+            ))}
           </div>
         ) : (
-          /* Empty State */
-          <div className="my-6 flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-card/40 p-12 text-center">
-            <div className="mb-4 flex size-16 items-center justify-center rounded-full bg-muted/60 text-muted-foreground">
-              <PackageSearch className="size-8" />
+          /* Empty State + Suggestions */
+          <div className="flex flex-col gap-10">
+            <div className="my-2 flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-card/40 p-10 text-center">
+              <div className="mb-4 flex size-16 items-center justify-center rounded-full bg-muted/60 text-muted-foreground">
+                <PackageSearch className="size-8" />
+              </div>
+              <h3 className="text-lg font-bold text-foreground">
+                No encontramos productos
+              </h3>
+              <p className="mt-1.5 max-w-sm text-sm text-muted-foreground">
+                No hay artículos que coincidan con tu búsqueda o en la categoría
+                seleccionada.
+              </p>
+              {isFiltered && (
+                <Button
+                  variant="outline"
+                  onClick={resetFilters}
+                  className="mt-5 gap-2"
+                >
+                  <FilterX className="size-4" />
+                  Ver todo el catálogo
+                </Button>
+              )}
             </div>
-            <h3 className="text-lg font-bold text-foreground">
-              No encontramos productos
-            </h3>
-            <p className="mt-1.5 max-w-sm text-sm text-muted-foreground">
-              No hay artículos que coincidan con tu búsqueda o en la categoría
-              seleccionada.
-            </p>
-            {isFiltered && (
-              <Button
-                variant="outline"
-                onClick={resetFilters}
-                className="mt-5 gap-2"
-              >
-                <FilterX className="size-4" />
-                Ver todo el catálogo
-              </Button>
+
+            {suggestedArticles.length > 0 && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 border-b border-border/60 pb-3">
+                  <Sparkles className="size-5 text-amber-500" />
+                  <h3 className="text-lg font-bold tracking-tight text-foreground">
+                    Productos que te pueden interesar
+                  </h3>
+                </div>
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+                  {suggestedArticles.map((article) => (
+                    <ArticleCard
+                      key={article.id}
+                      article={article}
+                      qty={getArticleQty(article.id, article.allows_decimals)}
+                      onUpdateQuantity={updateQuantity}
+                      onAddToCart={handleAddToCart}
+                      onPreview={setPreviewArticle}
+                    />
+                  ))}
+                </div>
+              </div>
             )}
           </div>
         )}
