@@ -52,5 +52,18 @@ class PriceListSeeder extends Seeder
                 'is_active' => true,
             ]
         );
+
+        PriceList::updateOrCreate(
+            ['name_normalized' => 'lista online'],
+            [
+                'name' => 'Lista Online',
+                'description' => 'Precios vigentes para el canal de venta online.',
+                'scope' => PriceListScope::Canal,
+                'channel' => PriceListChannel::Online,
+                'valid_from' => now()->toDateString(),
+                'valid_to' => null,
+                'is_active' => true,
+            ]
+        );
     }
 }

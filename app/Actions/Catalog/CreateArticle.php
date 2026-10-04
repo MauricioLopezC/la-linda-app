@@ -22,6 +22,7 @@ class CreateArticle
             'vat_rate_id' => ! empty($data['vat_rate_id']) ? (int) $data['vat_rate_id'] : null,
             'status' => isset($data['status']) ? ArticleStatus::from($data['status']) : ArticleStatus::Active,
             'is_online_publishable' => isset($data['is_online_publishable']) ? (bool) $data['is_online_publishable'] : false,
+            'image_url' => ! empty($data['image_url']) ? (string) $data['image_url'] : null,
         ]);
     }
 }
