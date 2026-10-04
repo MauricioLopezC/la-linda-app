@@ -10,6 +10,7 @@ use App\Models\Ecommerce\CartItem;
 use App\Models\Ecommerce\CustomerAccount;
 use App\Models\Ecommerce\WebOrder;
 use App\Models\Pricing\PriceList;
+use App\Models\User;
 use App\Rules\Customers\ValidCuit;
 use Database\Factories\Customers\CustomerFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -156,6 +157,16 @@ class Customer extends Model
     public function account(): HasOne
     {
         return $this->hasOne(CustomerAccount::class);
+    }
+
+    /**
+     * The User login of this customer when registered with role 'cliente'.
+     *
+     * @return HasOne<User, $this>
+     */
+    public function user(): HasOne
+    {
+        return $this->hasOne(User::class);
     }
 
     /**

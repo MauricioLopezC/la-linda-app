@@ -6,6 +6,8 @@ use App\Http\Controllers\Catalog\BrandController;
 use App\Http\Controllers\Catalog\CategoryController;
 use App\Http\Controllers\Catalog\UnitOfMeasureController;
 use App\Http\Controllers\Customers\CustomerController;
+use App\Http\Controllers\Ecommerce\CustomerAccountController;
+use App\Http\Controllers\Ecommerce\StoreHomeController;
 use App\Http\Controllers\Inventory\StockAdjustmentController;
 use App\Http\Controllers\Inventory\StockConsultationController;
 use App\Http\Controllers\Inventory\StockMovementHistoryController;
@@ -28,7 +30,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'welcome')->name('home');
 
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['internal.staff', 'verified'])->group(function () {
     Route::inertia('dashboard', 'dashboard')->name('dashboard');
 
     Route::prefix('catalog/categories')->name('catalog.categories.')->group(function () {
@@ -209,6 +211,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/', [SupplierAccountStatementController::class, 'index'])->name('index');
         Route::get('export/csv', [SupplierAccountStatementController::class, 'exportCsv'])->name('export.csv');
         Route::get('export/excel', [SupplierAccountStatementController::class, 'exportExcel'])->name('export.excel');
+    });
+});
+
+Route::prefix('tienda')->name('tienda.')->group(function () {
+    Route::get('/', [StoreHomeController::class, 'index'])->name('home');
+    Route::redirect('registro', '/register')->name('register');
+    Route::redirect('login', '/login')->name('login');
+
+    Route::middleware('auth')->group(function () {
+        Route::get('mi-cuenta', [CustomerAccountController::class, 'show'])->name('account.show');
+        Route::put('mi-cuenta', [CustomerAccountController::class, 'update'])->name('account.update');
     });
 });
 
