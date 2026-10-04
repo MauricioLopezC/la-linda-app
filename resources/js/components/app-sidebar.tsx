@@ -59,7 +59,7 @@ import { index as purchaseOrders } from '@/routes/purchasing/orders';
 import { index as paymentOrders } from '@/routes/purchasing/payment-orders';
 import { index as suppliers } from '@/routes/purchasing/suppliers';
 import { index as supplierVouchers } from '@/routes/purchasing/vouchers';
-import { create as openCashSession } from '@/routes/sales/cash-sessions';
+import { current as currentCashSession } from '@/routes/sales/cash-sessions';
 import { index as paymentMethods } from '@/routes/sales/payment-methods';
 import { index as pointsOfSale } from '@/routes/sales/points-of-sale';
 import { index as sales } from '@/routes/sales/sales';
@@ -180,8 +180,8 @@ const navGroups: NavGroup[] = [
     label: 'Ventas',
     items: [
       {
-        title: 'Abrir caja',
-        href: openCashSession(),
+        title: 'Turno de caja',
+        href: currentCashSession(),
         icon: Vault,
       },
       {

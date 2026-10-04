@@ -1,5 +1,5 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { Eye, Loader2, Plus, Store } from 'lucide-react';
+import { Eye, Loader2, Plus, Store, Vault } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import Heading from '@/components/heading';
@@ -25,7 +25,10 @@ import {
 } from '@/components/ui/table';
 import { formatCurrency } from '@/lib/utils';
 import { dashboard } from '@/routes';
-import { create as createCashSession } from '@/routes/sales/cash-sessions';
+import {
+  create as createCashSession,
+  show as showCashSession,
+} from '@/routes/sales/cash-sessions';
 import { index, show, store } from '@/routes/sales/sales';
 import type { BreadcrumbItem } from '@/types';
 
@@ -119,14 +122,22 @@ export default function SalesIndex({
             description="Ventas de mostrador abiertas y descartadas."
           />
           {cashSession !== null ? (
-            <Button onClick={handleOpenSale} disabled={isOpening}>
-              {isOpening ? (
-                <Loader2 className="mr-1.5 size-4 animate-spin" />
-              ) : (
-                <Plus className="mr-1.5 size-4" />
-              )}
-              Abrir venta
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button asChild variant="outline">
+                <Link href={showCashSession.url(cashSession.id)}>
+                  <Vault className="mr-1.5 size-4" />
+                  Ver mi turno
+                </Link>
+              </Button>
+              <Button onClick={handleOpenSale} disabled={isOpening}>
+                {isOpening ? (
+                  <Loader2 className="mr-1.5 size-4 animate-spin" />
+                ) : (
+                  <Plus className="mr-1.5 size-4" />
+                )}
+                Abrir venta
+              </Button>
+            </div>
           ) : (
             <Button asChild>
               <Link href={createCashSession.url()}>
@@ -241,9 +252,16 @@ export default function SalesIndex({
                   <TableRow key={sale.id}>
                     <TableCell className="font-mono">{sale.id}</TableCell>
                     <TableCell>
-                      {sale.cash_session_id
-                        ? `Turno #${sale.cash_session_id}`
-                        : '—'}
+                      {sale.cash_session_id ? (
+                        <Link
+                          href={showCashSession.url(sale.cash_session_id)}
+                          className="font-medium text-primary underline underline-offset-2 hover:opacity-80"
+                        >
+                          Turno #{sale.cash_session_id}
+                        </Link>
+                      ) : (
+                        '—'
+                      )}
                     </TableCell>
                     <TableCell>{sale.opened_at_formatted}</TableCell>
                     <TableCell>

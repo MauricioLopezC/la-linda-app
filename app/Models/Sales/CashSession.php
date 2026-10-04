@@ -3,7 +3,9 @@
 namespace App\Models\Sales;
 
 use App\Enums\Sales\CashCountMoment;
+use App\Enums\Sales\CashMovementType;
 use App\Enums\Sales\CashSessionStatus;
+use App\Enums\Sales\PaymentMethodKind;
 use App\Models\User;
 use Database\Factories\Sales\CashSessionFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -14,6 +16,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 /**
  * A cash session: a cashier's shift at a point of sale (HU-057). Its id is the "cash id" every
@@ -139,5 +142,82 @@ class CashSession extends Model
     public function isOpen(): bool
     {
         return $this->status === CashSessionStatus::Open;
+    }
+
+    /**
+     * The expected cash in the drawer according to recorded cash movements (HU-058 / HU-060).
+     * Opening, cash sales and cash incomes add up; cash expenses subtract.
+     *
+     * @return numeric-string
+     */
+    public function expectedCash(): string
+    {
+        $balance = DB::table('cash_movements')
+            ->join('payment_methods', 'payment_methods.id', '=', 'cash_movements.payment_method_id')
+            ->where('cash_movements.cash_session_id', $this->id)
+            ->where('payment_methods.kind', PaymentMethodKind::Cash->value)
+            ->selectRaw("
+                COALESCE(SUM(
+                    CASE
+                        WHEN cash_movements.type IN ('apertura', 'venta', 'ingreso') THEN cash_movements.amount
+                        WHEN cash_movements.type = 'egreso' THEN -cash_movements.amount
+                        ELSE 0
+                    END
+                ), 0) as balance
+            ")
+            ->value('balance');
+
+        return number_format((float) ($balance ?? 0), 2, '.', '');
+    }
+
+    /**
+     * Breakdown of cash totals by category for this shift.
+     *
+     * @return array{
+     *     opening_amount: string,
+     *     sales_cash_amount: string,
+     *     income_amount: string,
+     *     expense_amount: string,
+     *     expected_cash: string
+     * }
+     */
+    public function movementsSummary(): array
+    {
+        $rows = DB::table('cash_movements')
+            ->join('payment_methods', 'payment_methods.id', '=', 'cash_movements.payment_method_id')
+            ->where('cash_movements.cash_session_id', $this->id)
+            ->selectRaw('cash_movements.type, payment_methods.kind, SUM(cash_movements.amount) as total')
+            ->groupBy('cash_movements.type', 'payment_methods.kind')
+            ->get();
+
+        $opening = '0.00';
+        $salesCash = '0.00';
+        $income = '0.00';
+        $expense = '0.00';
+
+        foreach ($rows as $row) {
+            $amount = (float) $row->total;
+            if ($row->type === CashMovementType::Opening->value) {
+                $opening = number_format($amount, 2, '.', '');
+            } elseif ($row->type === CashMovementType::Sale->value && $row->kind === PaymentMethodKind::Cash->value) {
+                $salesCash = number_format($amount, 2, '.', '');
+            } elseif ($row->type === CashMovementType::Income->value) {
+                $income = number_format($amount, 2, '.', '');
+            } elseif ($row->type === CashMovementType::Expense->value) {
+                $expense = number_format($amount, 2, '.', '');
+            }
+        }
+
+        if ($opening === '0.00' && (float) $this->opening_amount > 0) {
+            $opening = number_format((float) $this->opening_amount, 2, '.', '');
+        }
+
+        return [
+            'opening_amount' => $opening,
+            'sales_cash_amount' => $salesCash,
+            'income_amount' => $income,
+            'expense_amount' => $expense,
+            'expected_cash' => $this->expectedCash(),
+        ];
     }
 }
