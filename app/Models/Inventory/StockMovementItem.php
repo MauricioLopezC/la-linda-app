@@ -61,4 +61,13 @@ class StockMovementItem extends Model
     {
         return $this->belongsTo(Article::class);
     }
+
+    /**
+     * Check if this line created a stock conflict (leaving balance negative).
+     */
+    public function hasStockConflict(): bool
+    {
+        return $this->system_quantity !== null
+            && round((float) $this->system_quantity + (float) $this->quantity, 3) < 0;
+    }
 }

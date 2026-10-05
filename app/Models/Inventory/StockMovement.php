@@ -136,4 +136,12 @@ class StockMovement extends Model
     {
         return $this->hasOne(StockMovement::class, 'reversal_of_movement_id');
     }
+
+    /**
+     * Check if any line in this movement has a stock conflict.
+     */
+    public function hasStockConflict(): bool
+    {
+        return $this->items->contains(fn (StockMovementItem $item): bool => $item->hasStockConflict());
+    }
 }

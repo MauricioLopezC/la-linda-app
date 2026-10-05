@@ -1,10 +1,11 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import {
   Ban,
   CheckCircle2,
   ChevronsUpDown,
   CreditCard,
   Loader2,
+  Package,
   Plus,
   ScanBarcode,
   Search,
@@ -56,6 +57,7 @@ import {
 } from '@/components/ui/table';
 import { formatCurrency } from '@/lib/utils';
 import { dashboard } from '@/routes';
+import { show as showAdjustment } from '@/routes/inventory/adjustments';
 import {
   confirmPayment,
   discard,
@@ -240,7 +242,19 @@ export default function SaleShow({
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {sale.stock_movement_id && (
+                <Button variant="outline" size="sm" asChild>
+                  <Link
+                    href={showAdjustment({
+                      stock_movement: sale.stock_movement_id,
+                    })}
+                  >
+                    <Package className="mr-1.5 size-4 text-primary" />
+                    Movimiento de stock #{sale.stock_movement_id}
+                  </Link>
+                </Button>
+              )}
               <Button
                 variant="default"
                 size="sm"
@@ -294,6 +308,28 @@ export default function SaleShow({
               </span>
             </div>
           </div>
+          {sale.stock_movement_id && (
+            <div className="space-y-1.5">
+              <p className="text-sm font-medium text-muted-foreground">
+                Stock descontado
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                asChild
+                className="h-7 gap-1.5 text-xs font-normal"
+              >
+                <Link
+                  href={showAdjustment({
+                    stock_movement: sale.stock_movement_id,
+                  })}
+                >
+                  <Package className="size-3 text-primary" />
+                  Salida #{sale.stock_movement_id}
+                </Link>
+              </Button>
+            </div>
+          )}
         </div>
 
         <div className="rounded-xl border border-sidebar-border bg-card p-4 shadow-sm">

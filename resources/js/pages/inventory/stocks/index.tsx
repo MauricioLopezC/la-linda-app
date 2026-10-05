@@ -1,5 +1,6 @@
 import { Head, Link, router } from '@inertiajs/react';
 import {
+  AlertTriangle,
   Building2,
   CheckCircle2,
   History,
@@ -472,14 +473,28 @@ export default function StockConsultationIndex({
                         {stock.branch_name}
                       </span>
                     </TableCell>
-                    <TableCell className="text-right font-mono text-base font-bold text-foreground">
+                    <TableCell
+                      className={`text-right font-mono text-base font-bold ${
+                        stock.is_negative || stock.quantity < 0
+                          ? 'text-rose-600 dark:text-rose-400'
+                          : 'text-foreground'
+                      }`}
+                    >
                       {formatStockQuantity(
                         stock.quantity,
                         stock.unit_of_measure_name,
                       )}
                     </TableCell>
                     <TableCell className="text-center">
-                      {stock.is_out_of_stock ? (
+                      {stock.is_negative || stock.quantity < 0 ? (
+                        <Badge
+                          variant="outline"
+                          className="gap-1 border-rose-500/30 bg-rose-500/10 font-semibold text-rose-700 dark:text-rose-400"
+                        >
+                          <AlertTriangle className="size-3" />
+                          Existencia negativa
+                        </Badge>
+                      ) : stock.is_out_of_stock ? (
                         <Badge variant="destructive" className="gap-1">
                           <XCircle className="size-3" />
                           Sin stock

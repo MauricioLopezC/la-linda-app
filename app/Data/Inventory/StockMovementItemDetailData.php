@@ -18,6 +18,8 @@ class StockMovementItemDetailData extends Data
         public string $unit_of_measure_name,
         public string $unit_of_measure_abbreviation,
         public string $quantity,
+        public ?string $system_quantity,
+        public bool $is_conflict,
     ) {}
 
     public static function fromModel(StockMovementItem $item): self
@@ -33,6 +35,8 @@ class StockMovementItemDetailData extends Data
             unit_of_measure_name: $item->article->unitOfMeasure->name,
             unit_of_measure_abbreviation: $item->article->unitOfMeasure->abbreviation,
             quantity: sprintf('%.3f', (float) $item->quantity),
+            system_quantity: $item->system_quantity !== null ? sprintf('%.3f', (float) $item->system_quantity) : null,
+            is_conflict: $item->hasStockConflict(),
         );
     }
 }
