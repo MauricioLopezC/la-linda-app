@@ -9,6 +9,7 @@ use App\Enums\Sales\SaleChannel;
 use App\Enums\Sales\SaleStatus;
 use App\Models\Customers\Customer;
 use App\Models\Inventory\StockMovement;
+use App\Models\Pricing\PriceList;
 use App\Models\User;
 use Database\Factories\Sales\SaleFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -32,6 +33,7 @@ use Illuminate\Support\Carbon;
  * @property int $point_of_sale_id
  * @property SaleChannel $channel
  * @property int|null $cash_session_id
+ * @property int|null $price_list_id
  * @property int $customer_id
  * @property int|null $user_id
  * @property Carbon $opened_at
@@ -42,6 +44,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $updated_at
  * @property PointOfSale $pointOfSale
  * @property CashSession|null $cashSession
+ * @property PriceList|null $priceList
  * @property Customer $customer
  * @property User|null $user
  * @property Collection<int, SaleItem> $items
@@ -53,6 +56,7 @@ use Illuminate\Support\Carbon;
     'point_of_sale_id',
     'channel',
     'cash_session_id',
+    'price_list_id',
     'customer_id',
     'user_id',
     'opened_at',
@@ -108,6 +112,12 @@ class Sale extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /** @return BelongsTo<PriceList, $this> */
+    public function priceList(): BelongsTo
+    {
+        return $this->belongsTo(PriceList::class);
     }
 
     /** @return HasMany<SaleItem, $this> */

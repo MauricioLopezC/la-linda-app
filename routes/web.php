@@ -136,6 +136,9 @@ Route::middleware(['internal.staff', 'verified'])->group(function () {
     Route::prefix('sales/cash-sessions')->name('sales.cash-sessions.')->group(function () {
         Route::get('open', [CashSessionController::class, 'create'])->name('create');
         Route::post('/', [CashSessionController::class, 'store'])->name('store');
+        Route::get('current', [CashSessionController::class, 'current'])->name('current');
+        Route::post('{cashSession}/movements', [CashSessionController::class, 'storeMovement'])->name('movements.store');
+        Route::get('{cashSession}', [CashSessionController::class, 'show'])->name('show');
     });
 
     Route::prefix('sales/sales')->name('sales.sales.')->group(function () {
@@ -147,6 +150,7 @@ Route::middleware(['internal.staff', 'verified'])->group(function () {
         Route::patch('{sale}/items/{item}', [SaleController::class, 'updateItem'])->name('items.update')->scopeBindings();
         Route::delete('{sale}/items/{item}', [SaleController::class, 'destroyItem'])->name('items.destroy')->scopeBindings();
         Route::patch('{sale}/customer', [SaleController::class, 'updateCustomer'])->name('customer.update');
+        Route::patch('{sale}/price-list', [SaleController::class, 'updatePriceList'])->name('price-list.update');
         Route::post('{sale}/discard', [SaleController::class, 'discard'])->name('discard');
         Route::post('{sale}/confirm-payment', [SaleController::class, 'confirmPayment'])->name('confirm-payment');
         // Declared last so the literal segments above are not swallowed by the wildcard.

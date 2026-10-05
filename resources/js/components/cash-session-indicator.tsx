@@ -1,12 +1,12 @@
 import { Link, usePage } from '@inertiajs/react';
 import { Vault } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { create } from '@/routes/sales/cash-sessions';
+import { create, show } from '@/routes/sales/cash-sessions';
 
 /**
  * Shows the cashier where they are working (HU-057), or a shortcut to open a
- * cash session when they have none.
+ * cash session when they have none. Clicking the active session takes them to
+ * the shift view (HU-058).
  */
 export function CashSessionIndicator() {
   const { auth, cashSession } = usePage().props;
@@ -32,10 +32,19 @@ export function CashSessionIndicator() {
   });
 
   return (
-    <Badge variant="secondary" className="gap-1.5 py-1">
-      <Vault className="size-3.5" />
-      Caja {cashSession.point_of_sale_number} · {cashSession.branch_name} ·
-      desde las {openedAt}
-    </Badge>
+    <Button
+      asChild
+      variant="secondary"
+      size="sm"
+      className="h-auto gap-1.5 px-2.5 py-1 text-xs font-normal transition-colors hover:bg-secondary/80"
+    >
+      <Link href={show(cashSession.id)}>
+        <Vault className="size-3.5" />
+        <span>
+          Caja {cashSession.point_of_sale_number} · {cashSession.branch_name} ·
+          desde las {openedAt}
+        </span>
+      </Link>
+    </Button>
   );
 }

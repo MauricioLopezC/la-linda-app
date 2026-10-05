@@ -55,6 +55,7 @@ class ChangeSaleCustomer
                         $item->article,
                         $sale->channel->toPriceListChannel(),
                         $customer,
+                        $sale->priceList,
                     );
                 } catch (ArticleNotPricedException) {
                     throw ValidationException::withMessages([

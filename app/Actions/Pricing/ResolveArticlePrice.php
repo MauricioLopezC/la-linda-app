@@ -36,7 +36,17 @@ class ResolveArticlePrice
         Article $article,
         PriceListChannel $channel,
         ?Customer $customer = null,
+        ?PriceList $priceList = null,
     ): ResolvedPriceData {
+        // Step 0 — explicit price list chosen for the operation (HU-041 fix).
+        if ($priceList !== null && $priceList->is_active && $priceList->validityStatus() === PriceListValidityStatus::Vigente) {
+            $item = $this->resolveFromList($article, $priceList);
+
+            if ($item !== null) {
+                return ResolvedPriceData::fromItem($item);
+            }
+        }
+
         // Step 1 — customer's particular list.
         if ($customer !== null) {
             $item = $this->resolveFromParticular($article, $customer);
