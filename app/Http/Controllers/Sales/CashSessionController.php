@@ -3,10 +3,13 @@
 namespace App\Http\Controllers\Sales;
 
 use App\Actions\Sales\OpenCashSession;
+use App\Actions\Sales\RegisterCashMovement;
 use App\Data\Sales\CashDenominationData;
+use App\Data\Sales\CashSessionData;
 use App\Data\Sales\CashSessionPointOfSaleData;
 use App\Enums\Sales\CashDenomination;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Sales\StoreCashMovementRequest;
 use App\Http\Requests\Sales\StoreCashSessionRequest;
 use App\Models\Sales\CashSession;
 use App\Models\Sales\PointOfSale;
@@ -18,11 +21,36 @@ use Inertia\Response;
 class CashSessionController extends Controller
 {
     /**
+     * Redirect to the authenticated user's current open session, or to the opening form.
+     */
+    public function current(Request $request): RedirectResponse
+    {
+        $openSession = CashSession::query()
+            ->openForUser((int) $request->user()?->id)
+            ->first();
+
+        if ($openSession === null) {
+            Inertia::flash('toast', [
+                'type' => 'info',
+                'message' => 'No tenés un turno de caja abierto. Podés abrirlo a continuación.',
+            ]);
+
+            return to_route('sales.cash-sessions.create');
+        }
+
+        return to_route('sales.cash-sessions.show', $openSession);
+    }
+
+    /**
      * Show the opening count form, unless the user already has an open session.
      */
     public function create(Request $request): Response|RedirectResponse
     {
-        if (CashSession::query()->openForUser((int) $request->user()?->id)->exists()) {
+        $openSession = CashSession::query()
+            ->openForUser((int) $request->user()?->id)
+            ->first();
+
+        if ($openSession !== null) {
             Inertia::flash('toast', ['type' => 'info', 'message' => 'Ya tenés un turno de caja abierto.']);
 
             return to_route('sales.sales.index');
@@ -59,5 +87,38 @@ class CashSessionController extends Controller
         ]);
 
         return to_route('sales.sales.index');
+    }
+
+    /**
+     * Display a cash session with its movements and financial summary (HU-058).
+     */
+    public function show(CashSession $cashSession): Response
+    {
+        return Inertia::render('sales/cash-sessions/show', [
+            'cashSession' => CashSessionData::fromModel($cashSession),
+        ]);
+    }
+
+    /**
+     * Register a cash income or expense in an open cash session (HU-058).
+     */
+    public function storeMovement(
+        StoreCashMovementRequest $request,
+        CashSession $cashSession,
+        RegisterCashMovement $action,
+    ): RedirectResponse {
+        /** @var array{type: string, amount: numeric-string|float|int, reason: string} $data */
+        $data = $request->validated();
+        $movement = $action->handle($cashSession, $data);
+
+        $typeLabel = $movement->type->label();
+        $amountFormatted = number_format((float) $movement->amount, 2, ',', '.');
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => "{$typeLabel} de \${$amountFormatted} registrado exitosamente.",
+        ]);
+
+        return back();
     }
 }

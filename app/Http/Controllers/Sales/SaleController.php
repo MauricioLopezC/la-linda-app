@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Sales;
 
 use App\Actions\Sales\AddArticleToSale;
 use App\Actions\Sales\ChangeSaleCustomer;
+use App\Actions\Sales\ChangeSalePriceList;
 use App\Actions\Sales\ConfirmSalePayment;
 use App\Actions\Sales\DiscardSale;
 use App\Actions\Sales\OpenSale;
@@ -15,6 +16,7 @@ use App\Data\Sales\SaleArticleOptionData;
 use App\Data\Sales\SaleCustomerOptionData;
 use App\Data\Sales\SaleData;
 use App\Data\Sales\SaleListData;
+use App\Data\Sales\SalePriceListOptionData;
 use App\Enums\Sales\SaleStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Sales\ConfirmSalePaymentRequest;
@@ -22,8 +24,10 @@ use App\Http\Requests\Sales\StoreSaleItemRequest;
 use App\Http\Requests\Sales\StoreSaleRequest;
 use App\Http\Requests\Sales\UpdateSaleCustomerRequest;
 use App\Http\Requests\Sales\UpdateSaleItemRequest;
+use App\Http\Requests\Sales\UpdateSalePriceListRequest;
 use App\Models\Catalog\Article;
 use App\Models\Customers\Customer;
+use App\Models\Pricing\PriceList;
 use App\Models\Sales\PaymentMethod;
 use App\Models\Sales\PointOfSale;
 use App\Models\Sales\Sale;
@@ -144,6 +148,7 @@ class SaleController extends Controller
             'sale' => SaleData::fromModel($sale),
             'customers' => SaleCustomerOptionData::collect($this->activeCustomers()),
             'activePaymentMethods' => PaymentMethodData::collect($this->activePaymentMethods()),
+            'priceLists' => SalePriceListOptionData::collect($this->activePriceLists()),
         ]);
     }
 
@@ -185,6 +190,19 @@ class SaleController extends Controller
         $action->handle($sale, Customer::findOrFail((int) $request->validated('customer_id')));
 
         return back()->with('success', 'Cliente actualizado y precios recalculados.');
+    }
+
+    /**
+     * Change the sale's price list, re-pricing its lines.
+     */
+    public function updatePriceList(UpdateSalePriceListRequest $request, Sale $sale, ChangeSalePriceList $action): RedirectResponse
+    {
+        $priceListId = $request->validated('price_list_id');
+        $priceList = $priceListId !== null ? PriceList::findOrFail((int) $priceListId) : null;
+
+        $action->handle($sale, $priceList);
+
+        return back()->with('success', 'Lista de precios actualizada y precios recalculados.');
     }
 
     /**
@@ -230,6 +248,18 @@ class SaleController extends Controller
     {
         return PaymentMethod::query()
             ->active()
+            ->orderBy('name')
+            ->get();
+    }
+
+    /**
+     * @return Collection<int, PriceList>
+     */
+    private function activePriceLists(): Collection
+    {
+        return PriceList::query()
+            ->active()
+            ->currentlyValid()
             ->orderBy('name')
             ->get();
     }

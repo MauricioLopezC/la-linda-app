@@ -69,6 +69,7 @@ import {
   store as storeItem,
   update as updateItem,
 } from '@/routes/sales/sales/items';
+import { update as updatePriceList } from '@/routes/sales/sales/price-list';
 import type { BreadcrumbItem } from '@/types';
 
 type Sale = App.Data.Sales.SaleData;
@@ -76,11 +77,13 @@ type SaleItem = App.Data.Sales.SaleItemData;
 type ArticleOption = App.Data.Sales.SaleArticleOptionData;
 type CustomerOption = App.Data.Sales.SaleCustomerOptionData;
 type PaymentMethod = App.Data.Sales.PaymentMethodData;
+type PriceListOption = App.Data.Sales.SalePriceListOptionData;
 
 type Props = {
   sale: Sale;
   customers: CustomerOption[];
   activePaymentMethods?: PaymentMethod[];
+  priceLists: PriceListOption[];
 };
 
 const saleStatusClasses: Record<string, string> = {
@@ -119,6 +122,7 @@ export default function SaleShow({
   sale,
   customers = [],
   activePaymentMethods = [],
+  priceLists = [],
 }: Props) {
   const [code, setCode] = useState('');
   const [codeError, setCodeError] = useState<string | undefined>();
@@ -171,6 +175,23 @@ export default function SaleShow({
         preserveScroll: true,
         onSuccess: () =>
           toast.success('Cliente actualizado y precios recalculados'),
+        onError: toastFirstError,
+      },
+    );
+  };
+
+  const handleChangePriceList = (priceListId: number | null) => {
+    if (priceListId === sale.price_list_id) {
+      return;
+    }
+
+    router.patch(
+      updatePriceList.url(sale.id),
+      { price_list_id: priceListId },
+      {
+        preserveScroll: true,
+        onSuccess: () =>
+          toast.success('Lista de precios actualizada y precios recalculados'),
         onError: toastFirstError,
       },
     );
@@ -296,8 +317,8 @@ export default function SaleShow({
           </div>
         </div>
 
-        <div className="rounded-xl border border-sidebar-border bg-card p-4 shadow-sm">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="flex flex-col justify-between gap-4 rounded-xl border border-sidebar-border bg-card p-4 shadow-sm">
             <div className="space-y-1.5">
               <div className="flex items-center gap-2">
                 <Label className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
@@ -305,7 +326,7 @@ export default function SaleShow({
                 </Label>
                 {sale.customer_price_list_name && (
                   <Badge variant="secondary" className="text-xs">
-                    Lista: {sale.customer_price_list_name}
+                    Lista preferencial: {sale.customer_price_list_name}
                   </Badge>
                 )}
               </div>
@@ -330,7 +351,7 @@ export default function SaleShow({
             </div>
 
             {sale.accepts_changes && (
-              <div className="w-full sm:w-80">
+              <div className="w-full">
                 <SearchCustomerPopover
                   customers={customers}
                   selectedCustomerId={sale.customer_id}
@@ -338,6 +359,38 @@ export default function SaleShow({
                   onSelect={(customerId) =>
                     handleChangeCustomer(String(customerId))
                   }
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-col justify-between gap-4 rounded-xl border border-sidebar-border bg-card p-4 shadow-sm">
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <Label className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+                  Lista de precios
+                </Label>
+                <Badge
+                  variant={sale.price_list_id ? 'default' : 'secondary'}
+                  className="text-xs"
+                >
+                  {sale.price_list_name ?? 'Automática (por defecto)'}
+                </Badge>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {sale.price_list_id
+                  ? 'Precios fijados prioritariamente por la lista seleccionada.'
+                  : 'Precios resueltos automáticamente según cliente, mostrador y general.'}
+              </p>
+            </div>
+
+            {sale.accepts_changes && (
+              <div className="w-full">
+                <PriceListSelect
+                  priceLists={priceLists}
+                  selectedPriceListId={sale.price_list_id}
+                  disabled={!sale.accepts_changes}
+                  onSelect={handleChangePriceList}
                 />
               </div>
             )}
@@ -1489,6 +1542,51 @@ function ConfirmedPaymentSection({ sale }: { sale: Sale }) {
         </TableFooter>
       </Table>
     </div>
+  );
+}
+
+function PriceListSelect({
+  priceLists,
+  selectedPriceListId,
+  disabled,
+  onSelect,
+}: {
+  priceLists: PriceListOption[];
+  selectedPriceListId: number | null;
+  disabled: boolean;
+  onSelect: (priceListId: number | null) => void;
+}) {
+  return (
+    <Select
+      value={selectedPriceListId ? String(selectedPriceListId) : 'auto'}
+      onValueChange={(val) => onSelect(val === 'auto' ? null : Number(val))}
+      disabled={disabled}
+    >
+      <SelectTrigger className="w-full font-normal">
+        <SelectValue placeholder="Seleccionar lista de precios..." />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="auto">
+          <div className="flex items-center gap-2">
+            <span className="font-medium">Automática (por defecto)</span>
+            <span className="text-xs text-muted-foreground">
+              · Cascada habitual
+            </span>
+          </div>
+        </SelectItem>
+        {priceLists.map((list) => (
+          <SelectItem key={list.id} value={String(list.id)}>
+            <div className="flex items-center gap-2">
+              <span className="font-medium">{list.name}</span>
+              <span className="text-xs text-muted-foreground">
+                ({list.scope_label}
+                {list.channel_label ? ` · ${list.channel_label}` : ''})
+              </span>
+            </div>
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 

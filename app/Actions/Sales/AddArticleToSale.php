@@ -112,6 +112,7 @@ class AddArticleToSale
                 $article,
                 $sale->channel->toPriceListChannel(),
                 $sale->customer,
+                $sale->priceList,
             );
         } catch (ArticleNotPricedException) {
             throw ValidationException::withMessages([
