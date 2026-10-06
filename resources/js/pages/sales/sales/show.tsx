@@ -251,7 +251,14 @@ export default function SaleShow({
             <div className="flex items-center gap-3">
               <CheckCircle2 className="size-6 shrink-0 text-blue-600 dark:text-blue-400" />
               <div>
-                <h3 className="text-base font-semibold">Venta confirmada</h3>
+                <h3 className="text-base font-semibold">
+                  Venta confirmada
+                  {sale.invoice && (
+                    <span className="ml-2 font-mono text-sm font-semibold text-blue-800 dark:text-blue-300">
+                      — {sale.invoice.voucher_label}
+                    </span>
+                  )}
+                </h3>
                 <p className="text-xs text-muted-foreground">
                   Confirmada{' '}
                   {sale.confirmed_at_formatted
@@ -299,7 +306,7 @@ export default function SaleShow({
             <p className="text-sm font-medium text-muted-foreground">
               Comprobante
             </p>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Badge
                 variant="outline"
                 className={
@@ -310,6 +317,11 @@ export default function SaleShow({
               >
                 {sale.invoice_type_label}
               </Badge>
+              {sale.invoice && (
+                <span className="font-mono text-sm font-semibold text-foreground">
+                  N° {sale.invoice.formatted_number}
+                </span>
+              )}
               <span className="text-xs text-muted-foreground">
                 ({sale.customer_tax_condition_label})
               </span>
@@ -548,11 +560,15 @@ export default function SaleShow({
                 <div className="flex flex-col gap-2 rounded-lg border border-sidebar-border bg-muted/40 p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
                   <div className="space-y-0.5">
                     <span className="text-xs font-medium text-muted-foreground">
-                      Comprobante a emitir al cobrar
+                      {sale.status === 'confirmada'
+                        ? 'Comprobante emitido'
+                        : 'Comprobante a emitir al cobrar'}
                     </span>
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-foreground">
-                        {sale.invoice_type_label}
+                        {sale.invoice
+                          ? sale.invoice.voucher_label
+                          : sale.invoice_type_label}
                       </span>
                       <Badge
                         variant="outline"

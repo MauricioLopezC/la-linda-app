@@ -21,6 +21,7 @@ class SaleListData extends Data
         public string $invoice_type_label,
         public int $items_count,
         public string $total_amount,
+        public ?string $invoice_formatted_number = null,
     ) {}
 
     /**
@@ -29,6 +30,9 @@ class SaleListData extends Data
     public static function fromModel(Sale $sale): self
     {
         $invoiceType = $sale->invoiceType();
+        $invoiceFormattedNumber = ($sale->relationLoaded('invoice') && $sale->invoice !== null)
+            ? $sale->invoice->formattedNumber()
+            : null;
 
         return new self(
             id: $sale->id,
@@ -44,6 +48,7 @@ class SaleListData extends Data
             invoice_type_label: $invoiceType->label(),
             items_count: (int) $sale->getAttribute('items_count'),
             total_amount: $sale->total_amount,
+            invoice_formatted_number: $invoiceFormattedNumber,
         );
     }
 }

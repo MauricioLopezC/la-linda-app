@@ -4,6 +4,7 @@ use App\Enums\Customers\CustomerIdType;
 use App\Models\Catalog\Article;
 use App\Models\Customers\Customer;
 use App\Models\Pricing\VatRate;
+use App\Models\Sales\Invoice;
 use App\Models\Sales\PointOfSale;
 use App\Models\Sales\Sale;
 use App\Models\Sales\SaleItem;
@@ -254,4 +255,48 @@ test('customer search matches name and document and excludes inactive customers'
     $this->getJson(route('sales.sales.search-customers', ['search' => 'Inactiva']))
         ->assertOk()
         ->assertJsonCount(0);
+});
+
+test('the sale screen displays the invoice details for a confirmed sale', function () {
+    $sale = Sale::factory()->confirmed()->create();
+    $invoice = Invoice::factory()->create([
+        'sale_id' => $sale->id,
+        'point_of_sale_id' => $sale->point_of_sale_id,
+        'cash_session_id' => $sale->cash_session_id,
+        'customer_id' => $sale->customer_id,
+        'user_id' => $sale->user_id,
+        'type' => 'B',
+        'number' => 1,
+    ]);
+
+    $this->actingAs(User::factory()->create())
+        ->get(route('sales.sales.show', $sale))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('sale.invoice')
+            ->where('sale.invoice.id', $invoice->id)
+            ->where('sale.invoice.type', 'B')
+            ->where('sale.invoice.formatted_number', $invoice->formattedNumber())
+            ->where('sale.invoice.voucher_label', $invoice->voucherLabel()));
+});
+
+test('the sales index displays invoice formatted number for confirmed sales', function () {
+    $sale = Sale::factory()->confirmed()->create(['total_amount' => '1210.00']);
+    $invoice = Invoice::factory()->create([
+        'sale_id' => $sale->id,
+        'point_of_sale_id' => $sale->point_of_sale_id,
+        'cash_session_id' => $sale->cash_session_id,
+        'customer_id' => $sale->customer_id,
+        'user_id' => $sale->user_id,
+        'type' => 'B',
+        'number' => 1,
+    ]);
+
+    $this->actingAs(User::factory()->create())
+        ->get(route('sales.sales.index', ['status' => 'confirmada']))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('sales.data', 1)
+            ->where('sales.data.0.id', $sale->id)
+            ->where('sales.data.0.invoice_formatted_number', $invoice->formattedNumber()));
 });

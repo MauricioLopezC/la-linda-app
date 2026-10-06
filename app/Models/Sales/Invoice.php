@@ -117,4 +117,20 @@ class Invoice extends Model
     {
         return $this->hasMany(InvoiceItem::class);
     }
+
+    /**
+     * Standard voucher number formatted as POS (4 digits) - Number (8 digits).
+     */
+    public function formattedNumber(): string
+    {
+        return sprintf('%04d-%08d', $this->pointOfSale->number, $this->number);
+    }
+
+    /**
+     * Full label including voucher type and formatted number (e.g. Factura B 0001-00000001).
+     */
+    public function voucherLabel(): string
+    {
+        return "{$this->type->label()} {$this->formattedNumber()}";
+    }
 }

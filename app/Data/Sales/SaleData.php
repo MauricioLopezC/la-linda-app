@@ -53,6 +53,7 @@ class SaleData extends Data
         public array $payments,
         public ?string $total_tendered,
         public ?string $change_amount,
+        public ?SaleInvoiceData $invoice = null,
     ) {}
 
     public static function fromModel(Sale $sale): self
@@ -62,6 +63,8 @@ class SaleData extends Data
             'customer.priceList',
             'priceList',
             'user',
+            'invoice.pointOfSale',
+            'invoice.user',
             'items' => fn ($query) => $query->orderBy('id'),
             'items.article.unitOfMeasure',
             'items.priceList',
@@ -138,6 +141,7 @@ class SaleData extends Data
             payments: $payments,
             total_tendered: $totalTendered,
             change_amount: $changeAmount,
+            invoice: $sale->invoice !== null ? SaleInvoiceData::fromModel($sale->invoice) : null,
         );
     }
 }
