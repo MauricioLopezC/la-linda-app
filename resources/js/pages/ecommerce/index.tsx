@@ -30,7 +30,9 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { login } from '@/routes';
 import { home } from '@/routes/tienda';
+import * as cartRoutes from '@/routes/tienda/cart';
 import type { BreadcrumbItem } from '@/types';
 
 type Article = App.Data.Ecommerce.OnlineCatalogArticleData;
@@ -95,12 +97,14 @@ function ArticleCardImage({
 function ArticleCard({
   article,
   qty,
+  isAdding = false,
   onUpdateQuantity,
   onAddToCart,
   onPreview,
 }: {
   article: Article;
   qty: number;
+  isAdding?: boolean;
   onUpdateQuantity: (
     id: number,
     delta: number,
@@ -226,11 +230,12 @@ function ArticleCard({
 
             <Button
               type="button"
+              disabled={isAdding}
               className="h-8 flex-1 gap-1.5 text-xs font-semibold"
               onClick={() => onAddToCart(article, qty)}
             >
               <ShoppingCart className="size-3.5" />
-              Añadir
+              {isAdding ? 'Añadiendo...' : 'Añadir'}
             </Button>
           </div>
         </div>
@@ -284,6 +289,9 @@ export default function StoreHome({
     });
   };
 
+  // Loading state when adding article to cart
+  const [loadingArticleId, setLoadingArticleId] = useState<number | null>(null);
+
   const handleAddToCart = (article: Article, explicitQty?: number) => {
     const qty =
       explicitQty ?? getArticleQty(article.id, article.allows_decimals);
@@ -292,15 +300,39 @@ export default function StoreHome({
       toast.info('Iniciá sesión para armar tu carrito de compras', {
         action: {
           label: 'Iniciar sesión',
-          onClick: () => router.visit('/login'),
+          onClick: () => router.visit(login.url()),
         },
       });
 
       return;
     }
 
-    toast.success(
-      `Agregaste ${qty} ${article.unit_of_measure_abbreviation || 'u.'} de "${article.description}" al carrito`,
+    setLoadingArticleId(article.id);
+    router.post(
+      cartRoutes.store.url(),
+      {
+        article_id: article.id,
+        quantity: qty,
+      },
+      {
+        preserveScroll: true,
+        onSuccess: () => {
+          toast.success(
+            `Agregaste ${qty} ${article.unit_of_measure_abbreviation || 'u.'} de "${article.description}" al carrito`,
+          );
+        },
+        onError: (errors) => {
+          const firstError = Object.values(errors)[0];
+          toast.error(
+            typeof firstError === 'string'
+              ? firstError
+              : 'No se pudo agregar el artículo al carrito.',
+          );
+        },
+        onFinish: () => {
+          setLoadingArticleId(null);
+        },
+      },
     );
   };
 
@@ -386,12 +418,25 @@ export default function StoreHome({
             </div>
             <div className="flex flex-wrap items-center gap-2 pt-1">
               {user ? (
-                <Button asChild size="default" className="gap-2">
-                  <Link href="/tienda/mi-cuenta">
-                    <UserCheck className="size-4" />
-                    Mi cuenta ({user.name})
-                  </Link>
-                </Button>
+                <>
+                  <Button asChild size="default" className="gap-2">
+                    <Link href="/tienda/mi-cuenta">
+                      <UserCheck className="size-4" />
+                      Mi cuenta ({user.name})
+                    </Link>
+                  </Button>
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="default"
+                    className="gap-2 bg-background/80 backdrop-blur-xs"
+                  >
+                    <Link href={cartRoutes.index.url()}>
+                      <ShoppingCart className="size-4" />
+                      Mi carrito
+                    </Link>
+                  </Button>
+                </>
               ) : (
                 <>
                   <Button asChild size="default" className="gap-2">
@@ -514,6 +559,7 @@ export default function StoreHome({
                 key={article.id}
                 article={article}
                 qty={getArticleQty(article.id, article.allows_decimals)}
+                isAdding={loadingArticleId === article.id}
                 onUpdateQuantity={updateQuantity}
                 onAddToCart={handleAddToCart}
                 onPreview={setPreviewArticle}
@@ -560,6 +606,7 @@ export default function StoreHome({
                       key={article.id}
                       article={article}
                       qty={getArticleQty(article.id, article.allows_decimals)}
+                      isAdding={loadingArticleId === article.id}
                       onUpdateQuantity={updateQuantity}
                       onAddToCart={handleAddToCart}
                       onPreview={setPreviewArticle}
@@ -739,6 +786,7 @@ export default function StoreHome({
                     <Button
                       type="button"
                       size="default"
+                      disabled={loadingArticleId === previewArticle.id}
                       className="flex-1 gap-2"
                       onClick={() => {
                         handleAddToCart(previewArticle);
@@ -746,7 +794,9 @@ export default function StoreHome({
                       }}
                     >
                       <ShoppingCart className="size-4" />
-                      Añadir al carrito
+                      {loadingArticleId === previewArticle.id
+                        ? 'Añadiendo...'
+                        : 'Añadir al carrito'}
                     </Button>
                   </div>
                 </div>
