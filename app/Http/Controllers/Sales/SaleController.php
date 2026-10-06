@@ -49,7 +49,7 @@ class SaleController extends Controller
     public function index(Request $request): Response
     {
         $sales = Sale::query()
-            ->with(['pointOfSale.warehouse.branch', 'customer', 'user'])
+            ->with(['pointOfSale.warehouse.branch', 'customer', 'user', 'invoice.pointOfSale'])
             ->withCount('items')
             ->when($request->filled('status') && $request->input('status') !== 'all', function (Builder $query) use ($request) {
                 $query->where('status', $request->input('status'));
