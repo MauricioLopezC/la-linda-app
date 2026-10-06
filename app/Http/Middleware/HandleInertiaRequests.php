@@ -59,6 +59,13 @@ class HandleInertiaRequests extends Middleware
 
                 return $cashSession === null ? null : OpenCashSessionData::fromModel($cashSession);
             },
+            'cartCount' => function () use ($request): int {
+                if (! $request->user()?->isClient()) {
+                    return 0;
+                }
+
+                return (int) ($request->user()->customer?->cartItems()->count() ?? 0);
+            },
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
     }
