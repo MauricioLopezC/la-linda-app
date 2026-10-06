@@ -1,11 +1,13 @@
 import { Head, Link, router } from '@inertiajs/react';
 import {
+  AlertTriangle,
   ArrowUpRight,
   ChevronsUpDown,
   FileText,
   FilterX,
   Loader2,
   Package,
+  ShoppingCart,
   User,
   Warehouse as WarehouseIcon,
 } from 'lucide-react';
@@ -57,6 +59,7 @@ import {
   index,
 } from '@/routes/inventory/movements';
 import { show as showSupplierVoucher } from '@/routes/purchasing/vouchers';
+import { show as showSale } from '@/routes/sales/sales';
 import type { BreadcrumbItem } from '@/types';
 
 type StockMovementList = App.Data.Inventory.StockMovementListData;
@@ -460,9 +463,23 @@ export default function StockMovementHistoryIndex({
                           {entry.created_at_formatted}
                         </TableCell>
                         <TableCell>
-                          <Badge variant="secondary" className="font-normal">
-                            {entry.type_name}
-                          </Badge>
+                          <div className="flex flex-col items-start gap-1">
+                            <Badge variant="secondary" className="font-normal">
+                              {entry.type_name}
+                            </Badge>
+                            {entry.is_conflict && (
+                              <Badge
+                                variant="outline"
+                                className="gap-1 border-amber-500/30 bg-amber-500/10 text-xs text-amber-700 dark:text-amber-400"
+                                title={`Stock previo: ${entry.system_quantity ?? '0.000'}`}
+                              >
+                                <AlertTriangle className="size-3" />
+                                Conflicto ({entry.system_quantity ??
+                                  '0.000'}{' '}
+                                prev.)
+                              </Badge>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-col gap-1">
@@ -486,6 +503,15 @@ export default function StockMovementHistoryIndex({
                                 Remito{' '}
                                 {entry.supplier_voucher_formatted_number ??
                                   `#${entry.supplier_voucher_id}`}
+                              </Link>
+                            )}
+                            {entry.sale_id && (
+                              <Link
+                                href={showSale(entry.sale_id)}
+                                className="flex items-center gap-1 text-xs text-emerald-600 hover:underline dark:text-emerald-400"
+                              >
+                                <ShoppingCart className="size-3" />
+                                Venta #{entry.sale_id}
                               </Link>
                             )}
                           </div>
@@ -551,9 +577,20 @@ export default function StockMovementHistoryIndex({
                         {movement.created_at_formatted}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="secondary" className="font-normal">
-                          {movement.type_name}
-                        </Badge>
+                        <div className="flex flex-col items-start gap-1">
+                          <Badge variant="secondary" className="font-normal">
+                            {movement.type_name}
+                          </Badge>
+                          {movement.has_conflict && (
+                            <Badge
+                              variant="outline"
+                              className="gap-1 border-amber-500/30 bg-amber-500/10 text-xs text-amber-700 dark:text-amber-400"
+                            >
+                              <AlertTriangle className="size-3" />
+                              Conflicto de stock
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1.5">
@@ -608,6 +645,15 @@ export default function StockMovementHistoryIndex({
                                 Remito{' '}
                                 {movement.supplier_voucher_formatted_number ??
                                   `#${movement.supplier_voucher_id}`}
+                              </Link>
+                            )}
+                            {movement.sale_id && (
+                              <Link
+                                href={showSale(movement.sale_id)}
+                                className="flex items-center gap-1 text-xs text-emerald-600 hover:underline dark:text-emerald-400"
+                              >
+                                <ShoppingCart className="size-3" />
+                                Venta #{movement.sale_id}
                               </Link>
                             )}
                           </div>

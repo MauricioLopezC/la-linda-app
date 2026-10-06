@@ -30,6 +30,7 @@ class ConsultArticleKardex
                 'stock_movement_items.stock_movement_id',
                 'stock_movement_items.article_id',
                 'stock_movement_items.quantity',
+                'stock_movement_items.system_quantity',
                 'stock_movements.stock_movement_type_id',
                 'stock_movements.user_id',
                 'stock_movements.created_at',
@@ -42,6 +43,7 @@ class ConsultArticleKardex
                 'stockMovement.user',
                 'stockMovement.supplierVoucher',
                 'stockMovement.reversalOf.supplierVoucher',
+                'stockMovement.sale',
             ])
             ->orderByDesc('created_at')
             ->orderByDesc('stock_movement_id')
