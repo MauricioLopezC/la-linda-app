@@ -2,6 +2,7 @@
 
 namespace App\Models\Sales;
 
+use App\Concerns\ConvertsMoneyToCents;
 use App\Enums\Sales\InvoiceType;
 use App\Models\Customers\Customer;
 use App\Models\User;
@@ -65,6 +66,8 @@ use Illuminate\Support\Carbon;
 ])]
 class Invoice extends Model
 {
+    use ConvertsMoneyToCents;
+
     /** @use HasFactory<InvoiceFactory> */
     use HasFactory;
 
@@ -135,5 +138,27 @@ class Invoice extends Model
     public function voucherLabel(): string
     {
         return "{$this->type->label()} {$this->formattedNumber()}";
+    }
+
+    /**
+     * Net and VAT amounts grouped by VAT rate, summed from the frozen invoice lines (HU-043).
+     * The DER keeps no separate breakdown table: it is always a GROUP BY over the lines.
+     *
+     * @return array<int, array{vat_rate: string, net_amount: string, vat_amount: string}>
+     */
+    public function vatBreakdown(): array
+    {
+        $items = $this->relationLoaded('items') ? $this->items : $this->items()->get();
+
+        return $items
+            ->groupBy(fn (InvoiceItem $item): string => $item->vat_rate)
+            ->map(fn (Collection $groupItems, string $vatRate): array => [
+                'vat_rate' => $vatRate,
+                'net_amount' => $this->centsToMoney($groupItems->sum(fn (InvoiceItem $item): int => $this->moneyToCents($item->net_amount))),
+                'vat_amount' => $this->centsToMoney($groupItems->sum(fn (InvoiceItem $item): int => $this->moneyToCents($item->vat_amount))),
+            ])
+            ->sortByDesc(fn (array $row): float => (float) $row['vat_rate'])
+            ->values()
+            ->all();
     }
 }

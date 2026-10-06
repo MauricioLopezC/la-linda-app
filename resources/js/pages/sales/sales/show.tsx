@@ -4,9 +4,11 @@ import {
   CheckCircle2,
   ChevronsUpDown,
   CreditCard,
+  Download,
   Loader2,
   Package,
   Plus,
+  Printer,
   ScanBarcode,
   Search,
   Trash2,
@@ -66,6 +68,7 @@ import {
   store as storeSale,
 } from '@/routes/sales/sales';
 import { update as updateCustomer } from '@/routes/sales/sales/customer';
+import { pdf as invoicePdf } from '@/routes/sales/sales/invoice';
 import {
   destroy as destroyItem,
   store as storeItem,
@@ -130,6 +133,7 @@ export default function SaleShow({
   const [codeError, setCodeError] = useState<string | undefined>();
   const [isAdding, setIsAdding] = useState(false);
   const [isDiscardDialogOpen, setIsDiscardDialogOpen] = useState(false);
+  const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
   const codeInputRef = useRef<HTMLInputElement>(null);
 
   const focusCodeInput = () => {
@@ -271,6 +275,7 @@ export default function SaleShow({
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
+              {sale.invoice && <InvoicePdfButtons saleId={sale.id} />}
               {sale.stock_movement_id && (
                 <Button variant="outline" size="sm" asChild>
                   <Link
@@ -639,6 +644,7 @@ export default function SaleShow({
           <PaymentSection
             sale={sale}
             activePaymentMethods={activePaymentMethods}
+            onConfirmed={() => setIsInvoiceDialogOpen(true)}
           />
         )}
 
@@ -674,6 +680,56 @@ export default function SaleShow({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {sale.invoice && (
+        <Dialog
+          open={isInvoiceDialogOpen}
+          onOpenChange={setIsInvoiceDialogOpen}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{sale.invoice.voucher_label} emitida</DialogTitle>
+              <DialogDescription>
+                Imprimí la factura o descargala en PDF para entregársela al
+                cliente. También podés hacerlo después desde el detalle de la
+                venta.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="ghost"
+                onClick={() => setIsInvoiceDialogOpen(false)}
+              >
+                Cerrar
+              </Button>
+              <InvoicePdfButtons saleId={sale.id} />
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+    </>
+  );
+}
+
+function InvoicePdfButtons({ saleId }: { saleId: number }) {
+  return (
+    <>
+      <Button variant="outline" size="sm" asChild>
+        <a
+          href={invoicePdf.url(saleId)}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <Printer className="mr-1.5 size-4" />
+          Imprimir factura
+        </a>
+      </Button>
+      <Button variant="outline" size="sm" asChild>
+        <a href={invoicePdf.url(saleId, { query: { download: 1 } })}>
+          <Download className="mr-1.5 size-4" />
+          Descargar PDF
+        </a>
+      </Button>
     </>
   );
 }
@@ -1096,9 +1152,11 @@ type PaymentRow = {
 function PaymentSection({
   sale,
   activePaymentMethods = [],
+  onConfirmed,
 }: {
   sale: Sale;
   activePaymentMethods: PaymentMethod[];
+  onConfirmed: () => void;
 }) {
   const cashMethod =
     activePaymentMethods.find((m) => m.kind === 'efectivo') ??
@@ -1287,6 +1345,8 @@ function PaymentSection({
               `¡Venta N° ${sale.id} cobrada y confirmada correctamente!`,
             );
           }
+
+          onConfirmed();
         },
         onError: toastFirstError,
         onFinish: () => setIsSubmitting(false),

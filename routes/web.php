@@ -154,6 +154,7 @@ Route::middleware(['internal.staff', 'verified'])->group(function () {
         Route::patch('{sale}/price-list', [SaleController::class, 'updatePriceList'])->name('price-list.update');
         Route::post('{sale}/discard', [SaleController::class, 'discard'])->name('discard');
         Route::post('{sale}/confirm-payment', [SaleController::class, 'confirmPayment'])->name('confirm-payment');
+        Route::get('{sale}/invoice/pdf', [SaleController::class, 'invoicePdf'])->name('invoice.pdf');
         // Declared last so the literal segments above are not swallowed by the wildcard.
         Route::get('{sale}', [SaleController::class, 'show'])->name('show');
     });
