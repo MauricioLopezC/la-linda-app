@@ -1,5 +1,6 @@
 import { Head, Link, setLayoutProps } from '@inertiajs/react';
 import {
+  AlertTriangle,
   ArrowLeft,
   ArrowUpRight,
   Calendar,
@@ -8,6 +9,7 @@ import {
   Printer,
   Plus,
   ShieldCheck,
+  ShoppingCart,
   User,
   Warehouse,
 } from 'lucide-react';
@@ -36,6 +38,7 @@ import {
 import { index as movementsIndex } from '@/routes/inventory/movements';
 import { index as stocksIndex } from '@/routes/inventory/stocks';
 import { show as showSupplierVoucher } from '@/routes/purchasing/vouchers';
+import { show as showSale } from '@/routes/sales/sales';
 import type { BreadcrumbItem } from '@/types';
 
 type MovementDetail = App.Data.Inventory.StockMovementDetailData;
@@ -241,6 +244,7 @@ export default function ShowStockAdjustment({ movement }: Props) {
 
             {/* Origin Voucher / Reversal Information */}
             {(movement.supplier_voucher_id ||
+              movement.sale_id ||
               movement.reversal_of_movement_id ||
               movement.reversal_movement_id) && (
               <div className="flex flex-wrap items-center gap-4 rounded-lg border border-blue-200 bg-blue-50/50 p-4 text-sm dark:border-blue-900/60 dark:bg-blue-950/30">
@@ -263,6 +267,25 @@ export default function ShowStockAdjustment({ movement }: Props) {
                         Remito{' '}
                         {movement.supplier_voucher_formatted_number ??
                           `#${movement.supplier_voucher_id}`}
+                        <ArrowUpRight className="size-3.5" />
+                      </Link>
+                    </Button>
+                  </div>
+                )}
+                {movement.sale_id && (
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-foreground">
+                      Venta de origen:
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      asChild
+                      className="gap-1.5 bg-background font-normal"
+                    >
+                      <Link href={showSale(movement.sale_id)}>
+                        <ShoppingCart className="size-3.5" />
+                        Venta #{movement.sale_id}
                         <ArrowUpRight className="size-3.5" />
                       </Link>
                     </Button>
@@ -315,6 +338,25 @@ export default function ShowStockAdjustment({ movement }: Props) {
               </div>
             )}
 
+            {/* Conflict Warning Banner */}
+            {movement.has_conflict && (
+              <div className="flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200">
+                <AlertTriangle className="mt-0.5 size-5 shrink-0 text-amber-600 dark:text-amber-400" />
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold">
+                    Movimiento con conflicto de stock
+                  </p>
+                  <p className="text-xs text-amber-800 dark:text-amber-300">
+                    Este egreso se registró con artículos cuya existencia previa
+                    en el sistema era insuficiente o cero (el artículo físico
+                    estaba en caja). La existencia resultante quedó negativa y
+                    debe ser regularizada mediante un movimiento manual de stock
+                    (HU-017) o ingreso de comprobante pendiente.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Observations if any */}
             {movement.notes && (
               <div className="border-l-2 border-primary bg-muted/20 py-1 pl-3 text-xs">
@@ -355,6 +397,18 @@ export default function ShowStockAdjustment({ movement }: Props) {
                             {item.category_name}{' '}
                             {item.brand_name ? `• ${item.brand_name}` : ''}
                           </div>
+                          {item.is_conflict && (
+                            <div>
+                              <Badge
+                                variant="outline"
+                                className="mt-1 gap-1 border-amber-500/30 bg-amber-500/10 text-xs text-amber-700 dark:text-amber-400"
+                              >
+                                <AlertTriangle className="size-3" />
+                                Conflicto de stock (Stock previo:{' '}
+                                {item.system_quantity ?? '0.000'})
+                              </Badge>
+                            </div>
+                          )}
                           <Link
                             href={movementsIndex({
                               query: {

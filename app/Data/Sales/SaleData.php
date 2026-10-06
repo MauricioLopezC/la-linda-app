@@ -53,6 +53,7 @@ class SaleData extends Data
         public array $payments,
         public ?string $total_tendered,
         public ?string $change_amount,
+        public ?int $stock_movement_id,
         public ?SaleInvoiceData $invoice = null,
     ) {}
 
@@ -70,6 +71,7 @@ class SaleData extends Data
             'items.priceList',
             'items.vatRate',
             'cashMovements.paymentMethod',
+            'stockMovement',
         ]);
 
         $invoiceType = $sale->invoiceType();
@@ -141,6 +143,7 @@ class SaleData extends Data
             payments: $payments,
             total_tendered: $totalTendered,
             change_amount: $changeAmount,
+            stock_movement_id: $sale->stockMovement?->id,
             invoice: $sale->invoice !== null ? SaleInvoiceData::fromModel($sale->invoice) : null,
         );
     }
