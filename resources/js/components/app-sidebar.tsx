@@ -238,6 +238,11 @@ const clientNavGroups: NavGroup[] = [
         icon: Store,
       },
       {
+        title: 'Carrito de compras',
+        href: '/tienda/carrito',
+        icon: ShoppingCart,
+      },
+      {
         title: 'Mi cuenta',
         href: '/tienda/mi-cuenta',
         icon: Users,
@@ -254,6 +259,11 @@ const guestNavGroups: NavGroup[] = [
         title: 'Tienda Online',
         href: '/tienda',
         icon: Store,
+      },
+      {
+        title: 'Carrito de compras',
+        href: '/tienda/carrito',
+        icon: ShoppingCart,
       },
       {
         title: 'Iniciar sesión',

@@ -6,6 +6,7 @@ use App\Http\Controllers\Catalog\BrandController;
 use App\Http\Controllers\Catalog\CategoryController;
 use App\Http\Controllers\Catalog\UnitOfMeasureController;
 use App\Http\Controllers\Customers\CustomerController;
+use App\Http\Controllers\Ecommerce\CartController;
 use App\Http\Controllers\Ecommerce\CustomerAccountController;
 use App\Http\Controllers\Ecommerce\StoreHomeController;
 use App\Http\Controllers\Inventory\StockAdjustmentController;
@@ -227,6 +228,14 @@ Route::prefix('tienda')->name('tienda.')->group(function () {
     Route::middleware('auth')->group(function () {
         Route::get('mi-cuenta', [CustomerAccountController::class, 'show'])->name('account.show');
         Route::put('mi-cuenta', [CustomerAccountController::class, 'update'])->name('account.update');
+
+        Route::prefix('carrito')->name('cart.')->group(function () {
+            Route::get('/', [CartController::class, 'index'])->name('index');
+            Route::post('/', [CartController::class, 'store'])->name('store');
+            Route::patch('{cart_item}', [CartController::class, 'update'])->name('update');
+            Route::delete('{cart_item}', [CartController::class, 'destroy'])->name('destroy');
+            Route::delete('/', [CartController::class, 'clear'])->name('clear');
+        });
     });
 });
 

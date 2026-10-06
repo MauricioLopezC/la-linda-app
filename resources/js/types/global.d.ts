@@ -19,6 +19,7 @@ declare module '@inertiajs/core' {
       auth: Auth;
       sidebarOpen: boolean;
       cashSession: App.Data.Sales.OpenCashSessionData | null;
+      cartCount: number;
       flash: Record<string, unknown>;
       [key: string]: unknown;
     };
