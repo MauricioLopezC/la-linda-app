@@ -22,6 +22,7 @@ use Illuminate\Support\Carbon;
  * @property int $sale_id
  * @property int $cash_session_id
  * @property int $point_of_sale_id
+ * @property int $point_of_sale_number
  * @property InvoiceType $type
  * @property int $number
  * @property Carbon $issued_at
@@ -47,6 +48,7 @@ use Illuminate\Support\Carbon;
     'sale_id',
     'cash_session_id',
     'point_of_sale_id',
+    'point_of_sale_number',
     'type',
     'number',
     'issued_at',
@@ -73,6 +75,7 @@ class Invoice extends Model
     {
         return [
             'type' => InvoiceType::class,
+            'point_of_sale_number' => 'integer',
             'number' => 'integer',
             'issued_at' => 'datetime',
             'net_amount' => 'decimal:2',
@@ -116,5 +119,21 @@ class Invoice extends Model
     public function items(): HasMany
     {
         return $this->hasMany(InvoiceItem::class);
+    }
+
+    /**
+     * Standard voucher number formatted as POS (4 digits) - Number (8 digits).
+     */
+    public function formattedNumber(): string
+    {
+        return sprintf('%04d-%08d', $this->point_of_sale_number, $this->number);
+    }
+
+    /**
+     * Full label including voucher type and formatted number (e.g. Factura B 0001-00000001).
+     */
+    public function voucherLabel(): string
+    {
+        return "{$this->type->label()} {$this->formattedNumber()}";
     }
 }
