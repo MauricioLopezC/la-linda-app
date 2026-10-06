@@ -4,6 +4,7 @@ namespace Database\Factories\Sales;
 
 use App\Enums\Sales\InvoiceType;
 use App\Models\Sales\Invoice;
+use App\Models\Sales\PointOfSale;
 use App\Models\Sales\Sale;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -26,6 +27,7 @@ class InvoiceFactory extends Factory
             'sale_id' => Sale::factory()->confirmed()->state(['total_amount' => '1210.00']),
             'cash_session_id' => fn (array $attributes): ?int => Sale::find((int) $attributes['sale_id'])?->cash_session_id,
             'point_of_sale_id' => fn (array $attributes): ?int => Sale::find((int) $attributes['sale_id'])?->point_of_sale_id,
+            'point_of_sale_number' => fn (array $attributes): int => PointOfSale::findOrFail((int) $attributes['point_of_sale_id'])->number,
             'type' => InvoiceType::B,
             'number' => fn (array $attributes): int => (int) Invoice::query()
                 ->where('point_of_sale_id', $attributes['point_of_sale_id'])

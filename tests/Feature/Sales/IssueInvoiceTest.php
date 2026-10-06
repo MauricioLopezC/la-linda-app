@@ -14,11 +14,13 @@ use App\Models\Customers\Customer;
 use App\Models\Pricing\VatRate;
 use App\Models\Sales\CashSession;
 use App\Models\Sales\Invoice;
+use App\Models\Sales\InvoiceItem;
 use App\Models\Sales\PaymentMethod;
 use App\Models\Sales\PointOfSale;
 use App\Models\Sales\Sale;
 use App\Models\Sales\SaleItem;
 use App\Models\User;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -161,6 +163,24 @@ test('cannot issue invoice on an open or discarded sale', function () {
         ->toThrow(ValidationException::class, 'Solo se puede emitir factura sobre una venta confirmada.');
 });
 
+test('issued invoice keeps its point of sale number after the point of sale is renumbered', function () {
+    [$user, $sale, $session, $pointOfSale] = createConfirmedSale();
+    $invoice = app(IssueInvoice::class)->handle($sale, $user);
+
+    $pointOfSale->update(['number' => 2]);
+
+    $invoice->refresh();
+    expect($invoice->point_of_sale_number)->toBe(1)
+        ->and($invoice->formattedNumber())->toBe('0001-00000001')
+        ->and($invoice->voucherLabel())->toBe('Factura B 0001-00000001');
+
+    [$nextUser, $nextSale] = createConfirmedSale('2420.00', null, $pointOfSale, $session);
+    $nextInvoice = app(IssueInvoice::class)->handle($nextSale, $nextUser);
+
+    expect($nextInvoice->point_of_sale_number)->toBe(2)
+        ->and($nextInvoice->formattedNumber())->toBe('0002-00000002');
+});
+
 test('cannot issue more than one invoice per sale', function () {
     [$user, $sale] = createConfirmedSale();
     $action = app(IssueInvoice::class);
@@ -254,7 +274,7 @@ test('invoice items freeze description, price, VAT rate and amounts independentl
     expect($freshInvoiceItem->description)->not->toBe('Descripción Completamente Diferente');
 });
 
-test('automatic invoice issuance is triggered when ConfirmSalePayment runs and is completely atomic', function () {
+test('automatic invoice issuance is triggered when ConfirmSalePayment runs', function () {
     $user = User::factory()->create();
     $pointOfSale = PointOfSale::factory()->create(['number' => 1]);
     $cashSession = CashSession::factory()->create([
@@ -313,4 +333,49 @@ test('automatic invoice issuance is triggered when ConfirmSalePayment runs and i
         ->and($invoice->number)->toBe(1)
         ->and($invoice->formattedNumber())->toBe('0001-00000001')
         ->and($invoice->items)->toHaveCount(1);
+});
+
+test('failed invoice issuance rolls back confirmation and movements and a retry keeps the next number', function () {
+    [$user, $sale] = createConfirmedSale();
+    $sale->update(['status' => SaleStatus::Open, 'confirmed_at' => null]);
+    SaleItem::factory()->create(['sale_id' => $sale->id]);
+    $sale->recalculateTotal();
+    $cashMethod = PaymentMethod::factory()->create([
+        'kind' => PaymentMethodKind::Cash,
+        'is_active' => true,
+    ]);
+    $payments = [[
+        'payment_method_id' => $cashMethod->id,
+        'amount' => $sale->total_amount,
+        'tendered_amount' => $sale->total_amount,
+    ]];
+
+    $createdItems = 0;
+    Event::listen('eloquent.creating: '.InvoiceItem::class, function () use (&$createdItems): void {
+        $createdItems++;
+
+        if ($createdItems === 2) {
+            throw new RuntimeException('Invoice item issuance failed');
+        }
+    });
+
+    expect(fn () => app(ConfirmSalePayment::class)->handle($sale, $payments, $user))
+        ->toThrow(RuntimeException::class, 'Invoice item issuance failed');
+
+    $sale->refresh();
+    expect($createdItems)->toBe(2)
+        ->and($sale->status)->toBe(SaleStatus::Open)
+        ->and($sale->confirmed_at)->toBeNull()
+        ->and($sale->invoice()->exists())->toBeFalse()
+        ->and(InvoiceItem::query()->count())->toBe(0)
+        ->and($sale->cashMovements()->exists())->toBeFalse()
+        ->and($sale->stockMovement()->exists())->toBeFalse();
+
+    $confirmedSale = app(ConfirmSalePayment::class)->handle($sale, $payments, $user);
+
+    expect($confirmedSale->status)->toBe(SaleStatus::Confirmed)
+        ->and($confirmedSale->invoice->formattedNumber())->toBe('0001-00000001')
+        ->and($confirmedSale->invoice->items)->toHaveCount(2)
+        ->and($confirmedSale->cashMovements)->toHaveCount(1)
+        ->and($confirmedSale->stockMovement)->not->toBeNull();
 });

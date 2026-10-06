@@ -2,10 +2,13 @@
 
 namespace App\Data\Sales;
 
+use App\Enums\Customers\CustomerIdType;
+use App\Enums\Customers\CustomerTaxCondition;
 use App\Enums\Sales\CashMovementType;
 use App\Models\Sales\CashMovement;
 use App\Models\Sales\Sale;
 use App\Models\Sales\SaleItem;
+use App\Rules\Customers\ValidCuit;
 use Spatie\LaravelData\Data;
 
 class SaleData extends Data
@@ -74,7 +77,21 @@ class SaleData extends Data
             'stockMovement',
         ]);
 
-        $invoiceType = $sale->invoiceType();
+        $invoice = $sale->invoice;
+        $invoiceType = $invoice !== null ? $invoice->type : $sale->invoiceType();
+        $customerTaxCondition = $invoice !== null
+            ? CustomerTaxCondition::from($invoice->customer_tax_condition)
+            : $sale->customer->tax_condition;
+        $customerIdType = $invoice !== null
+            ? CustomerIdType::from($invoice->customer_id_type ?? CustomerIdType::SinIdentificar->value)
+            : $sale->customer->id_type;
+        $customerIdNumber = $invoice !== null
+            ? $invoice->customer_id_number
+            : $sale->customer->id_number;
+
+        if ($customerIdType === CustomerIdType::Cuit) {
+            $customerIdNumber = ValidCuit::format($customerIdNumber);
+        }
 
         $saleMovements = $sale->cashMovements
             ->where('type', CashMovementType::Sale)
@@ -106,21 +123,21 @@ class SaleData extends Data
             id: $sale->id,
             cash_session_id: $sale->cash_session_id,
             point_of_sale_id: $sale->point_of_sale_id,
-            point_of_sale_number: $sale->pointOfSale->number,
+            point_of_sale_number: $invoice !== null ? $invoice->point_of_sale_number : $sale->pointOfSale->number,
             branch_name: $sale->pointOfSale->warehouse->branch->name,
             warehouse_name: $sale->pointOfSale->warehouse->name,
             channel: $sale->channel->value,
             channel_label: $sale->channel->label(),
             customer_id: $sale->customer_id,
-            customer_name: $sale->customer->name,
+            customer_name: $invoice !== null ? $invoice->customer_name : $sale->customer->name,
             customer_price_list_name: $sale->customer->priceList?->name,
             price_list_id: $sale->price_list_id,
             price_list_name: $sale->priceList?->name,
-            customer_tax_condition: $sale->customer->tax_condition->value,
-            customer_tax_condition_label: $sale->customer->tax_condition->label(),
-            customer_id_type: $sale->customer->id_type->value,
-            customer_id_type_label: $sale->customer->id_type->label(),
-            customer_id_number: $sale->customer->formattedIdNumber(),
+            customer_tax_condition: $customerTaxCondition->value,
+            customer_tax_condition_label: $customerTaxCondition->label(),
+            customer_id_type: $customerIdType->value,
+            customer_id_type_label: $customerIdType->label(),
+            customer_id_number: filled($customerIdNumber) ? $customerIdNumber : null,
             invoice_type: $invoiceType->value,
             invoice_type_label: $invoiceType->label(),
             user_name: $sale->user?->name,

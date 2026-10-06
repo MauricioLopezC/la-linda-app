@@ -36,7 +36,7 @@ class SaleInvoiceData extends Data
         return new self(
             id: $invoice->id,
             point_of_sale_id: $invoice->point_of_sale_id,
-            point_of_sale_number: $invoice->pointOfSale->number,
+            point_of_sale_number: $invoice->point_of_sale_number,
             type: $invoice->type->value,
             type_label: $invoice->type->label(),
             number: $invoice->number,

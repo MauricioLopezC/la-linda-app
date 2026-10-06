@@ -1,6 +1,8 @@
 <?php
 
+use App\Actions\Sales\IssueInvoice;
 use App\Enums\Customers\CustomerIdType;
+use App\Enums\Customers\CustomerTaxCondition;
 use App\Models\Catalog\Article;
 use App\Models\Customers\Customer;
 use App\Models\Pricing\VatRate;
@@ -299,4 +301,92 @@ test('the sales index displays invoice formatted number for confirmed sales', fu
             ->has('sales.data', 1)
             ->where('sales.data.0.id', $sale->id)
             ->where('sales.data.0.invoice_formatted_number', $invoice->formattedNumber()));
+});
+
+test('sale screens keep the issued invoice fiscal data after customer and point of sale edits', function (bool $responsableInscripto) {
+    $customer = ($responsableInscripto
+        ? Customer::factory()->responsableInscripto()
+        : Customer::factory()->consumidorFinal())->create([
+            'name' => 'Cliente Original',
+            'address' => 'Domicilio Original 123',
+        ]);
+    $pointOfSale = PointOfSale::factory()->create(['number' => 1]);
+    $sale = Sale::factory()->confirmed()->create([
+        'customer_id' => $customer->id,
+        'point_of_sale_id' => $pointOfSale->id,
+    ]);
+    SaleItem::factory()->create(['sale_id' => $sale->id]);
+    $sale->recalculateTotal();
+    $invoice = app(IssueInvoice::class)->handle($sale, $sale->user);
+    $originalDocument = $customer->formattedIdNumber();
+    $originalIdType = $customer->id_type;
+    $originalTaxCondition = $customer->tax_condition;
+    $type = $responsableInscripto ? 'A' : 'B';
+
+    $customer->update([
+        'name' => 'Cliente Modificado',
+        'address' => 'Domicilio Modificado 456',
+        'tax_condition' => $responsableInscripto ? CustomerTaxCondition::ConsumidorFinal : CustomerTaxCondition::ResponsibleInscripto,
+        'id_type' => $responsableInscripto ? CustomerIdType::Dni : CustomerIdType::Cuit,
+        'id_number' => $responsableInscripto ? '28945612' : '30502793175',
+    ]);
+    $pointOfSale->update(['number' => 2]);
+
+    $this->actingAs(User::factory()->create())
+        ->get(route('sales.sales.index', ['status' => 'confirmada']))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('sales.data', 1)
+            ->where('sales.data.0.customer_name', 'Cliente Original')
+            ->where('sales.data.0.point_of_sale_number', 1)
+            ->where('sales.data.0.invoice_type', $type)
+            ->where('sales.data.0.invoice_type_label', "Factura {$type}")
+            ->where('sales.data.0.invoice_formatted_number', '0001-00000001'));
+
+    $this->get(route('sales.sales.show', $sale))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('sale.customer_name', 'Cliente Original')
+            ->where('sale.customer_tax_condition', $originalTaxCondition->value)
+            ->where('sale.customer_tax_condition_label', $originalTaxCondition->label())
+            ->where('sale.customer_id_type', $originalIdType->value)
+            ->where('sale.customer_id_type_label', $originalIdType->label())
+            ->where('sale.customer_id_number', $originalDocument)
+            ->where('sale.point_of_sale_number', 1)
+            ->where('sale.invoice_type', $type)
+            ->where('sale.invoice_type_label', "Factura {$type}")
+            ->where('sale.invoice.id', $invoice->id)
+            ->where('sale.invoice.type', $type)
+            ->where('sale.invoice.point_of_sale_number', 1)
+            ->where('sale.invoice.formatted_number', '0001-00000001')
+            ->where('sale.invoice.customer_address', 'Domicilio Original 123'));
+})->with(['Factura A' => true, 'Factura B' => false]);
+
+test('sale screens use current fiscal data while the sale has no issued invoice', function () {
+    $customer = Customer::factory()->responsableInscripto()->create();
+    $sale = Sale::factory()->create(['customer_id' => $customer->id]);
+    $customer->update([
+        'name' => 'Nombre Actual',
+        'tax_condition' => CustomerTaxCondition::ConsumidorFinal,
+        'id_type' => CustomerIdType::Dni,
+        'id_number' => '28945612',
+    ]);
+
+    $this->actingAs(User::factory()->create())
+        ->get(route('sales.sales.index'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('sales.data.0.customer_name', 'Nombre Actual')
+            ->where('sales.data.0.invoice_type', 'B')
+            ->where('sales.data.0.invoice_formatted_number', null));
+
+    $this->get(route('sales.sales.show', $sale))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('sale.customer_name', 'Nombre Actual')
+            ->where('sale.customer_tax_condition', 'consumidor_final')
+            ->where('sale.customer_id_type', 'dni')
+            ->where('sale.customer_id_number', '28945612')
+            ->where('sale.invoice_type', 'B')
+            ->where('sale.invoice', null));
 });

@@ -25,22 +25,20 @@ class SaleListData extends Data
     ) {}
 
     /**
-     * Expects pointOfSale.warehouse.branch, customer and user loaded, and items_count.
+     * Expects pointOfSale.warehouse.branch, customer, user and invoice loaded, and items_count.
      */
     public static function fromModel(Sale $sale): self
     {
-        $invoiceType = $sale->invoiceType();
-        $invoiceFormattedNumber = ($sale->relationLoaded('invoice') && $sale->invoice !== null)
-            ? $sale->invoice->formattedNumber()
-            : null;
+        $invoice = $sale->relationLoaded('invoice') ? $sale->invoice : null;
+        $invoiceType = $invoice !== null ? $invoice->type : $sale->invoiceType();
 
         return new self(
             id: $sale->id,
             cash_session_id: $sale->cash_session_id,
             opened_at_formatted: $sale->opened_at->format('d/m/Y H:i'),
-            point_of_sale_number: $sale->pointOfSale->number,
+            point_of_sale_number: $invoice !== null ? $invoice->point_of_sale_number : $sale->pointOfSale->number,
             branch_name: $sale->pointOfSale->warehouse->branch->name,
-            customer_name: $sale->customer->name,
+            customer_name: $invoice !== null ? $invoice->customer_name : $sale->customer->name,
             user_name: $sale->user?->name,
             status: $sale->status->value,
             status_label: $sale->status->label(),
@@ -48,7 +46,7 @@ class SaleListData extends Data
             invoice_type_label: $invoiceType->label(),
             items_count: (int) $sale->getAttribute('items_count'),
             total_amount: $sale->total_amount,
-            invoice_formatted_number: $invoiceFormattedNumber,
+            invoice_formatted_number: $invoice?->formattedNumber(),
         );
     }
 }

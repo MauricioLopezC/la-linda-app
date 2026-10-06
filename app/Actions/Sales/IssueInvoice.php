@@ -78,10 +78,13 @@ class IssueInvoice
 
             $nextNumber = $lastNumber + 1;
 
+            $lockedSale->loadMissing(['items.article']);
+
             $invoice = Invoice::create([
                 'sale_id' => $lockedSale->id,
                 'cash_session_id' => $lockedSale->cash_session_id,
                 'point_of_sale_id' => $pointOfSale->id,
+                'point_of_sale_number' => $pointOfSale->number,
                 'type' => $type,
                 'number' => $nextNumber,
                 'issued_at' => now(),
@@ -97,8 +100,6 @@ class IssueInvoice
                 'user_id' => $user->id,
                 'created_at' => now(),
             ]);
-
-            $lockedSale->loadMissing(['items.article']);
 
             /** @var SaleItem $item */
             foreach ($lockedSale->items as $item) {
