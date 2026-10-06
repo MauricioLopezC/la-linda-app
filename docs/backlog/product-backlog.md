@@ -1073,16 +1073,22 @@ reimputación innecesarios.
 - **Validaciones:**
     - importe mayor a cero y motivo obligatorio
     - solo se registran en un turno abierto
-    - un egreso no puede superar el efectivo disponible según el sistema
+    - un egreso no puede superar el efectivo disponible según el sistema; el error no informa el monto disponible
 - **Comportamiento:**
     - se registran en efectivo
     - son inmutables: un error se corrige con el movimiento contrario
-    - el turno muestra el listado de sus movimientos (apertura, ventas, ingresos y egresos) y el efectivo esperado
-- **Verificación:** se registra un egreso de $3.000 por la compra de artículos de limpieza y el efectivo esperado del turno baja $3.000
+    - el turno muestra el listado de sus movimientos (apertura, ventas, ingresos y egresos)
+    - mientras el turno está abierto no se muestran sus totales ni el efectivo esperado, para que el arqueo de cierre sea ciego (`HU-060`); se ven en el resumen de rendición al cerrar
+- **Verificación:** se registra un egreso de $3.000 por la compra de artículos de limpieza; el turno abierto no muestra el efectivo esperado, y al cerrarlo el resumen de rendición refleja el egreso en el esperado
 
 > **Historia nueva del Sprint Planning 4 (2026-09-27).** PO (26/09): "A veces pasa que hay gastos
 > o se prestan plata entre cajas. Para eso se modela como movimiento de caja". El préstamo entre
 > cajas se separó en `HU-059`.
+>
+> **Cambio de alcance (2026-10-06):** se deja de mostrar el efectivo esperado y los totales del
+> turno abierto, para que el arqueo de cierre de `HU-060` sea ciego: el cajero declara lo que
+> cuenta sin ver cuánto debería haber. Cuando lleguen los roles (`HU-004`), el supervisor podrá
+> ver el esperado de un turno abierto (`HU-061`). Pendiente de comunicar al PO.
 
 ## HU-060 - Cerrar la caja con arqueo por medio de pago
 
