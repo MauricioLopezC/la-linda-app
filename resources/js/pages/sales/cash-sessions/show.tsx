@@ -1,10 +1,11 @@
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import {
   ArrowDownLeft,
   ArrowUpRight,
   Banknote,
   Clock,
   Lock,
+  Printer,
   ShoppingBag,
   Store,
   User,
@@ -36,8 +37,13 @@ import {
 } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { formatCurrency } from '@/lib/utils';
+import {
+  create as closingCreate,
+  pdf as closingPdf,
+} from '@/routes/sales/cash-sessions/closing';
 import { store as storeMovement } from '@/routes/sales/cash-sessions/movements';
 import { index as salesIndex, show as showSale } from '@/routes/sales/sales';
+import { ClosingSummary } from './components/closing-summary';
 
 type Session = App.Data.Sales.CashSessionData;
 type Movement = App.Data.Sales.CashMovementData;
@@ -47,8 +53,9 @@ type Props = {
 };
 
 export default function CashSessionShow({ cashSession }: Props) {
+  const { auth } = usePage().props;
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const availableCash = Number(cashSession.totals.expected_cash);
+  const isOwnSession = auth?.user?.id === cashSession.user_id;
 
   const form = useForm({
     type: 'ingreso' as 'ingreso' | 'egreso',
@@ -77,10 +84,6 @@ export default function CashSessionShow({ cashSession }: Props) {
       },
     });
   };
-
-  const isExpense = form.data.type === 'egreso';
-  const enteredAmount = Number(form.data.amount) || 0;
-  const exceedsCash = isExpense && enteredAmount > availableCash;
 
   return (
     <>
@@ -156,86 +159,116 @@ export default function CashSessionShow({ cashSession }: Props) {
                   <ArrowUpRight className="mr-1.5 size-4" />
                   Egreso de efectivo
                 </Button>
+                {isOwnSession && (
+                  <Button asChild size="sm">
+                    <Link href={closingCreate.url(cashSession.id)}>
+                      <Lock className="mr-1.5 size-4" />
+                      Cerrar caja
+                    </Link>
+                  </Button>
+                )}
               </>
+            )}
+            {!cashSession.is_open && cashSession.closure_lines.length > 0 && (
+              <Button size="sm" asChild>
+                <a
+                  href={closingPdf.url(cashSession.id)}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <Printer className="mr-1.5 size-4" />
+                  Rendición en PDF
+                </a>
+              </Button>
             )}
           </div>
         </div>
 
-        {/* Resumen financiero (Cards / KPIs) */}
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-xs font-medium text-muted-foreground">
-                Fondo inicial
-              </CardTitle>
-              <Vault className="size-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl font-bold tracking-tight">
-                {formatCurrency(cashSession.totals.opening_amount)}
-              </div>
-            </CardContent>
-          </Card>
+        {/* Rendición del turno cerrado (HU-060) */}
+        {!cashSession.is_open && cashSession.closure_lines.length > 0 && (
+          <ClosingSummary cashSession={cashSession} />
+        )}
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-xs font-medium text-muted-foreground">
-                Ventas (Efectivo)
-              </CardTitle>
-              <Store className="size-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl font-bold tracking-tight">
-                {formatCurrency(cashSession.totals.sales_cash_amount)}
-              </div>
-            </CardContent>
-          </Card>
+        {/*
+         * Resumen financiero: solo con el turno cerrado. Mientras está abierto
+         * el backend no manda los totales, así el arqueo de cierre es ciego (HU-060).
+         */}
+        {cashSession.totals && (
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-xs font-medium text-muted-foreground">
+                  Fondo inicial
+                </CardTitle>
+                <Vault className="size-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-xl font-bold tracking-tight">
+                  {formatCurrency(cashSession.totals.opening_amount)}
+                </div>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-xs font-medium text-muted-foreground">
-                Ingresos
-              </CardTitle>
-              <ArrowDownLeft className="size-4 text-emerald-600 dark:text-emerald-400" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl font-bold tracking-tight text-emerald-700 dark:text-emerald-400">
-                +{formatCurrency(cashSession.totals.income_amount)}
-              </div>
-            </CardContent>
-          </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-xs font-medium text-muted-foreground">
+                  Ventas (Efectivo)
+                </CardTitle>
+                <Store className="size-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-xl font-bold tracking-tight">
+                  {formatCurrency(cashSession.totals.sales_cash_amount)}
+                </div>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-xs font-medium text-muted-foreground">
-                Egresos
-              </CardTitle>
-              <ArrowUpRight className="size-4 text-rose-600 dark:text-rose-400" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl font-bold tracking-tight text-rose-700 dark:text-rose-400">
-                -{formatCurrency(cashSession.totals.expense_amount)}
-              </div>
-            </CardContent>
-          </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-xs font-medium text-muted-foreground">
+                  Ingresos
+                </CardTitle>
+                <ArrowDownLeft className="size-4 text-emerald-600 dark:text-emerald-400" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-xl font-bold tracking-tight text-emerald-700 dark:text-emerald-400">
+                  +{formatCurrency(cashSession.totals.income_amount)}
+                </div>
+              </CardContent>
+            </Card>
 
-          <Card className="col-span-2 border-primary/20 bg-primary/5 lg:col-span-1 dark:border-primary/30">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-xs font-semibold text-primary">
-                Efectivo esperado
-              </CardTitle>
-              <Banknote className="size-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl font-extrabold tracking-tight text-primary">
-                {formatCurrency(cashSession.totals.expected_cash)}
-              </div>
-              <p className="mt-1 text-[11px] text-muted-foreground">
-                Saldo actual en cajón
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-xs font-medium text-muted-foreground">
+                  Egresos
+                </CardTitle>
+                <ArrowUpRight className="size-4 text-rose-600 dark:text-rose-400" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-xl font-bold tracking-tight text-rose-700 dark:text-rose-400">
+                  -{formatCurrency(cashSession.totals.expense_amount)}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="col-span-2 border-primary/20 bg-primary/5 lg:col-span-1 dark:border-primary/30">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-xs font-semibold text-primary">
+                  Efectivo esperado
+                </CardTitle>
+                <Banknote className="size-4 text-primary" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-xl font-extrabold tracking-tight text-primary">
+                  {formatCurrency(cashSession.totals.expected_cash)}
+                </div>
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  Saldo según el sistema
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Tabla de movimientos del turno */}
         <div className="space-y-4">
@@ -427,17 +460,7 @@ export default function CashSessionShow({ cashSession }: Props) {
 
             {/* Importe */}
             <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="amount">Importe en efectivo ($)</Label>
-                {isExpense && (
-                  <span className="text-xs text-muted-foreground">
-                    Disponible:{' '}
-                    <strong className="font-semibold text-foreground">
-                      {formatCurrency(availableCash)}
-                    </strong>
-                  </span>
-                )}
-              </div>
+              <Label htmlFor="amount">Importe en efectivo ($)</Label>
               <Input
                 id="amount"
                 type="number"
@@ -449,12 +472,6 @@ export default function CashSessionShow({ cashSession }: Props) {
                 autoFocus
                 required
               />
-              {exceedsCash && (
-                <p className="text-xs font-medium text-rose-600 dark:text-rose-400">
-                  El importe ingresado supera el efectivo disponible (
-                  {formatCurrency(availableCash)}).
-                </p>
-              )}
               <InputError message={form.errors.amount} />
             </div>
 
@@ -488,7 +505,6 @@ export default function CashSessionShow({ cashSession }: Props) {
                 type="submit"
                 disabled={
                   form.processing ||
-                  exceedsCash ||
                   !form.data.amount ||
                   !form.data.reason.trim()
                 }
