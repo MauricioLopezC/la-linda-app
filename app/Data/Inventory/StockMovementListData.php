@@ -22,11 +22,16 @@ class StockMovementListData extends Data
         public ?int $supplier_voucher_id,
         public ?string $supplier_voucher_formatted_number,
         public ?int $reversal_of_movement_id,
+        public ?int $sale_id,
+        public bool $has_conflict,
     ) {}
 
     public static function fromModel(StockMovement $movement): self
     {
         $totalQty = $movement->items->sum(fn ($item): float => abs((float) $item->quantity));
+        $hasConflict = $movement->relationLoaded('items')
+            ? $movement->items->contains(fn ($item): bool => $item->system_quantity !== null && round((float) $item->system_quantity + (float) $item->quantity, 3) < 0)
+            : false;
         $tz = (string) config('app.timezone', 'America/Argentina/Buenos_Aires');
         $created = $movement->created_at?->copy()->setTimezone($tz) ?? now()->setTimezone($tz);
 
@@ -50,6 +55,8 @@ class StockMovementListData extends Data
             supplier_voucher_id: $voucher?->id,
             supplier_voucher_formatted_number: $voucherFormattedNumber,
             reversal_of_movement_id: $movement->reversal_of_movement_id,
+            sale_id: $movement->sale_id,
+            has_conflict: $hasConflict,
         );
     }
 }

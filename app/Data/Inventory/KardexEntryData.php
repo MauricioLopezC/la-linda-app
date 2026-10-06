@@ -18,6 +18,9 @@ class KardexEntryData extends Data
         public string $balance,
         public ?int $supplier_voucher_id,
         public ?string $supplier_voucher_formatted_number,
+        public ?int $sale_id,
+        public ?string $system_quantity,
+        public bool $is_conflict,
     ) {}
 
     /**
@@ -34,6 +37,9 @@ class KardexEntryData extends Data
             ? "{$voucher->letter->value} {$voucher->point_of_sale}-{$voucher->number}"
             : null;
 
+        $isConflict = $item->system_quantity !== null
+            && round((float) $item->system_quantity + (float) $item->quantity, 3) < 0;
+
         return new self(
             id: $item->id,
             stock_movement_id: $movement->id,
@@ -45,6 +51,9 @@ class KardexEntryData extends Data
             balance: sprintf('%.3f', (float) $item->getAttribute('balance')),
             supplier_voucher_id: $voucher?->id,
             supplier_voucher_formatted_number: $voucherFormattedNumber,
+            sale_id: $movement->sale_id,
+            system_quantity: $item->system_quantity !== null ? sprintf('%.3f', (float) $item->system_quantity) : null,
+            is_conflict: $isConflict,
         );
     }
 }

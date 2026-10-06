@@ -21,6 +21,7 @@ class StockBalanceData extends Data
         public string $branch_name,
         public float $quantity,
         public bool $is_out_of_stock,
+        public bool $is_negative,
     ) {}
 
     public static function fromModel(StockBalance $stock): self
@@ -39,6 +40,7 @@ class StockBalanceData extends Data
             branch_name: $stock->warehouse->branch->name,
             quantity: (float) $stock->quantity,
             is_out_of_stock: (float) $stock->quantity <= 0,
+            is_negative: (float) $stock->quantity < 0,
         );
     }
 }
