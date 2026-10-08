@@ -10,6 +10,7 @@ use App\Enums\Sales\PaymentMethodKind;
 use App\Enums\Sales\SaleStatus;
 use App\Events\Sales\SaleConfirmed;
 use App\Models\Sales\CashMovement;
+use App\Models\Sales\CashSession;
 use App\Models\Sales\PaymentMethod;
 use App\Models\Sales\Sale;
 use App\Models\User;
@@ -55,7 +56,15 @@ class ConfirmSalePayment
                 ]);
             }
 
-            if ($lockedSale->cash_session_id === null || $lockedSale->cashSession?->status !== CashSessionStatus::Open) {
+            /*
+             * Locking the session serializes the payment with the closing (HU-060): the closing
+             * either sees this sale still open and rejects, or sees it confirmed with its movements.
+             */
+            $cashSession = $lockedSale->cash_session_id === null
+                ? null
+                : CashSession::query()->lockForUpdate()->find($lockedSale->cash_session_id);
+
+            if ($cashSession?->status !== CashSessionStatus::Open) {
                 throw ValidationException::withMessages([
                     'sale' => 'El turno de caja de la venta no se encuentra abierto.',
                 ]);

@@ -32,6 +32,8 @@ trait ConvertsMoneyToCents
     /**
      * Format an integer amount of cents back into a decimal money string with a
      * dot separator and exactly two decimal places.
+     *
+     * @return numeric-string
      */
     protected function centsToMoney(int $cents): string
     {

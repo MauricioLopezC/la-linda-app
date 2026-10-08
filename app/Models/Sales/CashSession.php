@@ -2,6 +2,7 @@
 
 namespace App\Models\Sales;
 
+use App\Actions\Sales\GetCashSessionExpectedTotals;
 use App\Enums\Sales\CashCountMoment;
 use App\Enums\Sales\CashMovementType;
 use App\Enums\Sales\CashSessionStatus;
@@ -152,22 +153,7 @@ class CashSession extends Model
      */
     public function expectedCash(): string
     {
-        $balance = DB::table('cash_movements')
-            ->join('payment_methods', 'payment_methods.id', '=', 'cash_movements.payment_method_id')
-            ->where('cash_movements.cash_session_id', $this->id)
-            ->where('payment_methods.kind', PaymentMethodKind::Cash->value)
-            ->selectRaw("
-                COALESCE(SUM(
-                    CASE
-                        WHEN cash_movements.type IN ('apertura', 'venta', 'ingreso') THEN cash_movements.amount
-                        WHEN cash_movements.type = 'egreso' THEN -cash_movements.amount
-                        ELSE 0
-                    END
-                ), 0) as balance
-            ")
-            ->value('balance');
-
-        return number_format((float) ($balance ?? 0), 2, '.', '');
+        return app(GetCashSessionExpectedTotals::class)->expectedCash($this);
     }
 
     /**

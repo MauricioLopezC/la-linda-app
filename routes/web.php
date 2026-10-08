@@ -139,6 +139,9 @@ Route::middleware(['internal.staff', 'verified'])->group(function () {
         Route::post('/', [CashSessionController::class, 'store'])->name('store');
         Route::get('current', [CashSessionController::class, 'current'])->name('current');
         Route::post('{cashSession}/movements', [CashSessionController::class, 'storeMovement'])->name('movements.store');
+        Route::get('{cashSession}/close', [CashSessionController::class, 'createClosing'])->name('closing.create');
+        Route::post('{cashSession}/close', [CashSessionController::class, 'storeClosing'])->name('closing.store');
+        Route::get('{cashSession}/close/pdf', [CashSessionController::class, 'closingPdf'])->name('closing.pdf');
         Route::get('{cashSession}', [CashSessionController::class, 'show'])->name('show');
     });
 
