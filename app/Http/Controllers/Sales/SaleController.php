@@ -16,7 +16,11 @@ use App\Data\Sales\SaleArticleOptionData;
 use App\Data\Sales\SaleCustomerOptionData;
 use App\Data\Sales\SaleData;
 use App\Data\Sales\SaleListData;
+use App\Data\Sales\SalePaymentData;
 use App\Data\Sales\SalePriceListOptionData;
+use App\Enums\Customers\CustomerIdType;
+use App\Enums\Customers\CustomerTaxCondition;
+use App\Enums\Sales\CashMovementType;
 use App\Enums\Sales\SaleStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Sales\ConfirmSalePaymentRequest;
@@ -28,16 +32,21 @@ use App\Http\Requests\Sales\UpdateSalePriceListRequest;
 use App\Models\Catalog\Article;
 use App\Models\Customers\Customer;
 use App\Models\Pricing\PriceList;
+use App\Models\Sales\CashMovement;
 use App\Models\Sales\PaymentMethod;
 use App\Models\Sales\PointOfSale;
 use App\Models\Sales\Sale;
 use App\Models\Sales\SaleItem;
 use App\Models\User;
+use App\Rules\Customers\ValidCuit;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response as HttpResponse;
+use Illuminate\Support\Facades\File;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -226,6 +235,53 @@ class SaleController extends Controller
         $action->handle($sale);
 
         return to_route('sales.sales.index')->with('success', 'Venta descartada.');
+    }
+
+    /**
+     * Print (inline) or download (`?download=1`) the invoice issued for the sale (HU-043).
+     * Everything comes from the frozen invoice and the immutable sale payments; nothing is recalculated.
+     */
+    public function invoicePdf(Request $request, Sale $sale): HttpResponse
+    {
+        $invoice = $sale->invoice;
+
+        abort_if($invoice === null, 404);
+
+        $invoice->loadMissing([
+            'items' => fn ($query) => $query->orderBy('id'),
+            'sale.cashMovements.paymentMethod',
+            'user',
+        ]);
+
+        $payments = $invoice->sale->cashMovements
+            ->where('type', CashMovementType::Sale)
+            ->sortBy('id')
+            ->map(fn (CashMovement $movement): SalePaymentData => SalePaymentData::fromModel($movement))
+            ->values()
+            ->all();
+
+        $customerIdType = CustomerIdType::tryFrom((string) $invoice->customer_id_type);
+        $customerDocument = match (true) {
+            $customerIdType === null, $customerIdType === CustomerIdType::SinIdentificar, blank($invoice->customer_id_number) => null,
+            $customerIdType === CustomerIdType::Cuit => 'CUIT '.(ValidCuit::format($invoice->customer_id_number) ?? $invoice->customer_id_number),
+            default => "{$customerIdType->label()} {$invoice->customer_id_number}",
+        };
+
+        $cssPath = resource_path('css/pdf/invoice.css');
+
+        $pdf = Pdf::loadView('pdf.sales.invoice', [
+            'invoice' => $invoice,
+            'issuer' => config('invoicing.issuer'),
+            'customerTaxCondition' => CustomerTaxCondition::tryFrom($invoice->customer_tax_condition)?->label() ?? $invoice->customer_tax_condition,
+            'customerDocument' => $customerDocument,
+            'vatBreakdown' => $invoice->vatBreakdown(),
+            'payments' => $payments,
+            'stylesheet' => File::exists($cssPath) ? File::get($cssPath) : '',
+        ]);
+
+        $fileName = "Factura_{$invoice->type->value}_{$invoice->formattedNumber()}.pdf";
+
+        return $request->boolean('download') ? $pdf->download($fileName) : $pdf->stream($fileName);
     }
 
     /**
