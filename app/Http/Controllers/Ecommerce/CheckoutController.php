@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Ecommerce;
 use App\Actions\Ecommerce\GetCustomerCart;
 use App\Actions\Ecommerce\PlaceWebOrder;
 use App\Data\Ecommerce\PickupBranchOptionData;
+use App\Enums\Ecommerce\DeliveryMethod;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Ecommerce\PlaceWebOrderRequest;
 use App\Models\Customers\Customer;
@@ -32,10 +33,14 @@ class CheckoutController extends Controller
         }
 
         $branches = Branch::query()->active()->orderBy('name')->get();
+        $shippingCost = number_format((float) config('ecommerce.shipping_cost', '2500.00'), 2, '.', '');
 
         return Inertia::render('ecommerce/checkout/show', [
             'cart' => $cart,
             'branches' => PickupBranchOptionData::collect($branches),
+            'default_shipping_address' => $customer->address,
+            'shipping_cost' => $shippingCost,
+            'formatted_shipping_cost' => '$ '.number_format((float) $shippingCost, 2, ',', '.'),
         ]);
     }
 
@@ -46,10 +51,19 @@ class CheckoutController extends Controller
     {
         $customer = $this->customerOf($request);
 
-        /** @var Branch $branch */
-        $branch = Branch::findOrFail($request->validated('pickup_branch_id'));
+        $deliveryMethod = DeliveryMethod::from((string) $request->validated('delivery_method'));
+        $pickupBranch = $deliveryMethod === DeliveryMethod::Pickup && $request->filled('pickup_branch_id')
+            ? Branch::findOrFail((int) $request->validated('pickup_branch_id'))
+            : null;
 
-        $order = $placeWebOrder->execute($customer, $branch, $request->validated('notes'));
+        $order = $placeWebOrder->execute(
+            customer: $customer,
+            deliveryMethod: $deliveryMethod,
+            pickupBranch: $pickupBranch,
+            shippingAddress: $request->validated('shipping_address'),
+            shippingNotes: $request->validated('shipping_notes'),
+            notes: $request->validated('notes'),
+        );
 
         return redirect()->route('tienda.orders.show', $order)
             ->with('success', "Confirmamos tu pedido N.º {$order->formattedNumber()}.");
