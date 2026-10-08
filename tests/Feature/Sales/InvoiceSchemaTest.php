@@ -8,6 +8,27 @@ use App\Models\Sales\InvoiceItem;
 use App\Models\Sales\Sale;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+
+test('the point of sale snapshot migration backfills existing invoices and preserves their constraints', function () {
+    $invoice = Invoice::factory()->create();
+    $originalNumber = $invoice->pointOfSale->number;
+    $migration = require database_path('migrations/2026_10_06_154922_add_point_of_sale_number_to_invoices_table.php');
+
+    $migration->down();
+    expect(Schema::hasColumn('invoices', 'point_of_sale_number'))->toBeFalse();
+
+    $migration->up();
+    $invoice->pointOfSale->update(['number' => $originalNumber + 1]);
+    $invoice->refresh();
+
+    expect($invoice->point_of_sale_number)->toBe($originalNumber)
+        ->and($invoice->formattedNumber())->toBe(sprintf('%04d-%08d', $originalNumber, $invoice->number))
+        ->and(inSavepoint(fn () => DB::table('invoices')->where('id', $invoice->id)->update(['type' => 'C'])))
+        ->toThrow(QueryException::class)
+        ->and(inSavepoint(fn () => DB::table('invoices')->where('id', $invoice->id)->update(['total_amount' => '1200.00'])))
+        ->toThrow(QueryException::class);
+});
 
 test('invoice numbers are unique per point of sale and type', function () {
     $first = Invoice::factory()->create();

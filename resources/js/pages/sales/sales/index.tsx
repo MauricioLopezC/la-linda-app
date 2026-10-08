@@ -276,12 +276,19 @@ export default function SalesIndex({
                       {formatCurrency(sale.total_amount)}
                     </TableCell>
                     <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={saleStatusClasses[sale.status]}
-                      >
-                        {sale.status_label}
-                      </Badge>
+                      <div className="flex flex-col items-start gap-1">
+                        <Badge
+                          variant="outline"
+                          className={saleStatusClasses[sale.status]}
+                        >
+                          {sale.status_label}
+                        </Badge>
+                        {sale.invoice_formatted_number && (
+                          <span className="font-mono text-xs text-muted-foreground">
+                            {sale.invoice_type} {sale.invoice_formatted_number}
+                          </span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="sm" asChild>
