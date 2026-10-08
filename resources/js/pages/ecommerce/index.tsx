@@ -8,6 +8,7 @@ import {
   Package,
   PackageSearch,
   Plus,
+  ReceiptText,
   Search,
   ShieldCheck,
   ShoppingCart,
@@ -33,6 +34,7 @@ import { Input } from '@/components/ui/input';
 import { login } from '@/routes';
 import { home } from '@/routes/tienda';
 import * as cartRoutes from '@/routes/tienda/cart';
+import * as ordersRoutes from '@/routes/tienda/orders';
 import type { BreadcrumbItem } from '@/types';
 
 type Article = App.Data.Ecommerce.OnlineCatalogArticleData;
@@ -434,6 +436,17 @@ export default function StoreHome({
                     <Link href={cartRoutes.index.url()}>
                       <ShoppingCart className="size-4" />
                       Mi carrito
+                    </Link>
+                  </Button>
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="default"
+                    className="gap-2 bg-background/80 backdrop-blur-xs"
+                  >
+                    <Link href={ordersRoutes.index.url()}>
+                      <ReceiptText className="size-4" />
+                      Mis pedidos
                     </Link>
                   </Button>
                 </>
