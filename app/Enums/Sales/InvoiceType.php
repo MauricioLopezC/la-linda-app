@@ -19,6 +19,17 @@ enum InvoiceType: string
         return "Factura {$this->value}";
     }
 
+    /**
+     * Voucher type code assigned by ARCA, printed under the letter (001 = Factura A, 006 = Factura B).
+     */
+    public function voucherCode(): string
+    {
+        return match ($this) {
+            self::A => '001',
+            self::B => '006',
+        };
+    }
+
     public static function forTaxCondition(CustomerTaxCondition $taxCondition): self
     {
         return $taxCondition === CustomerTaxCondition::ResponsibleInscripto ? self::A : self::B;

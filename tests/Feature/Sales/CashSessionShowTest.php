@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\Sales\CashMovementType;
+use App\Enums\Sales\CashSessionStatus;
 use App\Models\Sales\CashMovement;
 use App\Models\Sales\CashSession;
 use App\Models\Sales\PaymentMethod;
@@ -11,7 +12,7 @@ beforeEach(function () {
     $this->cash = PaymentMethod::factory()->cash()->create(['name' => 'Efectivo']);
 });
 
-test('a cashier can view their cash session with movements and expected cash', function () {
+test('an open cash session shows its movements but not its totals nor the expected cash', function () {
     $user = User::factory()->create();
     $session = CashSession::factory()->create([
         'user_id' => $user->id,
@@ -41,14 +42,47 @@ test('a cashier can view their cash session with movements and expected cash', f
             ->where('id', $session->id)
             ->where('status', 'abierta')
             ->where('is_open', true)
-            ->where('totals.opening_amount', '8000.00')
-            ->where('totals.income_amount', '2000.00')
-            ->where('totals.expense_amount', '0.00')
-            ->where('totals.expected_cash', '10000.00')
+            ->where('totals', null)
+            ->where('expected_totals', [])
             ->has('movements', 2)
             ->etc()
         )
     );
+});
+
+test('a closed cash session shows its totals and the expected cash', function () {
+    $user = User::factory()->create();
+    $session = CashSession::factory()->create([
+        'user_id' => $user->id,
+        'opening_amount' => '8000.00',
+    ]);
+    CashMovement::factory()->opening()->create([
+        'cash_session_id' => $session->id,
+        'payment_method_id' => $this->cash->id,
+        'amount' => '8000.00',
+        'user_id' => $user->id,
+    ]);
+    CashMovement::factory()->create([
+        'cash_session_id' => $session->id,
+        'type' => CashMovementType::Income,
+        'payment_method_id' => $this->cash->id,
+        'amount' => '2000.00',
+        'reason' => 'Refuerzo de cambio',
+        'user_id' => $user->id,
+    ]);
+    $session->update(['status' => CashSessionStatus::Closed, 'closed_at' => now()]);
+
+    $this->actingAs($user)
+        ->get(route('sales.cash-sessions.show', $session))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('cashSession.is_open', false)
+            ->where('cashSession.totals.opening_amount', '8000.00')
+            ->where('cashSession.totals.income_amount', '2000.00')
+            ->where('cashSession.totals.expense_amount', '0.00')
+            ->where('cashSession.totals.expected_cash', '10000.00')
+            ->where('cashSession.expected_totals.0.expected_amount', '10000.00')
+        );
 });
 
 test('current cash session route redirects to the open shift if cashier has one', function () {
@@ -134,5 +168,8 @@ test('HTTP movement validation rejects expense exceeding available cash', functi
         'reason' => 'Gasto mayor al disponible',
     ]);
 
-    $response->assertSessionHasErrors('amount');
+    /* The message leaves the available cash out, so the closing count stays blind. */
+    $response->assertSessionHasErrors([
+        'amount' => 'El importe del egreso supera el efectivo disponible en la caja según el sistema.',
+    ]);
 });

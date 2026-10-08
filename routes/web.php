@@ -141,6 +141,9 @@ Route::middleware(['internal.staff', 'verified'])->group(function () {
         Route::post('/', [CashSessionController::class, 'store'])->name('store');
         Route::get('current', [CashSessionController::class, 'current'])->name('current');
         Route::post('{cashSession}/movements', [CashSessionController::class, 'storeMovement'])->name('movements.store');
+        Route::get('{cashSession}/close', [CashSessionController::class, 'createClosing'])->name('closing.create');
+        Route::post('{cashSession}/close', [CashSessionController::class, 'storeClosing'])->name('closing.store');
+        Route::get('{cashSession}/close/pdf', [CashSessionController::class, 'closingPdf'])->name('closing.pdf');
         Route::get('{cashSession}', [CashSessionController::class, 'show'])->name('show');
     });
 
@@ -156,6 +159,7 @@ Route::middleware(['internal.staff', 'verified'])->group(function () {
         Route::patch('{sale}/price-list', [SaleController::class, 'updatePriceList'])->name('price-list.update');
         Route::post('{sale}/discard', [SaleController::class, 'discard'])->name('discard');
         Route::post('{sale}/confirm-payment', [SaleController::class, 'confirmPayment'])->name('confirm-payment');
+        Route::get('{sale}/invoice/pdf', [SaleController::class, 'invoicePdf'])->name('invoice.pdf');
         // Declared last so the literal segments above are not swallowed by the wildcard.
         Route::get('{sale}', [SaleController::class, 'show'])->name('show');
     });

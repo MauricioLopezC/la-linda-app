@@ -73,11 +73,10 @@ class RegisterCashMovement
             if ($type === CashMovementType::Expense) {
                 $availableCash = $session->expectedCash();
 
+                /* The message leaves the available amount out: the closing count is blind (HU-060). */
                 if (bccomp($amount, $availableCash, 2) === 1) {
-                    $formattedAvailable = number_format((float) $availableCash, 2, ',', '.');
-
                     throw ValidationException::withMessages([
-                        'amount' => "El importe del egreso no puede superar el efectivo disponible según el sistema (\${$formattedAvailable}).",
+                        'amount' => 'El importe del egreso supera el efectivo disponible en la caja según el sistema.',
                     ]);
                 }
             }
