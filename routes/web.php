@@ -7,8 +7,10 @@ use App\Http\Controllers\Catalog\CategoryController;
 use App\Http\Controllers\Catalog\UnitOfMeasureController;
 use App\Http\Controllers\Customers\CustomerController;
 use App\Http\Controllers\Ecommerce\CartController;
+use App\Http\Controllers\Ecommerce\CheckoutController;
 use App\Http\Controllers\Ecommerce\CustomerAccountController;
 use App\Http\Controllers\Ecommerce\StoreHomeController;
+use App\Http\Controllers\Ecommerce\WebOrderController;
 use App\Http\Controllers\Inventory\StockAdjustmentController;
 use App\Http\Controllers\Inventory\StockConsultationController;
 use App\Http\Controllers\Inventory\StockMovementHistoryController;
@@ -235,6 +237,14 @@ Route::prefix('tienda')->name('tienda.')->group(function () {
             Route::patch('{cart_item}', [CartController::class, 'update'])->name('update');
             Route::delete('{cart_item}', [CartController::class, 'destroy'])->name('destroy');
             Route::delete('/', [CartController::class, 'clear'])->name('clear');
+        });
+
+        Route::get('checkout', [CheckoutController::class, 'show'])->name('checkout.show');
+        Route::post('checkout', [CheckoutController::class, 'store'])->name('checkout.store');
+
+        Route::prefix('mis-pedidos')->name('orders.')->group(function () {
+            Route::get('/', [WebOrderController::class, 'index'])->name('index');
+            Route::get('{web_order}', [WebOrderController::class, 'show'])->name('show');
         });
     });
 });

@@ -2,12 +2,8 @@
 
 namespace App\Actions\Ecommerce;
 
-use App\Actions\Pricing\ResolveArticlePrice;
 use App\Data\Ecommerce\CartData;
 use App\Data\Ecommerce\CartItemData;
-use App\Enums\Catalog\ArticleStatus;
-use App\Enums\Pricing\PriceListChannel;
-use App\Exceptions\Pricing\ArticleNotPricedException;
 use App\Models\Customers\Customer;
 use App\Models\Ecommerce\CartItem;
 use Illuminate\Database\Eloquent\Collection;
@@ -15,7 +11,7 @@ use Illuminate\Database\Eloquent\Collection;
 class GetCustomerCart
 {
     public function __construct(
-        private readonly ResolveArticlePrice $resolveArticlePrice,
+        private readonly ResolveCartLine $resolveCartLine,
     ) {}
 
     /**
@@ -35,29 +31,10 @@ class GetCustomerCart
         $hasUnavailable = false;
 
         foreach ($cartItems as $item) {
-            $article = $item->article;
-            $isAvailable = true;
-            $unavailableReason = null;
-            $resolvedPrice = null;
-
-            if ($article->status !== ArticleStatus::Active) {
-                $isAvailable = false;
-                $unavailableReason = 'Artículo inactivo';
-            } elseif (! $article->is_online_publishable) {
-                $isAvailable = false;
-                $unavailableReason = 'No disponible para venta online';
-            } else {
-                try {
-                    $resolvedPrice = $this->resolveArticlePrice->execute(
-                        $article,
-                        PriceListChannel::Online,
-                        $customer,
-                    );
-                } catch (ArticleNotPricedException) {
-                    $isAvailable = false;
-                    $unavailableReason = 'Sin precio vigente';
-                }
-            }
+            $line = $this->resolveCartLine->execute($item->article, $customer);
+            $resolvedPrice = $line['price'];
+            $unavailableReason = $line['unavailable_reason'];
+            $isAvailable = $resolvedPrice !== null;
 
             $unitPriceStr = $resolvedPrice?->unit_price;
             $subtotalStr = '0.00';

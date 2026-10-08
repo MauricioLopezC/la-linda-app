@@ -243,6 +243,11 @@ const clientNavGroups: NavGroup[] = [
         icon: ShoppingCart,
       },
       {
+        title: 'Mis pedidos',
+        href: '/tienda/mis-pedidos',
+        icon: ReceiptText,
+      },
+      {
         title: 'Mi cuenta',
         href: '/tienda/mi-cuenta',
         icon: Users,

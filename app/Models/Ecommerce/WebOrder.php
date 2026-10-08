@@ -102,4 +102,12 @@ class WebOrder extends Model
     {
         return $this->hasMany(WebOrderItem::class);
     }
+
+    /**
+     * Order number as shown to the customer (e.g. 00000042).
+     */
+    public function formattedNumber(): string
+    {
+        return sprintf('%08d', $this->number);
+    }
 }

@@ -33,6 +33,7 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { home } from '@/routes/tienda';
 import * as cartRoutes from '@/routes/tienda/cart';
+import * as checkoutRoutes from '@/routes/tienda/checkout';
 import type { BreadcrumbItem } from '@/types';
 
 type CartData = App.Data.Ecommerce.CartData;
@@ -148,9 +149,15 @@ export default function CartIndex({ cart }: Props) {
       return;
     }
 
-    toast.info(
-      'El proceso de confirmación de pedido y checkout estará disponible próximamente en la siguiente etapa.',
-    );
+    if (cart.has_unavailable_items) {
+      toast.error(
+        'Quitá los artículos no disponibles del carrito para confirmar el pedido.',
+      );
+
+      return;
+    }
+
+    router.visit(checkoutRoutes.show.url());
   };
 
   return (
@@ -457,7 +464,9 @@ export default function CartIndex({ cart }: Props) {
                     type="button"
                     size="lg"
                     className="w-full gap-2 font-semibold shadow-xs"
-                    disabled={availableItemsCount === 0}
+                    disabled={
+                      availableItemsCount === 0 || cart.has_unavailable_items
+                    }
                     onClick={handleContinueCheckout}
                   >
                     Continuar compra
