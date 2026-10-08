@@ -1,5 +1,12 @@
 import { Head, Link, useForm } from '@inertiajs/react';
-import { AlertCircle, ArrowLeft, CheckCircle2, MapPin } from 'lucide-react';
+import {
+  AlertCircle,
+  ArrowLeft,
+  CheckCircle2,
+  MapPin,
+  Store,
+  Truck,
+} from 'lucide-react';
 import React from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +19,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -32,15 +40,30 @@ type PickupBranch = App.Data.Ecommerce.PickupBranchOptionData;
 type Props = {
   cart: CartData;
   branches: PickupBranch[];
+  default_shipping_address: string | null;
+  shipping_cost: string;
+  formatted_shipping_cost: string;
 };
 
-export default function CheckoutShow({ cart, branches }: Props) {
+export default function CheckoutShow({
+  cart,
+  branches,
+  default_shipping_address,
+  shipping_cost,
+  formatted_shipping_cost,
+}: Props) {
   const form = useForm<{
+    delivery_method: 'retiro' | 'envio';
     pickup_branch_id: string;
+    shipping_address: string;
+    shipping_notes: string;
     notes: string;
     cart?: string;
   }>({
+    delivery_method: 'retiro',
     pickup_branch_id: branches.length === 1 ? String(branches[0].id) : '',
+    shipping_address: default_shipping_address ?? '',
+    shipping_notes: '',
     notes: '',
   });
 
@@ -48,6 +71,21 @@ export default function CheckoutShow({ cart, branches }: Props) {
     (branch) => String(branch.id) === form.data.pickup_branch_id,
   );
   const cartError = form.errors.cart;
+
+  const isShipping = form.data.delivery_method === 'envio';
+  const shippingCostNumber = Number(shipping_cost) || 0;
+  const cartTotalNumber = Number(cart.total) || 0;
+  const currentTotalNumber = isShipping
+    ? cartTotalNumber + shippingCostNumber
+    : cartTotalNumber;
+
+  const formattedCurrentTotal = `$ ${currentTotalNumber.toLocaleString(
+    'es-AR',
+    {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    },
+  )}`;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,7 +102,7 @@ export default function CheckoutShow({ cart, branches }: Props) {
             Confirmar pedido
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Revisá tu compra, elegí dónde retirarla y confirmá el pedido.
+            Revisá tu compra, elegí cómo recibirla y confirmá el pedido.
           </p>
         </div>
 
@@ -86,70 +124,185 @@ export default function CheckoutShow({ cart, branches }: Props) {
 
         <form onSubmit={handleSubmit} className="grid gap-6 lg:grid-cols-3">
           <div className="space-y-6 lg:col-span-2">
-            {/* Pickup */}
+            {/* Modalidad de entrega */}
             <Card className="border-border shadow-xs">
               <CardHeader>
                 <CardTitle className="text-lg font-semibold">
-                  Retiro en sucursal
+                  Modalidad de entrega
                 </CardTitle>
                 <CardDescription>
-                  Te avisamos cuando tu pedido esté listo para retirar.
+                  Elegí si preferís retirar en sucursal o recibir el pedido en
+                  tu domicilio.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="pickup_branch_id" className="text-sm">
-                    Sucursal de retiro{' '}
-                    <span className="text-destructive">*</span>
-                  </Label>
-                  <Select
-                    value={form.data.pickup_branch_id}
-                    onValueChange={(value) =>
-                      form.setData('pickup_branch_id', value)
-                    }
+              <CardContent className="space-y-5">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={() => form.setData('delivery_method', 'retiro')}
+                    className={`flex cursor-pointer items-start gap-3 rounded-lg border p-4 text-left transition-colors ${
+                      form.data.delivery_method === 'retiro'
+                        ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                        : 'border-border hover:border-muted-foreground/30'
+                    }`}
                   >
-                    <SelectTrigger
-                      id="pickup_branch_id"
-                      className="w-full"
-                      aria-invalid={!!form.errors.pickup_branch_id}
-                    >
-                      <SelectValue placeholder="Elegí una sucursal" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {branches.map((branch) => (
-                        <SelectItem key={branch.id} value={String(branch.id)}>
-                          {branch.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {selectedBranch?.address && (
-                    <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <MapPin className="size-3.5" />
-                      {selectedBranch.address}
-                    </p>
-                  )}
-                  {branches.length === 0 && (
-                    <p className="text-xs text-destructive">
-                      No hay sucursales habilitadas para retiro en este momento.
-                    </p>
-                  )}
-                  {form.errors.pickup_branch_id && (
-                    <p className="text-xs text-destructive">
-                      {form.errors.pickup_branch_id}
-                    </p>
-                  )}
+                    <Store className="mt-0.5 size-5 shrink-0 text-primary" />
+                    <div className="flex-1 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-foreground">
+                          Retiro en sucursal
+                        </span>
+                        <Badge variant="secondary" className="text-xs">
+                          Sin costo
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Retirás en una de nuestras sucursales habilitadas.
+                      </p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => form.setData('delivery_method', 'envio')}
+                    className={`flex cursor-pointer items-start gap-3 rounded-lg border p-4 text-left transition-colors ${
+                      form.data.delivery_method === 'envio'
+                        ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                        : 'border-border hover:border-muted-foreground/30'
+                    }`}
+                  >
+                    <Truck className="mt-0.5 size-5 shrink-0 text-primary" />
+                    <div className="flex-1 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-foreground">
+                          Envío a domicilio
+                        </span>
+                        <Badge
+                          variant="secondary"
+                          className="text-xs font-semibold"
+                        >
+                          {formatted_shipping_cost}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Lo enviamos a tu dirección particular.
+                      </p>
+                    </div>
+                  </button>
                 </div>
 
-                <div className="space-y-1.5">
+                {form.errors.delivery_method && (
+                  <p className="text-xs text-destructive">
+                    {form.errors.delivery_method}
+                  </p>
+                )}
+
+                {/* Campos según modalidad */}
+                {form.data.delivery_method === 'retiro' ? (
+                  <div className="space-y-1.5 pt-2">
+                    <Label htmlFor="pickup_branch_id" className="text-sm">
+                      Sucursal de retiro{' '}
+                      <span className="text-destructive">*</span>
+                    </Label>
+                    <Select
+                      value={form.data.pickup_branch_id}
+                      onValueChange={(value) =>
+                        form.setData('pickup_branch_id', value)
+                      }
+                    >
+                      <SelectTrigger
+                        id="pickup_branch_id"
+                        className="w-full"
+                        aria-invalid={!!form.errors.pickup_branch_id}
+                      >
+                        <SelectValue placeholder="Elegí una sucursal" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {branches.map((branch) => (
+                          <SelectItem key={branch.id} value={String(branch.id)}>
+                            {branch.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {selectedBranch?.address && (
+                      <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <MapPin className="size-3.5" />
+                        {selectedBranch.address}
+                      </p>
+                    )}
+                    {branches.length === 0 && (
+                      <p className="text-xs text-destructive">
+                        No hay sucursales habilitadas para retiro en este
+                        momento.
+                      </p>
+                    )}
+                    {form.errors.pickup_branch_id && (
+                      <p className="text-xs text-destructive">
+                        {form.errors.pickup_branch_id}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-4 pt-2">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="shipping_address" className="text-sm">
+                        Domicilio de entrega{' '}
+                        <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        id="shipping_address"
+                        value={form.data.shipping_address}
+                        onChange={(e) =>
+                          form.setData('shipping_address', e.target.value)
+                        }
+                        placeholder="Calle, número, piso/depto, localidad..."
+                        maxLength={255}
+                        aria-invalid={!!form.errors.shipping_address}
+                      />
+                      <p className="text-[11px] text-muted-foreground">
+                        Podés editar el domicilio para este pedido sin modificar
+                        el registrado en tu cuenta.
+                      </p>
+                      {form.errors.shipping_address && (
+                        <p className="text-xs text-destructive">
+                          {form.errors.shipping_address}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="shipping_notes" className="text-sm">
+                        Indicaciones para la entrega (opcional)
+                      </Label>
+                      <Input
+                        id="shipping_notes"
+                        value={form.data.shipping_notes}
+                        onChange={(e) =>
+                          form.setData('shipping_notes', e.target.value)
+                        }
+                        placeholder="Por ejemplo: timbre blanco, dejar en portería, entre calles..."
+                        maxLength={255}
+                        aria-invalid={!!form.errors.shipping_notes}
+                      />
+                      {form.errors.shipping_notes && (
+                        <p className="text-xs text-destructive">
+                          {form.errors.shipping_notes}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-1.5 pt-2">
                   <Label htmlFor="notes" className="text-sm">
-                    Observaciones
+                    Observaciones adicionales
                   </Label>
                   <Textarea
                     id="notes"
                     value={form.data.notes}
                     onChange={(e) => form.setData('notes', e.target.value)}
-                    placeholder="Por ejemplo: retiro después de las 18 hs."
+                    placeholder="Comentarios o indicaciones generales para el pedido..."
                     maxLength={500}
                     rows={3}
                     aria-invalid={!!form.errors.notes}
@@ -232,9 +385,11 @@ export default function CheckoutShow({ cart, branches }: Props) {
                   </span>
                 </div>
                 <div className="flex justify-between text-muted-foreground">
-                  <span>Retiro en sucursal</span>
+                  <span>
+                    {isShipping ? 'Envío a domicilio' : 'Retiro en sucursal'}
+                  </span>
                   <span className="font-semibold text-foreground">
-                    Sin costo
+                    {isShipping ? formatted_shipping_cost : 'Sin costo'}
                   </span>
                 </div>
                 <Separator />
@@ -243,13 +398,13 @@ export default function CheckoutShow({ cart, branches }: Props) {
                     Total
                   </span>
                   <span className="text-2xl font-extrabold tracking-tight text-primary">
-                    {cart.formatted_total}
+                    {formattedCurrentTotal}
                   </span>
                 </div>
                 <p className="pt-1 text-[11px] leading-relaxed text-muted-foreground">
-                  Los precios se confirman al momento de enviar el pedido y
-                  quedan fijos desde entonces. El pedido queda pendiente de
-                  pago.
+                  Los precios y el costo de envío se confirman al momento de
+                  enviar el pedido y quedan fijos desde entonces. El pedido
+                  queda pendiente de pago.
                 </p>
               </CardContent>
               <CardFooter className="pt-2">
@@ -260,7 +415,8 @@ export default function CheckoutShow({ cart, branches }: Props) {
                   disabled={
                     form.processing ||
                     cart.has_unavailable_items ||
-                    branches.length === 0
+                    (form.data.delivery_method === 'retiro' &&
+                      branches.length === 0)
                   }
                 >
                   <CheckCircle2 className="size-4" />

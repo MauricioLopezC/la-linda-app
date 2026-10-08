@@ -36,15 +36,28 @@ class PlaceWebOrder
     /**
      * @throws ValidationException
      */
-    public function execute(Customer $customer, Branch $pickupBranch, ?string $notes = null): WebOrder
-    {
+    public function execute(
+        Customer $customer,
+        DeliveryMethod $deliveryMethod,
+        ?Branch $pickupBranch = null,
+        ?string $shippingAddress = null,
+        ?string $shippingNotes = null,
+        ?string $notes = null,
+    ): WebOrder {
         $attempt = 0;
 
         while (true) {
             $attempt++;
 
             try {
-                return DB::transaction(fn (): WebOrder => $this->place($customer, $pickupBranch, $notes));
+                return DB::transaction(fn (): WebOrder => $this->place(
+                    $customer,
+                    $deliveryMethod,
+                    $pickupBranch,
+                    $shippingAddress,
+                    $shippingNotes,
+                    $notes,
+                ));
             } catch (UniqueConstraintViolationException $exception) {
                 if ($attempt >= self::MAX_ATTEMPTS) {
                     throw $exception;
@@ -56,8 +69,14 @@ class PlaceWebOrder
     /**
      * @throws ValidationException
      */
-    private function place(Customer $customer, Branch $pickupBranch, ?string $notes): WebOrder
-    {
+    private function place(
+        Customer $customer,
+        DeliveryMethod $deliveryMethod,
+        ?Branch $pickupBranch,
+        ?string $shippingAddress,
+        ?string $shippingNotes,
+        ?string $notes,
+    ): WebOrder {
         /** @var Collection<int, CartItem> $cartItems */
         $cartItems = CartItem::query()
             ->where('customer_id', $customer->id)
@@ -68,12 +87,6 @@ class PlaceWebOrder
         if ($cartItems->isEmpty()) {
             throw ValidationException::withMessages([
                 'cart' => 'Tu carrito está vacío: agregá artículos antes de confirmar el pedido.',
-            ]);
-        }
-
-        if (! Branch::query()->active()->whereKey($pickupBranch->id)->exists()) {
-            throw ValidationException::withMessages([
-                'pickup_branch_id' => 'La sucursal de retiro elegida no está activa.',
             ]);
         }
 
@@ -114,15 +127,44 @@ class PlaceWebOrder
 
         $amount = number_format($itemsAmount, 2, '.', '');
 
+        if ($deliveryMethod === DeliveryMethod::Pickup) {
+            if ($pickupBranch === null || ! Branch::query()->active()->whereKey($pickupBranch->id)->exists()) {
+                throw ValidationException::withMessages([
+                    'pickup_branch_id' => 'La sucursal de retiro elegida no está activa.',
+                ]);
+            }
+
+            $shippingAddress = null;
+            $shippingNotes = null;
+            $shippingCost = '0.00';
+            $totalAmount = $amount;
+        } else {
+            $cleanShippingAddress = filled($shippingAddress) ? trim((string) $shippingAddress) : '';
+
+            if ($cleanShippingAddress === '') {
+                throw ValidationException::withMessages([
+                    'shipping_address' => 'El domicilio de entrega es obligatorio para envíos a domicilio.',
+                ]);
+            }
+
+            $pickupBranch = null;
+            $shippingAddress = $cleanShippingAddress;
+            $shippingNotes = filled($shippingNotes) ? trim((string) $shippingNotes) : null;
+            $shippingCost = number_format((float) config('ecommerce.shipping_cost', '2500.00'), 2, '.', '');
+            $totalAmount = number_format($itemsAmount + (float) $shippingCost, 2, '.', '');
+        }
+
         $order = WebOrder::create([
             'number' => (int) WebOrder::query()->max('number') + 1,
             'customer_id' => $customer->id,
             'status' => WebOrderStatus::Pending,
-            'delivery_method' => DeliveryMethod::Pickup,
-            'pickup_branch_id' => $pickupBranch->id,
+            'delivery_method' => $deliveryMethod,
+            'pickup_branch_id' => $pickupBranch?->id,
+            'shipping_address' => $shippingAddress,
+            'shipping_notes' => $shippingNotes,
             'items_amount' => $amount,
-            'shipping_cost' => '0.00',
-            'total_amount' => $amount,
+            'shipping_cost' => $shippingCost,
+            'total_amount' => $totalAmount,
             'notes' => filled($notes) ? trim($notes) : null,
             'placed_at' => now(),
         ]);
