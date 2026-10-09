@@ -70,10 +70,10 @@ class IssueInvoice
                 }
             }
 
+            // The point of sale lock above already serializes numbering; Postgres rejects FOR UPDATE on an aggregate.
             $lastNumber = (int) Invoice::query()
                 ->where('point_of_sale_id', $pointOfSale->id)
                 ->where('type', $type)
-                ->lockForUpdate()
                 ->max('number');
 
             $nextNumber = $lastNumber + 1;
