@@ -58,7 +58,9 @@ test('users without a customer cannot use checkout or orders', function () {
     $this->actingAs($staff)->get(route('tienda.orders.index'))->assertForbidden();
 });
 
-test('checkout shows the cart summary and only active branches', function () {
+test('checkout shows the cart summary, active branches and shipping cost', function () {
+    $this->customer->update(['address' => 'Calle Mitre 123']);
+
     CartItem::factory()->create([
         'customer_id' => $this->customer->id,
         'article_id' => $this->article->id,
@@ -72,6 +74,9 @@ test('checkout shows the cart summary and only active branches', function () {
         ->assertInertia(fn (Assert $page) => $page
             ->component('ecommerce/checkout/show')
             ->where('cart.total', '3000.00')
+            ->where('default_shipping_address', 'Calle Mitre 123')
+            ->where('shipping_cost', '2500.00')
+            ->where('formatted_shipping_cost', '$ 2.500,00')
             ->has('branches', 1)
             ->where('branches.0.name', 'Sucursal Centro'));
 });
@@ -90,6 +95,7 @@ test('placing the order redirects to its detail and empties the cart', function 
     ]);
 
     $response = $this->actingAs($this->clientUser)->post(route('tienda.checkout.store'), [
+        'delivery_method' => 'retiro',
         'pickup_branch_id' => $this->branch->id,
         'notes' => 'Llamar al llegar',
     ]);
@@ -101,8 +107,60 @@ test('placing the order redirects to its detail and empties the cart', function 
 
     expect($order->customer_id)->toBe($this->customer->id)
         ->and($order->total_amount)->toBe('3000.00')
+        ->and($order->shipping_cost)->toBe('0.00')
         ->and($order->notes)->toBe('Llamar al llegar')
         ->and($this->customer->cartItems()->count())->toBe(0);
+});
+
+test('placing a delivery order ignores client shipping cost and freezes customer shipping address', function () {
+    CartItem::factory()->create([
+        'customer_id' => $this->customer->id,
+        'article_id' => $this->article->id,
+        'quantity' => '2.000',
+    ]);
+
+    $response = $this->actingAs($this->clientUser)->post(route('tienda.checkout.store'), [
+        'delivery_method' => 'envio',
+        'shipping_address' => 'Av. San Martín 789, Salta',
+        'shipping_notes' => 'Depto 4B, timbre blanco',
+        'notes' => 'Entrega por la tarde',
+        'shipping_cost' => '99999.00', // Client cannot set or tamper shipping cost
+    ]);
+
+    $order = WebOrder::sole();
+
+    $response->assertRedirect(route('tienda.orders.show', $order))
+        ->assertSessionHas('success', "Confirmamos tu pedido N.º {$order->formattedNumber()}.");
+
+    expect($order->customer_id)->toBe($this->customer->id)
+        ->and($order->delivery_method->value)->toBe('envio')
+        ->and($order->pickup_branch_id)->toBeNull()
+        ->and($order->shipping_address)->toBe('Av. San Martín 789, Salta')
+        ->and($order->shipping_notes)->toBe('Depto 4B, timbre blanco')
+        ->and($order->items_amount)->toBe('3000.00')
+        ->and($order->shipping_cost)->toBe('2500.00')
+        ->and($order->total_amount)->toBe('5500.00')
+        ->and($order->notes)->toBe('Entrega por la tarde')
+        ->and($this->customer->cartItems()->count())->toBe(0);
+});
+
+test('placing a delivery order validates shipping address', function () {
+    CartItem::factory()->create([
+        'customer_id' => $this->customer->id,
+        'article_id' => $this->article->id,
+        'quantity' => '1.000',
+    ]);
+
+    $this->actingAs($this->clientUser)
+        ->from(route('tienda.checkout.show'))
+        ->post(route('tienda.checkout.store'), [
+            'delivery_method' => 'envio',
+            'shipping_address' => '',
+        ])
+        ->assertRedirect(route('tienda.checkout.show'))
+        ->assertSessionHasErrors('shipping_address');
+
+    expect(WebOrder::count())->toBe(0);
 });
 
 test('placing the order validates the pickup branch', function (?int $branchId) {
@@ -114,7 +172,10 @@ test('placing the order validates the pickup branch', function (?int $branchId) 
 
     $this->actingAs($this->clientUser)
         ->from(route('tienda.checkout.show'))
-        ->post(route('tienda.checkout.store'), ['pickup_branch_id' => $branchId ?? Branch::factory()->create(['is_active' => false])->id])
+        ->post(route('tienda.checkout.store'), [
+            'delivery_method' => 'retiro',
+            'pickup_branch_id' => $branchId ?? Branch::factory()->create(['is_active' => false])->id,
+        ])
         ->assertRedirect(route('tienda.checkout.show'))
         ->assertSessionHasErrors('pickup_branch_id');
 
@@ -182,6 +243,36 @@ test('order detail shows the frozen lines to its owner', function () {
             ->has('order.items', 1)
             ->where('order.items.0.article_description', 'Arroz Largo Fino 1kg')
             ->where('order.items.0.price_list_name', $this->onlineList->name));
+});
+
+test('order detail shows delivery address and shipping indications to its owner', function () {
+    $order = WebOrder::factory()->shipping('2500.00')->create([
+        'customer_id' => $this->customer->id,
+        'shipping_address' => 'Av. San Martín 789, Salta',
+        'shipping_notes' => 'Depto 4B',
+        'items_amount' => '3000.00',
+        'total_amount' => '5500.00',
+    ]);
+    WebOrderItem::factory()->create([
+        'web_order_id' => $order->id,
+        'article_id' => $this->article->id,
+        'quantity' => '2.000',
+        'unit_price' => '1500.00',
+        'price_list_id' => $this->onlineList->id,
+        'line_total' => '3000.00',
+    ]);
+
+    $this->actingAs($this->clientUser)
+        ->get(route('tienda.orders.show', $order))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('ecommerce/orders/show')
+            ->where('order.formatted_number', $order->formattedNumber())
+            ->where('order.delivery_method', 'envio')
+            ->where('order.shipping_address', 'Av. San Martín 789, Salta')
+            ->where('order.shipping_notes', 'Depto 4B')
+            ->where('order.shipping_cost', '2500.00')
+            ->where('order.total_amount', '5500.00'));
 });
 
 test('a customer cannot see another customer order', function () {

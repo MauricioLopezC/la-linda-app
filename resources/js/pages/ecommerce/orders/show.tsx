@@ -1,5 +1,11 @@
 import { Head, Link } from '@inertiajs/react';
-import { ArrowLeft, CalendarClock, MapPin, StickyNote } from 'lucide-react';
+import {
+  ArrowLeft,
+  CalendarClock,
+  MapPin,
+  StickyNote,
+  Truck,
+} from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -108,25 +114,58 @@ export default function OrderShow({ order }: Props) {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
-                {order.pickup_branch_name && (
-                  <div className="flex items-start gap-2">
-                    <MapPin className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                    <div>
-                      <div className="font-medium text-foreground">
-                        {order.pickup_branch_name}
-                      </div>
-                      {order.pickup_branch_address && (
-                        <div className="text-xs text-muted-foreground">
-                          {order.pickup_branch_address}
+                {order.delivery_method === 'retiro' &&
+                  order.pickup_branch_name && (
+                    <div className="flex items-start gap-2">
+                      <MapPin className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                      <div>
+                        <div className="font-medium text-foreground">
+                          {order.pickup_branch_name}
                         </div>
-                      )}
+                        {order.pickup_branch_address && (
+                          <div className="text-xs text-muted-foreground">
+                            {order.pickup_branch_address}
+                          </div>
+                        )}
+                      </div>
                     </div>
+                  )}
+                {order.delivery_method === 'envio' && (
+                  <div className="space-y-2">
+                    <div className="flex items-start gap-2">
+                      <Truck className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                      <div>
+                        <div className="text-xs font-medium text-muted-foreground">
+                          Domicilio de entrega
+                        </div>
+                        <div className="font-medium text-foreground">
+                          {order.shipping_address || 'No especificado'}
+                        </div>
+                      </div>
+                    </div>
+                    {order.shipping_notes && (
+                      <div className="flex items-start gap-2 pl-6">
+                        <div>
+                          <div className="text-xs font-medium text-muted-foreground">
+                            Indicaciones
+                          </div>
+                          <div className="text-xs text-foreground">
+                            {order.shipping_notes}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
                 {order.notes && (
-                  <div className="flex items-start gap-2">
+                  <div className="flex items-start gap-2 border-t border-border pt-2">
                     <StickyNote className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                    <p className="text-muted-foreground">{order.notes}</p>
+                    <div>
+                      <div className="text-xs font-medium text-muted-foreground">
+                        Observaciones
+                      </div>
+                      <p className="text-muted-foreground">{order.notes}</p>
+                    </div>
                   </div>
                 )}
               </CardContent>
