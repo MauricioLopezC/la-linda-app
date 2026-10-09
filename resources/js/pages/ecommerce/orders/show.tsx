@@ -1,11 +1,16 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import {
+  AlertCircle,
   ArrowLeft,
   CalendarClock,
+  CheckCircle2,
+  CreditCard,
   MapPin,
   StickyNote,
   Truck,
 } from 'lucide-react';
+import { useState } from 'react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -24,7 +29,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { index } from '@/routes/tienda/orders';
+import { index, pay } from '@/routes/tienda/orders';
 import type { BreadcrumbItem } from '@/types';
 
 type Props = {
@@ -32,6 +37,21 @@ type Props = {
 };
 
 export default function OrderShow({ order }: Props) {
+  const [isPaying, setIsPaying] = useState(false);
+
+  const handlePay = () => {
+    setIsPaying(true);
+    router.post(
+      pay.url(order.id),
+      {},
+      {
+        onFinish: () => setIsPaying(false),
+      },
+    );
+  };
+
+  const isPaid = order.status === 'pagado';
+
   return (
     <>
       <Head title={`Pedido N.º ${order.formatted_number} | Tienda Online`} />
@@ -47,13 +67,65 @@ export default function OrderShow({ order }: Props) {
               Confirmado el {order.placed_at_formatted}
             </p>
           </div>
-          <Badge
-            variant={order.status === 'pagado' ? 'default' : 'secondary'}
-            className="w-fit text-sm"
-          >
-            {order.status_label}
-          </Badge>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge
+              variant={isPaid ? 'default' : 'secondary'}
+              className="w-fit text-sm"
+            >
+              {order.status_label}
+            </Badge>
+            {!isPaid && (
+              <Button
+                size="sm"
+                onClick={handlePay}
+                disabled={isPaying}
+                className="gap-1.5 shadow-xs"
+              >
+                <CreditCard className="size-4" />
+                {isPaying ? 'Conectando...' : 'Pagar con Mercado Pago'}
+              </Button>
+            )}
+          </div>
         </div>
+
+        {!isPaid ? (
+          <Alert className="border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-200">
+            <AlertCircle className="size-4 text-amber-600 dark:text-amber-400" />
+            <AlertTitle className="font-semibold">
+              Pago pendiente de confirmación
+            </AlertTitle>
+            <AlertDescription className="mt-1 flex flex-col gap-3 text-xs sm:flex-row sm:items-center sm:justify-between">
+              <span>
+                Este pedido todavía no fue abonado. Podés pagarlo ahora en línea
+                mediante Mercado Pago sandbox.
+              </span>
+              <Button
+                size="sm"
+                onClick={handlePay}
+                disabled={isPaying}
+                className="w-fit shrink-0 gap-1.5 font-semibold"
+              >
+                <CreditCard className="size-4" />
+                {isPaying ? 'Conectando...' : 'Pagar ahora'}
+              </Button>
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <Alert className="border-primary/30 bg-primary/10 text-foreground">
+            <CheckCircle2 className="size-4 text-primary" />
+            <AlertTitle className="font-semibold">Pago acreditado</AlertTitle>
+            <AlertDescription className="mt-1 text-xs text-muted-foreground">
+              Acreditado el {order.paid_at_formatted} por un importe de{' '}
+              <strong className="text-foreground">
+                {order.formatted_paid_amount ?? order.formatted_total_amount}
+              </strong>{' '}
+              {order.mp_payment_id && (
+                <span>(ID de pago MP: {order.mp_payment_id})</span>
+              )}
+              .
+            </AlertDescription>
+          </Alert>
+        )}
 
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Items */}
@@ -197,6 +269,28 @@ export default function OrderShow({ order }: Props) {
                     {order.formatted_total_amount}
                   </span>
                 </div>
+
+                {isPaid && order.formatted_paid_amount && (
+                  <div className="flex justify-between border-t border-border pt-2 text-xs text-muted-foreground">
+                    <span>Importe pagado</span>
+                    <span className="font-semibold text-foreground">
+                      {order.formatted_paid_amount}
+                    </span>
+                  </div>
+                )}
+
+                {!isPaid && (
+                  <div className="pt-2">
+                    <Button
+                      onClick={handlePay}
+                      disabled={isPaying}
+                      className="w-full gap-2 font-semibold shadow-xs"
+                    >
+                      <CreditCard className="size-4" />
+                      {isPaying ? 'Conectando...' : 'Pagar pedido'}
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

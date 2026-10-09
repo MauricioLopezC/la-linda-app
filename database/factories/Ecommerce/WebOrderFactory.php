@@ -53,9 +53,10 @@ class WebOrderFactory extends Factory
 
     public function paid(): static
     {
-        return $this->state(fn (): array => [
+        return $this->state(fn (array $attributes): array => [
             'status' => WebOrderStatus::Paid,
             'mp_payment_id' => (string) fake()->unique()->numerify('##########'),
+            'paid_amount' => $attributes['total_amount'] ?? $attributes['items_amount'],
             'paid_at' => now(),
         ]);
     }

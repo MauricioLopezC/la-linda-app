@@ -27,11 +27,12 @@ use Illuminate\Support\Carbon;
  * @property int|null $pickup_branch_id
  * @property string|null $shipping_address
  * @property string|null $shipping_notes
- * @property string $items_amount
- * @property string $shipping_cost
- * @property string $total_amount
+ * @property numeric-string $items_amount
+ * @property numeric-string $shipping_cost
+ * @property numeric-string $total_amount
  * @property string|null $mp_preference_id
  * @property string|null $mp_payment_id
+ * @property numeric-string|null $paid_amount
  * @property Carbon|null $paid_at
  * @property string|null $notes
  * @property Carbon $placed_at
@@ -54,6 +55,7 @@ use Illuminate\Support\Carbon;
     'total_amount',
     'mp_preference_id',
     'mp_payment_id',
+    'paid_amount',
     'paid_at',
     'notes',
     'placed_at',
@@ -80,6 +82,7 @@ class WebOrder extends Model
             'items_amount' => 'decimal:2',
             'shipping_cost' => 'decimal:2',
             'total_amount' => 'decimal:2',
+            'paid_amount' => 'decimal:2',
             'paid_at' => 'datetime',
             'placed_at' => 'datetime',
         ];
