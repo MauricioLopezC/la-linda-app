@@ -50,6 +50,34 @@ test('approves payment when webhook notification arrives and api confirms approv
         ->and($freshOrder->paid_at)->not->toBeNull();
 });
 
+test('stores paid_at in the app timezone when mercado pago reports date_approved with another offset', function () {
+    $order = WebOrder::factory()->create([
+        'items_amount' => '4000.00',
+        'shipping_cost' => '0.00',
+        'total_amount' => '4000.00',
+        'status' => WebOrderStatus::Pending,
+    ]);
+
+    Http::fake([
+        'https://api.mercadopago.test/v1/payments/998878' => Http::response([
+            'id' => 998878,
+            'status' => 'approved',
+            'external_reference' => (string) $order->id,
+            'transaction_amount' => 4000.0,
+            'date_approved' => '2026-10-09T01:11:56.000-04:00',
+        ], 200),
+    ]);
+
+    $this->postJson(route('webhooks.mercadopago'), [
+        'type' => 'payment',
+        'data' => [
+            'id' => '998878',
+        ],
+    ])->assertOk();
+
+    expect($order->fresh()->getRawOriginal('paid_at'))->toBe('2026-10-09 02:11:56');
+});
+
 test('does not mark order as paid when payment status is rejected or pending', function () {
     $order = WebOrder::factory()->create([
         'items_amount' => '4000.00',
