@@ -123,7 +123,7 @@ class ProcessMercadoPagoPaymentNotification
         }
 
         $formattedAmount = number_format($transactionAmount, 2, '.', '');
-        $paidAt = filled($dateApproved) ? Carbon::parse((string) $dateApproved) : now();
+        $paidAt = filled($dateApproved) ? Carbon::parse((string) $dateApproved)->setTimezone(config('app.timezone')) : now();
 
         $this->markWebOrderAsPaid->execute(
             order: $order,
