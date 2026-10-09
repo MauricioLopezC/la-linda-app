@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\Ecommerce\MarkWebOrderAsPaid;
 use App\Enums\Catalog\ArticleStatus;
 use App\Enums\Ecommerce\WebOrderStatus;
 use App\Enums\Pricing\PriceListChannel;
@@ -167,4 +168,50 @@ test('displays return page without modifying order status directly', function ()
 
     // Even if query status is approved, the order MUST remain pendiente until webhook confirmation
     expect($order->fresh()->status)->toBe(WebOrderStatus::Pending);
+});
+
+test('redirects to order show without enabling checkout when order is accredited while preference request is in flight', function () {
+    $order = WebOrder::factory()->create([
+        'customer_id' => $this->customer->id,
+        'pickup_branch_id' => $this->branch->id,
+        'items_amount' => '2000.00',
+        'total_amount' => '2000.00',
+    ]);
+    WebOrderItem::factory()->create([
+        'web_order_id' => $order->id,
+        'article_id' => $this->article->id,
+        'quantity' => '1.000',
+        'unit_price' => '2000.00',
+        'price_list_id' => $this->onlineList->id,
+        'line_total' => '2000.00',
+    ]);
+
+    Http::fake([
+        'https://api.mercadopago.test/checkout/preferences' => function () use ($order) {
+            // Webhook accredits the order concurrently while checkout preference is being generated
+            app(MarkWebOrderAsPaid::class)->execute(
+                order: $order,
+                paymentId: 'concurrent-mp-payment-99',
+                paidAmount: '2000.00',
+                paidAt: now(),
+            );
+
+            return Http::response([
+                'id' => 'late-pref-888',
+                'init_point' => 'https://www.mercadopago.com/checkout/v1/redirect?pref_id=late-pref-888',
+                'sandbox_init_point' => 'https://sandbox.mercadopago.com/checkout/v1/redirect?pref_id=late-pref-888',
+            ], 201);
+        },
+    ]);
+
+    $response = $this->actingAs($this->clientUser)
+        ->withHeaders(['X-Inertia' => 'true'])
+        ->post(route('tienda.orders.pay', $order));
+
+    // Must redirect to order show and MUST NOT redirect to checkout (no 409 X-Inertia-Location)
+    $response->assertRedirect(route('tienda.orders.show', $order))
+        ->assertSessionHas('info', 'El pedido ya se encuentra pagado.');
+
+    expect($order->fresh()->status)->toBe(WebOrderStatus::Paid)
+        ->and($order->fresh()->mp_preference_id)->toBeNull();
 });

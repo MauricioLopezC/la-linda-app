@@ -2,6 +2,7 @@
 
 use App\Enums\Ecommerce\WebOrderStatus;
 use App\Models\Ecommerce\WebOrder;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 
 beforeEach(function () {
@@ -157,4 +158,86 @@ test('ignores non-payment notifications gracefully', function () {
 
     $response->assertOk()
         ->assertJson(['status' => 'ignored']);
+});
+
+test('discards non-existent payment in api with 200 without retrying', function () {
+    Http::fake([
+        'https://api.mercadopago.test/v1/payments/999999' => Http::response([
+            'message' => 'Payment 999999 not found',
+            'error' => 'not_found',
+            'status' => 404,
+        ], 404),
+    ]);
+
+    $response = $this->postJson(route('webhooks.mercadopago'), [
+        'type' => 'payment',
+        'data' => ['id' => '999999'],
+    ]);
+
+    $response->assertOk()
+        ->assertJson([
+            'status' => 'ignored',
+            'reason' => 'payment_not_found',
+        ]);
+
+    // 404 is not a transient error: it must NOT retry
+    Http::assertSentCount(1);
+});
+
+test('retries on transient 500 server error and succeeds when subsequent attempt returns approved', function () {
+    $order = WebOrder::factory()->create([
+        'items_amount' => '4000.00',
+        'shipping_cost' => '0.00',
+        'total_amount' => '4000.00',
+        'status' => WebOrderStatus::Pending,
+    ]);
+
+    Http::fake([
+        'https://api.mercadopago.test/v1/payments/887766' => Http::sequence()
+            ->push(['message' => 'Internal error'], 500)
+            ->push([
+                'id' => 887766,
+                'status' => 'approved',
+                'external_reference' => (string) $order->id,
+                'transaction_amount' => 4000.0,
+                'date_approved' => '2026-10-08T18:00:00.000Z',
+            ], 200),
+    ]);
+
+    $response = $this->postJson(route('webhooks.mercadopago'), [
+        'type' => 'payment',
+        'data' => ['id' => '887766'],
+    ]);
+
+    $response->assertOk()
+        ->assertJson([
+            'status' => 'ok',
+            'order_status' => 'pagado',
+        ]);
+
+    Http::assertSentCount(2);
+    expect($order->fresh()->status)->toBe(WebOrderStatus::Paid);
+});
+
+test('handles connection failure to mercado pago api returning 500 without crashing', function () {
+    $order = WebOrder::factory()->create([
+        'items_amount' => '4000.00',
+        'shipping_cost' => '0.00',
+        'total_amount' => '4000.00',
+        'status' => WebOrderStatus::Pending,
+    ]);
+
+    Http::fake([
+        'https://api.mercadopago.test/v1/payments/*' => fn () => throw new ConnectionException('Connection refused by host'),
+    ]);
+
+    $response = $this->postJson(route('webhooks.mercadopago'), [
+        'type' => 'payment',
+        'data' => ['id' => '443322'],
+    ]);
+
+    $response->assertStatus(500)
+        ->assertJson(['error' => 'mercadopago_api_error']);
+
+    expect($order->fresh()->status)->toBe(WebOrderStatus::Pending);
 });

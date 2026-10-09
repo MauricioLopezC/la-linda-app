@@ -43,9 +43,9 @@ export default function OrderPaymentReturn({ order, status }: Props) {
     );
   };
 
-  const isApproved = status === 'approved' || order.status === 'pagado';
-  const isRejected = status === 'rejected' && order.status !== 'pagado';
-  const isPending = !isApproved && !isRejected;
+  const isPaid = order.status === 'pagado';
+  const isRejected = !isPaid && status === 'rejected';
+  const isPending = !isPaid && !isRejected;
 
   return (
     <>
@@ -55,13 +55,13 @@ export default function OrderPaymentReturn({ order, status }: Props) {
         <div className="w-full max-w-xl space-y-6">
           <Card className="border-border text-center shadow-sm">
             <CardHeader className="flex flex-col items-center pt-8 pb-4">
-              {isApproved && (
-                <div className="mb-4 flex size-16 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              {isPaid && (
+                <div className="mb-4 flex size-16 items-center justify-center rounded-full bg-success-bg text-success-fg">
                   <CheckCircle2 className="size-10" />
                 </div>
               )}
               {isPending && (
-                <div className="mb-4 flex size-16 items-center justify-center rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                <div className="mb-4 flex size-16 items-center justify-center rounded-full bg-warning-bg text-warning-fg">
                   <Clock className="size-10" />
                 </div>
               )}
@@ -72,16 +72,18 @@ export default function OrderPaymentReturn({ order, status }: Props) {
               )}
 
               <CardTitle className="text-2xl font-bold tracking-tight text-foreground">
-                {isApproved && '¡Pago recibido!'}
+                {isPaid && '¡Pago recibido!'}
                 {isPending && 'Pago en procesamiento'}
                 {isRejected && 'No pudimos procesar el pago'}
               </CardTitle>
 
               <CardDescription className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-                {isApproved &&
-                  'Mercado Pago está confirmando la transacción. Apenas se acredite, vas a ver tu pedido actualizado en tu cuenta.'}
+                {isPaid &&
+                  'Tu pago fue recibido y acreditado correctamente. Ya podés consultar el estado de tu pedido.'}
                 {isPending &&
-                  'Tu pago se encuentra pendiente de acreditación por parte de Mercado Pago. Te notificaremos y actualizaremos tu pedido apenas se confirme.'}
+                  (status === 'approved'
+                    ? 'Mercado Pago está confirmando la transacción. Apenas se acredite, vas a ver tu pedido actualizado en tu cuenta.'
+                    : 'Tu pago se encuentra pendiente de acreditación por parte de Mercado Pago. Te notificaremos y actualizaremos tu pedido apenas se confirme.')}
                 {isRejected &&
                   'La operación fue cancelada o rechazada por el medio de pago. Tu pedido sigue guardado como pendiente para que puedas reintentar.'}
               </CardDescription>

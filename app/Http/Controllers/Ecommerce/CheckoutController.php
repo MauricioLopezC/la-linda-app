@@ -7,6 +7,7 @@ use App\Actions\Ecommerce\GetCustomerCart;
 use App\Actions\Ecommerce\PlaceWebOrder;
 use App\Data\Ecommerce\PickupBranchOptionData;
 use App\Enums\Ecommerce\DeliveryMethod;
+use App\Enums\Ecommerce\WebOrderStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Ecommerce\PlaceWebOrderRequest;
 use App\Models\Customers\Customer;
@@ -73,8 +74,18 @@ class CheckoutController extends Controller
         try {
             $preference = $createPreference->execute($order);
 
+            if ($order->fresh()->status === WebOrderStatus::Paid) {
+                return redirect()->route('tienda.orders.show', $order)
+                    ->with('info', 'El pedido ya se encuentra pagado.');
+            }
+
             return Inertia::location($preference['redirect_url']);
         } catch (\Throwable $exception) {
+            if ($order->fresh()->status === WebOrderStatus::Paid) {
+                return redirect()->route('tienda.orders.show', $order)
+                    ->with('info', 'El pedido ya se encuentra pagado.');
+            }
+
             report($exception);
 
             return redirect()->route('tienda.orders.show', $order)

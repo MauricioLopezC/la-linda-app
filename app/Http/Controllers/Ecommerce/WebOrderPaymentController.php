@@ -36,8 +36,18 @@ class WebOrderPaymentController extends Controller
         try {
             $preference = $createPreference->execute($webOrder);
 
+            if ($webOrder->fresh()->status === WebOrderStatus::Paid) {
+                return redirect()->route('tienda.orders.show', $webOrder)
+                    ->with('info', 'El pedido ya se encuentra pagado.');
+            }
+
             return Inertia::location($preference['redirect_url']);
         } catch (\Throwable $exception) {
+            if ($webOrder->fresh()->status === WebOrderStatus::Paid) {
+                return redirect()->route('tienda.orders.show', $webOrder)
+                    ->with('info', 'El pedido ya se encuentra pagado.');
+            }
+
             report($exception);
 
             return redirect()->route('tienda.orders.show', $webOrder)
