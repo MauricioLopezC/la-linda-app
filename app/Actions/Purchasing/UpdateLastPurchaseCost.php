@@ -51,7 +51,7 @@ class UpdateLastPurchaseCost
         $articleIds = $voucher->items()
             ->whereNotNull('article_id')
             ->distinct()
-            ->orderBy('article_id')
+            ->reorder('article_id')
             ->pluck('article_id');
         $associations = ArticleSupplier::query()
             ->where('supplier_id', $voucher->supplier_id)
