@@ -9,8 +9,11 @@ use App\Http\Controllers\Customers\CustomerController;
 use App\Http\Controllers\Ecommerce\CartController;
 use App\Http\Controllers\Ecommerce\CheckoutController;
 use App\Http\Controllers\Ecommerce\CustomerAccountController;
+use App\Http\Controllers\Ecommerce\MercadoPagoWebhookController;
 use App\Http\Controllers\Ecommerce\StoreHomeController;
 use App\Http\Controllers\Ecommerce\WebOrderController;
+use App\Http\Controllers\Ecommerce\WebOrderPaymentController;
+use App\Http\Controllers\Ecommerce\WebOrderPaymentReturnController;
 use App\Http\Controllers\Inventory\StockAdjustmentController;
 use App\Http\Controllers\Inventory\StockConsultationController;
 use App\Http\Controllers\Inventory\StockMovementHistoryController;
@@ -226,6 +229,8 @@ Route::middleware(['internal.staff', 'verified'])->group(function () {
     });
 });
 
+Route::post('webhooks/mercadopago', MercadoPagoWebhookController::class)->name('webhooks.mercadopago');
+
 Route::prefix('tienda')->name('tienda.')->group(function () {
     Route::get('/', [StoreHomeController::class, 'index'])->name('home');
     Route::redirect('registro', '/register')->name('register');
@@ -248,6 +253,8 @@ Route::prefix('tienda')->name('tienda.')->group(function () {
 
         Route::prefix('mis-pedidos')->name('orders.')->group(function () {
             Route::get('/', [WebOrderController::class, 'index'])->name('index');
+            Route::post('{web_order}/pagar', [WebOrderPaymentController::class, 'store'])->name('pay');
+            Route::get('{web_order}/retorno', [WebOrderPaymentReturnController::class, 'show'])->name('payment-return');
             Route::get('{web_order}', [WebOrderController::class, 'show'])->name('show');
         });
     });
