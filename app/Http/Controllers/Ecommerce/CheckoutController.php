@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers\Ecommerce;
 
+use App\Actions\Ecommerce\CreateMercadoPagoPreference;
 use App\Actions\Ecommerce\GetCustomerCart;
 use App\Actions\Ecommerce\PlaceWebOrder;
 use App\Data\Ecommerce\PickupBranchOptionData;
 use App\Enums\Ecommerce\DeliveryMethod;
+use App\Enums\Ecommerce\WebOrderStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Ecommerce\PlaceWebOrderRequest;
 use App\Models\Customers\Customer;
@@ -15,6 +17,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 class CheckoutController extends Controller
 {
@@ -45,10 +48,13 @@ class CheckoutController extends Controller
     }
 
     /**
-     * Place the order from the customer's cart.
+     * Place the order from the customer's cart and redirect to Mercado Pago.
      */
-    public function store(PlaceWebOrderRequest $request, PlaceWebOrder $placeWebOrder): RedirectResponse
-    {
+    public function store(
+        PlaceWebOrderRequest $request,
+        PlaceWebOrder $placeWebOrder,
+        CreateMercadoPagoPreference $createPreference,
+    ): SymfonyResponse {
         $customer = $this->customerOf($request);
 
         $deliveryMethod = DeliveryMethod::from((string) $request->validated('delivery_method'));
@@ -65,8 +71,26 @@ class CheckoutController extends Controller
             notes: $request->validated('notes'),
         );
 
-        return redirect()->route('tienda.orders.show', $order)
-            ->with('success', "Confirmamos tu pedido N.º {$order->formattedNumber()}.");
+        try {
+            $preference = $createPreference->execute($order);
+
+            if ($order->fresh()->status === WebOrderStatus::Paid) {
+                return redirect()->route('tienda.orders.show', $order)
+                    ->with('info', 'El pedido ya se encuentra pagado.');
+            }
+
+            return Inertia::location($preference['redirect_url']);
+        } catch (\Throwable $exception) {
+            if ($order->fresh()->status === WebOrderStatus::Paid) {
+                return redirect()->route('tienda.orders.show', $order)
+                    ->with('info', 'El pedido ya se encuentra pagado.');
+            }
+
+            report($exception);
+
+            return redirect()->route('tienda.orders.show', $order)
+                ->with('success', "Confirmamos tu pedido N.º {$order->formattedNumber()}. Podés realizar el pago cuando desees desde aquí.");
+        }
     }
 
     private function customerOf(Request $request): Customer

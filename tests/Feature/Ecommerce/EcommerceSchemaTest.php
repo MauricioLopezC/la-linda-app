@@ -67,7 +67,8 @@ test('an order total is its items plus shipping', function () {
 test('an order is paid exactly when it has a payment time', function () {
     $paid = WebOrder::factory()->paid()->create();
 
-    expect($paid->status)->toBe(WebOrderStatus::Paid);
+    expect($paid->status)->toBe(WebOrderStatus::Paid)
+        ->and($paid->paid_amount)->toBe($paid->total_amount);
 
     expect(inSavepoint(fn () => WebOrder::factory()->create(['paid_at' => now()])))
         ->toThrow(QueryException::class)

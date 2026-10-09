@@ -12,6 +12,7 @@ use App\Models\Organization\Branch;
 use App\Models\Pricing\PriceList;
 use App\Models\Pricing\PriceListItem;
 use App\Models\User;
+use Illuminate\Support\Facades\Http;
 use Inertia\Testing\AssertableInertia as Assert;
 
 beforeEach(function () {
@@ -87,50 +88,71 @@ test('checkout with an empty cart sends the customer back to the cart', function
         ->assertRedirect(route('tienda.cart.index'));
 });
 
-test('placing the order redirects to its detail and empties the cart', function () {
+test('placing the order redirects to mercado pago and empties the cart', function () {
+    config(['services.mercadopago.access_token' => 'TEST_TOKEN']);
+    Http::fake([
+        '*' => Http::response([
+            'id' => 'pref-test-111',
+            'sandbox_init_point' => 'https://sandbox.mercadopago.com/checkout/v1/redirect?pref_id=pref-test-111',
+        ], 201),
+    ]);
+
     CartItem::factory()->create([
         'customer_id' => $this->customer->id,
         'article_id' => $this->article->id,
         'quantity' => '2.000',
     ]);
 
-    $response = $this->actingAs($this->clientUser)->post(route('tienda.checkout.store'), [
-        'delivery_method' => 'retiro',
-        'pickup_branch_id' => $this->branch->id,
-        'notes' => 'Llamar al llegar',
-    ]);
+    $response = $this->actingAs($this->clientUser)
+        ->withHeaders(['X-Inertia' => 'true'])
+        ->post(route('tienda.checkout.store'), [
+            'delivery_method' => 'retiro',
+            'pickup_branch_id' => $this->branch->id,
+            'notes' => 'Llamar al llegar',
+        ]);
 
     $order = WebOrder::sole();
 
-    $response->assertRedirect(route('tienda.orders.show', $order))
-        ->assertSessionHas('success', "Confirmamos tu pedido N.º {$order->formattedNumber()}.");
+    $response->assertStatus(409)
+        ->assertHeader('X-Inertia-Location', 'https://sandbox.mercadopago.com/checkout/v1/redirect?pref_id=pref-test-111');
 
     expect($order->customer_id)->toBe($this->customer->id)
         ->and($order->total_amount)->toBe('3000.00')
         ->and($order->shipping_cost)->toBe('0.00')
         ->and($order->notes)->toBe('Llamar al llegar')
+        ->and($order->mp_preference_id)->toBe('pref-test-111')
         ->and($this->customer->cartItems()->count())->toBe(0);
 });
 
 test('placing a delivery order ignores client shipping cost and freezes customer shipping address', function () {
+    config(['services.mercadopago.access_token' => 'TEST_TOKEN']);
+    Http::fake([
+        '*' => Http::response([
+            'id' => 'pref-test-222',
+            'sandbox_init_point' => 'https://sandbox.mercadopago.com/checkout/v1/redirect?pref_id=pref-test-222',
+        ], 201),
+    ]);
+
     CartItem::factory()->create([
         'customer_id' => $this->customer->id,
         'article_id' => $this->article->id,
         'quantity' => '2.000',
     ]);
 
-    $response = $this->actingAs($this->clientUser)->post(route('tienda.checkout.store'), [
-        'delivery_method' => 'envio',
-        'shipping_address' => 'Av. San Martín 789, Salta',
-        'shipping_notes' => 'Depto 4B, timbre blanco',
-        'notes' => 'Entrega por la tarde',
-        'shipping_cost' => '99999.00', // Client cannot set or tamper shipping cost
-    ]);
+    $response = $this->actingAs($this->clientUser)
+        ->withHeaders(['X-Inertia' => 'true'])
+        ->post(route('tienda.checkout.store'), [
+            'delivery_method' => 'envio',
+            'shipping_address' => 'Av. San Martín 789, Salta',
+            'shipping_notes' => 'Depto 4B, timbre blanco',
+            'notes' => 'Entrega por la tarde',
+            'shipping_cost' => '99999.00', // Client cannot set or tamper shipping cost
+        ]);
 
     $order = WebOrder::sole();
 
-    $response->assertRedirect(route('tienda.orders.show', $order))
-        ->assertSessionHas('success', "Confirmamos tu pedido N.º {$order->formattedNumber()}.");
+    $response->assertStatus(409)
+        ->assertHeader('X-Inertia-Location', 'https://sandbox.mercadopago.com/checkout/v1/redirect?pref_id=pref-test-222');
 
     expect($order->customer_id)->toBe($this->customer->id)
         ->and($order->delivery_method->value)->toBe('envio')

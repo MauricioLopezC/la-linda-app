@@ -34,6 +34,11 @@ class WebOrderData extends Data
         public string $formatted_shipping_cost,
         public string $total_amount,
         public string $formatted_total_amount,
+        public ?string $paid_amount,
+        public ?string $formatted_paid_amount,
+        public ?string $paid_at_formatted,
+        public ?string $mp_preference_id,
+        public ?string $mp_payment_id,
         public array $items,
     ) {}
 
@@ -62,6 +67,11 @@ class WebOrderData extends Data
             formatted_shipping_cost: self::money($order->shipping_cost),
             total_amount: $order->total_amount,
             formatted_total_amount: self::money($order->total_amount),
+            paid_amount: $order->paid_amount,
+            formatted_paid_amount: $order->paid_amount === null ? null : self::money($order->paid_amount),
+            paid_at_formatted: $order->paid_at?->format('d/m/Y H:i'),
+            mp_preference_id: $order->mp_preference_id,
+            mp_payment_id: $order->mp_payment_id,
             items: $order->items
                 ->sortBy('id')
                 ->map(fn (WebOrderItem $item): WebOrderItemData => WebOrderItemData::fromModel($item))
