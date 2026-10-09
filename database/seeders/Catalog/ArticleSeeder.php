@@ -39,7 +39,7 @@ class ArticleSeeder extends Seeder
                 'unit' => 'Unidad',
                 'barcode' => '7790580123456',
                 'is_online_publishable' => true,
-                'image_url' => 'https://images.unsplash.com/photo-1595231776515-ddffb1f4eb73?auto=format&fit=crop&w=600&q=80',
+                'image_url' => '/images/articles/ART-0001.webp',
             ],
             [
                 'description' => 'Choclo Amarillo en Grano Entero Arcor Lata 300 g',
@@ -49,7 +49,7 @@ class ArticleSeeder extends Seeder
                 'unit' => 'Unidad',
                 'barcode' => '7790580654321',
                 'is_online_publishable' => true,
-                'image_url' => 'https://images.unsplash.com/photo-1551754655-cd27e38d2076?auto=format&fit=crop&w=600&q=80',
+                'image_url' => '/images/articles/ART-0002.webp',
             ],
             [
                 'description' => 'Harina de Trigo 000 Ultrarefinada Pureza Paquete 1 kg',
@@ -59,7 +59,7 @@ class ArticleSeeder extends Seeder
                 'unit' => 'Unidad',
                 'barcode' => '7791234567890',
                 'is_online_publishable' => true,
-                'image_url' => 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=600&q=80',
+                'image_url' => '/images/articles/ART-0003.webp',
             ],
             [
                 'description' => 'Arroz Largo Fino Tipo 00000 Gallo Bolsa 1 kg',
@@ -69,7 +69,7 @@ class ArticleSeeder extends Seeder
                 'unit' => 'Unidad',
                 'barcode' => '7792345678901',
                 'is_online_publishable' => true,
-                'image_url' => 'https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=600&q=80',
+                'image_url' => '/images/articles/ART-0004.webp',
             ],
             [
                 'description' => 'Gaseosa Sabor Cola Clásica Coca-Cola Botella 1.5 L',
@@ -79,7 +79,7 @@ class ArticleSeeder extends Seeder
                 'unit' => 'Unidad',
                 'barcode' => '7790895000017',
                 'is_online_publishable' => true,
-                'image_url' => 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=600&q=80',
+                'image_url' => '/images/articles/ART-0005.webp',
             ],
             [
                 'description' => 'Agua Saborizada Pomelo Sin Gas Levité Botella 1.5 L',
@@ -89,7 +89,7 @@ class ArticleSeeder extends Seeder
                 'unit' => 'Unidad',
                 'barcode' => '7793456889900',
                 'is_online_publishable' => true,
-                'image_url' => 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=600&q=80',
+                'image_url' => '/images/articles/ART-0006.webp',
             ],
             [
                 'description' => 'Agua Mineral Natural de Manantial Sin Gas Villavicencio Botella 2 L',
@@ -99,7 +99,7 @@ class ArticleSeeder extends Seeder
                 'unit' => 'Unidad',
                 'barcode' => '7794567890123',
                 'is_online_publishable' => true,
-                'image_url' => 'https://images.unsplash.com/photo-1560023907-5f339617ea30?auto=format&fit=crop&w=600&q=80',
+                'image_url' => '/images/articles/ART-0007.webp',
             ],
             [
                 'description' => 'Leche Entera Homogeneizada 3% Grasa La Serenísima Tetra Brik 1 L',
@@ -109,7 +109,7 @@ class ArticleSeeder extends Seeder
                 'unit' => 'Unidad',
                 'barcode' => '7790742123456',
                 'is_online_publishable' => true,
-                'image_url' => 'https://images.unsplash.com/photo-1563636619-e9143da7973b?auto=format&fit=crop&w=600&q=80',
+                'image_url' => '/images/articles/ART-0008.webp',
             ],
             [
                 'description' => 'Yerba Mate Tradicional Elaborada con Palo Playadito Paquete 1 kg',
@@ -120,7 +120,7 @@ class ArticleSeeder extends Seeder
                 'barcode' => '7795678901234',
                 'status' => ArticleStatus::Inactive,
                 'is_online_publishable' => false,
-                'image_url' => 'https://images.unsplash.com/photo-1576092768241-dec231879fc3?auto=format&fit=crop&w=600&q=80',
+                'image_url' => '/images/articles/ART-0009.webp',
             ],
             [
                 'description' => 'Aceite de Girasol Puro 100% Natura Botella 900 ml',
@@ -130,7 +130,7 @@ class ArticleSeeder extends Seeder
                 'unit' => 'Unidad',
                 'barcode' => '7796789012345',
                 'is_online_publishable' => true,
-                'image_url' => 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?auto=format&fit=crop&w=600&q=80',
+                'image_url' => '/images/articles/ART-0010.webp',
             ],
             [
                 'description' => 'Fideos Secos Spaghetti Guisero Lucchetti Paquete 500 g',
@@ -140,7 +140,7 @@ class ArticleSeeder extends Seeder
                 'unit' => 'Unidad',
                 'barcode' => '7797890123456',
                 'is_online_publishable' => true,
-                'image_url' => 'https://images.unsplash.com/photo-1612927601601-6638404737ce?auto=format&fit=crop&w=600&q=80',
+                'image_url' => '/images/articles/ART-0011.webp',
             ],
             [
                 'description' => 'Cerveza Rubia Clásica Lager Quilmes Botella 1 L',
@@ -150,7 +150,7 @@ class ArticleSeeder extends Seeder
                 'unit' => 'Unidad',
                 'barcode' => '7798901234567',
                 'is_online_publishable' => true,
-                'image_url' => 'https://images.unsplash.com/photo-1600788886242-5c96aabe3757?auto=format&fit=crop&w=600&q=80',
+                'image_url' => '/images/articles/ART-0012.webp',
             ],
             [
                 'description' => 'Tomate Pelado Entero en Jugo Marolio Lata 400 g',
@@ -160,7 +160,7 @@ class ArticleSeeder extends Seeder
                 'unit' => 'Unidad',
                 'barcode' => '7799012345678',
                 'is_online_publishable' => true,
-                'image_url' => 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&w=600&q=80',
+                'image_url' => '/images/articles/ART-0013.webp',
             ],
             [
                 'description' => 'Azúcar Común Tipo A Ledesma Paquete 1 kg',
@@ -170,7 +170,7 @@ class ArticleSeeder extends Seeder
                 'unit' => 'Unidad',
                 'barcode' => '7790123456789',
                 'is_online_publishable' => true,
-                'image_url' => 'https://images.unsplash.com/photo-1587735243615-c03f25aaff15?auto=format&fit=crop&w=600&q=80',
+                'image_url' => '/images/articles/ART-0014.webp',
             ],
             [
                 'description' => 'Galletitas Dulces Sabor Vainilla Terrabusi Paquete 300 g',
@@ -180,7 +180,7 @@ class ArticleSeeder extends Seeder
                 'unit' => 'Unidad',
                 'barcode' => '7791234509876',
                 'is_online_publishable' => true,
-                'image_url' => 'https://images.unsplash.com/photo-1499636136210-6f4ee915583e?auto=format&fit=crop&w=600&q=80',
+                'image_url' => '/images/articles/ART-0015.webp',
             ],
             [
                 'description' => 'Manzana Roja Granel',
@@ -189,7 +189,7 @@ class ArticleSeeder extends Seeder
                 'unit' => 'Kilogramo',
                 'barcode' => null,
                 'is_online_publishable' => false,
-                'image_url' => 'https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?auto=format&fit=crop&w=600&q=80',
+                'image_url' => '/images/articles/ART-0016.webp',
             ],
             [
                 'description' => 'Papa Blanca Granel',
@@ -198,7 +198,7 @@ class ArticleSeeder extends Seeder
                 'unit' => 'Kilogramo',
                 'barcode' => null,
                 'is_online_publishable' => false,
-                'image_url' => 'https://images.unsplash.com/photo-1518977676601-b53f82aba655?auto=format&fit=crop&w=600&q=80',
+                'image_url' => '/images/articles/ART-0017.webp',
             ],
             [
                 'description' => 'Mermelada de Ciruela Clásica Arcor Frasco 454 g',
@@ -208,7 +208,7 @@ class ArticleSeeder extends Seeder
                 'unit' => 'Unidad',
                 'barcode' => '7790580987123',
                 'is_online_publishable' => true,
-                'image_url' => 'https://images.unsplash.com/photo-1589182373726-e4f658ab50f0?auto=format&fit=crop&w=600&q=80',
+                'image_url' => '/images/articles/ART-0018.webp',
             ],
             [
                 'description' => 'Arvejas Secas Remojadas Marolio Lata 300 g',
@@ -218,7 +218,7 @@ class ArticleSeeder extends Seeder
                 'unit' => 'Unidad',
                 'barcode' => '7799012876543',
                 'is_online_publishable' => true,
-                'image_url' => 'https://images.unsplash.com/photo-1592394533824-9440e5d68530?auto=format&fit=crop&w=600&q=80',
+                'image_url' => '/images/articles/ART-0019.webp',
             ],
             [
                 'description' => 'Fideos Guiseros Tirabuzón Lucchetti Paquete 500 g',
@@ -228,7 +228,7 @@ class ArticleSeeder extends Seeder
                 'unit' => 'Unidad',
                 'barcode' => '7797890654321',
                 'is_online_publishable' => true,
-                'image_url' => 'https://images.unsplash.com/photo-1546549032-9571cd6b27df?auto=format&fit=crop&w=600&q=80',
+                'image_url' => '/images/articles/ART-0020.webp',
             ],
             [
                 'description' => 'Arroz Doble Carolina Especial Gallo Bolsa 1 kg',
@@ -238,7 +238,7 @@ class ArticleSeeder extends Seeder
                 'unit' => 'Unidad',
                 'barcode' => '7792345112233',
                 'is_online_publishable' => true,
-                'image_url' => 'https://images.unsplash.com/photo-1536304993881-ff6e9eefa2a6?auto=format&fit=crop&w=600&q=80',
+                'image_url' => '/images/articles/ART-0021.webp',
             ],
             [
                 'description' => 'Mayonesa Clásica Reducida en Calorías Natura Doypack 500 g',
@@ -248,7 +248,7 @@ class ArticleSeeder extends Seeder
                 'unit' => 'Unidad',
                 'barcode' => '7796789445566',
                 'is_online_publishable' => true,
-                'image_url' => 'https://images.unsplash.com/photo-1528750997573-59b89d56f4f7?auto=format&fit=crop&w=600&q=80',
+                'image_url' => '/images/articles/ART-0022.webp',
             ],
             [
                 'description' => 'Harina Leudante con Polvo de Hornear Pureza Paquete 1 kg',
@@ -258,7 +258,7 @@ class ArticleSeeder extends Seeder
                 'unit' => 'Unidad',
                 'barcode' => '7791234778899',
                 'is_online_publishable' => true,
-                'image_url' => 'https://images.unsplash.com/photo-1574085733277-851d9d856a3a?auto=format&fit=crop&w=600&q=80',
+                'image_url' => '/images/articles/ART-0023.webp',
             ],
             [
                 'description' => 'Gaseosa Sabor Lima-Limón Sin Azúcar Coca-Cola Botella 1.5 L',
@@ -268,7 +268,7 @@ class ArticleSeeder extends Seeder
                 'unit' => 'Unidad',
                 'barcode' => '7790895334455',
                 'is_online_publishable' => true,
-                'image_url' => 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?auto=format&fit=crop&w=600&q=80',
+                'image_url' => '/images/articles/ART-0024.webp',
             ],
             [
                 'description' => 'Agua Saborizada Manzana Deliciosa Levité Botella 1.5 L',
@@ -278,7 +278,7 @@ class ArticleSeeder extends Seeder
                 'unit' => 'Unidad',
                 'barcode' => '7793456889901',
                 'is_online_publishable' => true,
-                'image_url' => 'https://images.unsplash.com/photo-1556881286-fc6915169721?auto=format&fit=crop&w=600&q=80',
+                'image_url' => '/images/articles/ART-0025.webp',
             ],
             [
                 'description' => 'Cerveza Negra Imperial Stout Quilmes Botella 1 L',
@@ -288,7 +288,7 @@ class ArticleSeeder extends Seeder
                 'unit' => 'Unidad',
                 'barcode' => '7798901556677',
                 'is_online_publishable' => true,
-                'image_url' => 'https://images.unsplash.com/photo-1535958636474-b021ee887b13?auto=format&fit=crop&w=600&q=80',
+                'image_url' => '/images/articles/ART-0026.webp',
             ],
             [
                 'description' => 'Yogur Entero Batido con Frutillas La Serenísima Pote 120 g',
@@ -298,7 +298,7 @@ class ArticleSeeder extends Seeder
                 'unit' => 'Unidad',
                 'barcode' => '7790742556677',
                 'is_online_publishable' => true,
-                'image_url' => 'https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&w=600&q=80',
+                'image_url' => '/images/articles/ART-0027.webp',
             ],
             [
                 'description' => 'Queso Crema Clásico Finlandia La Serenísima Pote 300 g',
@@ -308,7 +308,7 @@ class ArticleSeeder extends Seeder
                 'unit' => 'Unidad',
                 'barcode' => '7790742990011',
                 'is_online_publishable' => true,
-                'image_url' => 'https://images.unsplash.com/photo-1624806992066-5ffcf7ca186b?auto=format&fit=crop&w=600&q=80',
+                'image_url' => '/images/articles/ART-0028.webp',
             ],
             [
                 'description' => 'Leche Descremada 0% Grasa Reducida en Lactosa La Serenísima Tetra Brik 1 L',
@@ -318,7 +318,7 @@ class ArticleSeeder extends Seeder
                 'unit' => 'Unidad',
                 'barcode' => '7790742332211',
                 'is_online_publishable' => true,
-                'image_url' => 'https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&w=600&q=80',
+                'image_url' => '/images/articles/ART-0029.webp',
             ],
             [
                 'description' => 'Yerba Mate con Hierbas Serranas Playadito Paquete 500 g',
@@ -328,7 +328,7 @@ class ArticleSeeder extends Seeder
                 'unit' => 'Unidad',
                 'barcode' => '7795678443322',
                 'is_online_publishable' => true,
-                'image_url' => 'https://images.unsplash.com/photo-1597318181409-cf64d0b5d8a2?auto=format&fit=crop&w=600&q=80',
+                'image_url' => '/images/articles/ART-0030.webp',
             ],
             [
                 'description' => 'Galletitas Surtidas Variedad Terrabusi Paquete 400 g',
@@ -338,7 +338,7 @@ class ArticleSeeder extends Seeder
                 'unit' => 'Unidad',
                 'barcode' => '7791234998877',
                 'is_online_publishable' => true,
-                'image_url' => 'https://images.unsplash.com/photo-1558961363-fa8fdf82db35?auto=format&fit=crop&w=600&q=80',
+                'image_url' => '/images/articles/ART-0031.webp',
             ],
             [
                 'description' => 'Jabón Líquido para Ropa Concentrado Botella 800 ml',
@@ -347,7 +347,7 @@ class ArticleSeeder extends Seeder
                 'unit' => 'Unidad',
                 'barcode' => '7798888111222',
                 'is_online_publishable' => true,
-                'image_url' => 'https://images.unsplash.com/photo-1585421514738-01798e348b17?auto=format&fit=crop&w=600&q=80',
+                'image_url' => '/images/articles/ART-0032.webp',
             ],
             [
                 'description' => 'Lavavajillas Ultra Concentrado Aroma Limón Botella 500 ml',
@@ -356,7 +356,7 @@ class ArticleSeeder extends Seeder
                 'unit' => 'Unidad',
                 'barcode' => '7798888333444',
                 'is_online_publishable' => true,
-                'image_url' => 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=600&q=80',
+                'image_url' => '/images/articles/ART-0033.webp',
             ],
             [
                 'description' => 'Naranja de Ombligo Fresca Seleccionada',
@@ -365,7 +365,7 @@ class ArticleSeeder extends Seeder
                 'unit' => 'Kilogramo',
                 'barcode' => null,
                 'is_online_publishable' => true,
-                'image_url' => 'https://images.unsplash.com/photo-1582979512210-99b6a53386f9?auto=format&fit=crop&w=600&q=80',
+                'image_url' => '/images/articles/ART-0034.webp',
             ],
             [
                 'description' => 'Tomate Redondo Premium',
@@ -374,7 +374,7 @@ class ArticleSeeder extends Seeder
                 'unit' => 'Kilogramo',
                 'barcode' => null,
                 'is_online_publishable' => true,
-                'image_url' => 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&w=600&q=80',
+                'image_url' => '/images/articles/ART-0035.webp',
             ],
         ];
 

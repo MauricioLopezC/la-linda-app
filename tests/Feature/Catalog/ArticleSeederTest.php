@@ -52,3 +52,24 @@ test('seed articles carry the reduced VAT rate for fresh produce and the general
         ->and($percentages['ART-0016'])->toBe(10.5)
         ->and($percentages['ART-0001'])->toBe(21.0);
 });
+
+test('every seed article points to a demo image bundled in public/', function () {
+    $this->seed([
+        CategorySeeder::class,
+        BrandSeeder::class,
+        UnitOfMeasureSeeder::class,
+        VatRateSeeder::class,
+        ArticleSeeder::class,
+    ]);
+
+    $missing = Article::query()
+        ->get()
+        ->reject(fn (Article $article): bool => $article->image_url !== null
+            && str_starts_with($article->image_url, '/images/articles/')
+            && is_file(public_path($article->image_url)));
+
+    expect($missing)->toBeEmpty(
+        'Artículos de la semilla sin imagen de demo en public/images/articles: '
+        .$missing->pluck('internal_code')->implode(', ')
+    );
+});
