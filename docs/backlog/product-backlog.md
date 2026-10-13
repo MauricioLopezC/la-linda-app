@@ -17,11 +17,14 @@ Product Owner se genera a pedido a partir de este documento.
   no los describía. Los MMF reales se identifican al cerrar cada sprint, no por adelantado.
 - Estimación en **story points**, escala de Fibonacci.
 - **Capacidad de referencia: 30 a 40 SP por sprint (indicación del PO).** Con 6 sprints eso da
-  entre 180 y 240 SP. El backlog activo estimado suma **381 SP**, entre 1,5 y 2 veces la capacidad.
+  entre 180 y 240 SP. El backlog activo estimado suma **354 SP**, entre 1,5 y 2 veces la capacidad.
   El desvío se informa al PO para que decida el recorte; **no se disimula bajando las
   estimaciones**, porque los story points miden tamaño relativo y la capacidad es un hecho aparte.
-- **Velocidad observada desde el Sprint 3: 60 a 65 SP por sprint** (Sprint 3 comprometió 59). Los
-  sprints se planifican con esa velocidad y no con la capacidad de referencia inicial.
+- **Velocidad observada: 59 SP en Sprint 3 y 97 SP en Sprint 4.** El Sprint 5 compromete **53 SP**
+  (escala de Fibonacci estricta) enfocados en los 4 ejes definidos tras la revisión del Sprint 4 con
+  el profesor: despacho en depósito con baja de stock de ventas online (`EPIC-15`, `EPIC-17`),
+  disponibilidad, filtros y ordenamiento en el e-commerce (`HU-048`, `HU-047`), usuarios y roles con
+  Gates por módulo (`HU-003`, `HU-004`) y el tablero gerencial completo (`EPIC-18` a `EPIC-22`).
 - **Trabajo adelantado fuera del compromiso:** cuando una historia se construyó parcialmente en
   un sprint anterior sin estar comprometida, entra al sprint con la estimación del trabajo
   restante, dejando registrada la original. Así la velocidad no suma dos veces el mismo trabajo.
@@ -32,21 +35,21 @@ Product Owner se genera a pedido a partir de este documento.
   comprobantes, los múltiples medios de pago, la numeración, la anulación y el PDF.
 - **Criterio de estimación:** el primer ítem que construye un patrón técnico se estima más caro
   que los que después lo reusan. Por eso el primer listado con filtros combinables y exportación
-  (`HU-009`) vale 5 y los que vienen después (`HU-028`, `HU-053`) valen 3. `HU-016` y `HU-018`
+  (`HU-009`) valía 5 y los que vienen después (`HU-028`, `HU-053`) valen 3. `HU-016` y `HU-018`
   valen 2 desde el 2026-08-22, cuando la exportación salió de sus criterios hacia `HU-053`.
 - **Alcance** referencia las macrofuncionalidades de `LaLindaAlcanceV1.md` (`ADM-01`, `STK-04`, ...).
 - Los criterios de aceptación siguen la estructura *Datos / Validaciones / Comportamiento / Verificación*.
-- **Solo las historias ya implementadas tienen criterios de aceptación (decisión del equipo,
-  2026-09-27).** Las pendientes dicen "A definir en el Sprint Planning correspondiente": sus
-  criterios se desglosan en el planning del sprint en que entren, a partir de lo que el PO explique
-  en ese momento. Los criterios escritos por adelantado arrastraban errores conceptuales de
-  iteraciones anteriores y de otros documentos (alcance, pliego), y el PO los cambiaba igual al
-  llegar el sprint. No se completan criterios de historias pendientes fuera del planning; en el
-  planning también se pueden agregar, partir o reformular historias.
+- **Solo las historias ya implementadas o comprometidas en el sprint en curso tienen criterios de
+  aceptación (decisión del equipo, 2026-09-27).** Las pendientes dicen "A definir en el Sprint
+  Planning correspondiente": sus criterios se desglosan en el planning del sprint en que entren, a
+  partir de lo que el PO explique en ese momento. Los criterios escritos por adelantado arrastraban
+  errores conceptuales de iteraciones anteriores y de otros documentos (alcance, pliego), y el PO
+  los cambiaba igual al llegar el sprint. No se completan criterios de historias pendientes fuera
+  del planning; en el planning también se pueden agregar, partir o reformular historias.
 - **`HU-004` no es precondición de nada (PO, 2026-08-11).** El profesor pidió arrancar por
   artículos y stock, así que las historias de catálogo, parámetros, proveedores y clientes ya
   no dependen de roles y permisos: les alcanza con que exista un usuario logueado, que lo
-  provee el starter kit. Los permisos se aplican cuando `HU-004` se construya.
+  provee el starter kit. Los permisos se aplican cuando `HU-004` se construya (Sprint 5).
 - **Fuera del backlog por acuerdo con el PO (2026-08-11):** el entorno de trabajo y el layout
   base se resuelven antes del Sprint 1, y el login y el cambio de contraseña los provee el
   starter kit de Laravel. Por eso no hay ítems para `SEG-02` ni habilitadores de arranque.
@@ -65,7 +68,7 @@ Product Owner se genera a pedido a partir de este documento.
 
 ## Índice
 
-77 registros históricos: 73 ítems activos con **381 story points estimados**, 3 historias
+77 registros históricos: 73 ítems activos con **354 story points estimados**, 3 historias
 absorbidas, más la reserva de estabilización (`HAB-03`, sin estimar a propósito).
 
 | # | ID | Título | Módulo | SP | Estado |
@@ -74,8 +77,8 @@ absorbidas, más la reserva de estabilización (`HAB-03`, sin estimar a propósi
 | 2 | [HU-006](#hu-006) | Administrar categorías, marcas y unidades de medida | ADM | 5 | Pendiente |
 | 3 | [HU-031](#hu-031) | Administrar los tipos de movimiento de stock | ADM | 2 | Pendiente |
 | 4 | [HU-008](#hu-008) | Administrar el catálogo de artículos | ART | 5 | Pendiente |
-| 5 | [HU-032](#hu-032) | Registrar la imagen de un artículo | ART | 3 | Pendiente |
-| 6 | [HU-009](#hu-009) | Buscar artículos en el catálogo | ART | 5 | Pendiente |
+| 5 | [HU-032](#hu-032) | Registrar la imagen de un artículo | ART | 1 | Pendiente |
+| 6 | [HU-009](#hu-009) | Buscar artículos en el catálogo | ART | 2 | Pendiente |
 | 7 | [HU-010](#hu-010) | Importar el catálogo desde un archivo CSV | ART | 8 | Pendiente |
 | 8 | [HU-011](#hu-011) | Administrar listas de precios | PRE | 5 | Pendiente |
 | 9 | [HU-012](#hu-012) | Definir el precio de venta de los artículos en una lista | PRE | 8 | Pendiente |
@@ -87,12 +90,12 @@ absorbidas, más la reserva de estabilización (`HAB-03`, sin estimar a propósi
 | 15 | [HU-036](#hu-036) | Registrar y consultar comprobantes de proveedor con detalle | CMP | 8 | Pendiente |
 | 16 | [HU-054](#hu-054) | Gestionar notas de crédito y débito del proveedor | CMP | 3 | Pendiente |
 | 17 | [HU-027](#hu-027) | Emitir y anular una orden de pago a proveedor | CMP | 13 | Pendiente |
-| 18 | [HU-014](#hu-014) | Registrar los contactos de un proveedor y consultar el listado | CMP | 3 | Pendiente |
+| 18 | [HU-014](#hu-014) | Registrar los contactos de un proveedor y consultar el listado | CMP | 2 | Pendiente |
 | 19 | [HU-015](#hu-015) | Asociar artículos a sus proveedores | ART | 5 | Pendiente |
 | 20 | [HU-016](#hu-016) | Consultar las existencias por depósito | STK | 2 | Pendiente |
 | 21 | [HU-017](#hu-017) | Registrar un movimiento de stock manual | STK | 8 | Pendiente |
 | 22 | [HU-018](#hu-018) | Consultar el historial de movimientos de stock | STK | 2 | Pendiente |
-| 23 | [HU-019](#hu-019) | Transferir mercadería entre depósitos | STK | 8 | Pendiente |
+| 23 | [HU-019](#hu-019) | Transferir mercadería entre depósitos | STK | 5 | Pendiente |
 | 24 | [HU-020](#hu-020) | Definir el stock mínimo y ver los artículos en faltante | STK | 5 | Pendiente |
 | 25 | [HU-021](#hu-021) | Administrar clientes | CLI | 5 | Pendiente |
 | 26 | [HU-022](#hu-022) | Asignar una lista de precios a un cliente | CLI | 2 | Pendiente |
@@ -127,22 +130,22 @@ absorbidas, más la reserva de estabilización (`HAB-03`, sin estimar a propósi
 | 55 | [HU-049](#hu-049) | Elegir la modalidad de entrega y calcular el costo de envío | ECO | 5 | Pendiente |
 | 56 | [HU-050](#hu-050) | Pagar el pedido con Mercado Pago en sandbox | ECO | 8 | Pendiente |
 | 57 | [HU-048](#hu-048) | Mostrar la disponibilidad online e impedir la compra sin stock | ECO | 3 | Pendiente |
-| 58 | [HU-047](#hu-047) | Buscar, filtrar y ordenar artículos en la tienda online | ECO | 5 | Pendiente |
+| 58 | [HU-047](#hu-047) | Buscar, filtrar y ordenar artículos en la tienda online | ECO | 3 | Pendiente |
 | 59 | [HU-044](#hu-044) | Anular una venta con nota de crédito y reingreso de stock | VTA | 8 | Pendiente |
 | 60 | [HU-045](#hu-045) | Registrar una devolución parcial de cliente | VTA | 5 | Pendiente |
 | 61 | [EPIC-08](#epic-08) | Consultar los comprobantes emitidos | VTA | 5 | Pendiente |
 | 62 | [EPIC-09](#epic-09) | Consultar la ficha del cliente con su historial | CLI | 5 | Pendiente |
 | 63 | [EPIC-10](#epic-10) | Registrar y consultar el log de auditoría | SEG | 8 | Pendiente |
 | 64 | [SPIKE-01](#spike-01) | Investigar la integración con ARCA (WSAA y WSFE) | VTA | 3 | Pendiente |
-| 65 | [EPIC-15](#epic-15) | Procesar el pedido pagado como una venta con factura y egreso de stock | ECO | 8 | Pendiente |
-| 66 | [EPIC-16](#epic-16) | Seguir el estado del pedido y recibir notificaciones por correo | ECO | 8 | Pendiente |
-| 67 | [EPIC-17](#epic-17) | Administrar los pedidos web desde el panel interno | ECO | 8 | Pendiente |
-| 68 | [EPIC-18](#epic-18) | Visualizar los ingresos del periodo | DSH | 8 | Pendiente |
+| 65 | [EPIC-15](#epic-15) | Procesar el pedido pagado como una venta online con su factura | ECO | 5 | Pendiente |
+| 66 | [EPIC-16](#epic-16) | Seguir el estado del pedido y recibir notificaciones por correo | ECO | 5 | Pendiente |
+| 67 | [EPIC-17](#epic-17) | Despachar y entregar pedidos web desde depósito con baja de stock | ECO | 8 | Pendiente |
+| 68 | [EPIC-18](#epic-18) | Visualizar los ingresos del periodo | DSH | 5 | Pendiente |
 | 69 | [EPIC-19](#epic-19) | Visualizar los egresos del periodo | DSH | 5 | Pendiente |
-| 70 | [EPIC-20](#epic-20) | Visualizar la relación entre ingresos y egresos y su evolución | DSH | 8 | Pendiente |
-| 71 | [EPIC-21](#epic-21) | Visualizar indicadores operativos complementarios | DSH | 5 | Pendiente |
+| 70 | [EPIC-20](#epic-20) | Visualizar la relación entre ingresos y egresos y su evolución | DSH | 5 | Pendiente |
+| 71 | [EPIC-21](#epic-21) | Visualizar indicadores operativos complementarios | DSH | 3 | Pendiente |
 | 72 | [HU-053](#hu-053) | Exportar a CSV y Excel los listados de stock | STK | 3 | Pendiente |
-| 73 | [EPIC-22](#epic-22) | Filtrar y exportar el tablero gerencial | DSH | 5 | Pendiente |
+| 73 | [EPIC-22](#epic-22) | Filtrar y exportar el tablero gerencial | DSH | 3 | Pendiente |
 | 74 | [HU-034](#hu-034) | Cargar el detalle de artículos de la orden de compra | CMP | - | Absorbida por HU-033 |
 | 75 | [HU-035](#hu-035) | Calcular los totales y emitir la orden de compra | CMP | - | Absorbida por HU-033 |
 | 76 | [HU-024](#hu-024) | Gestionar los estados y consultar las órdenes de compra | CMP | - | Absorbida por HU-033 |
@@ -249,7 +252,7 @@ independiente.
     - el signo de un tipo ya utilizado en movimientos registrados no puede cambiarse (haría ilegible el historial)
     - no se puede dar de baja un tipo ya utilizado en un movimiento registrado
     - los tipos propios del sistema no pueden eliminarse
-- **Comportamiento:** los tipos que genera automáticamente otro módulo (entrada por compra, salida por venta, devolución de cliente, transferencia de salida y de entrada) no se ofrecen en la pantalla de carga de movimientos manuales
+- **Comportamiento:** los tipos que genera automáticamente otro módulo (entrada por compra, salida por venta, salida por entrega de pedido web, devolución de cliente, transferencia de salida y de entrada) no se ofrecen en la pantalla de carga de movimientos manuales
 
 ## HU-008 - Administrar el catálogo de artículos
 
@@ -281,7 +284,7 @@ independiente.
 
 ## HU-032 - Registrar la imagen de un artículo
 
-**Tipo:** Historia · **Módulo:** ART · **Estimación:** 3 SP · **Estado:** Pendiente · **Alcance:** `ART-05` · **Depende de:** HU-008
+**Tipo:** Historia · **Módulo:** ART · **Estimación:** 1 SP (reestimada, antes 3) · **Estado:** Pendiente · **Alcance:** `ART-05` · **Depende de:** HU-008
 
 **Como** Encargado de compras, **necesito** cargar la imagen de un artículo, **para** que quien lo busque en el sistema o en la tienda online lo reconozca sin depender solo de la descripción.
 
@@ -289,15 +292,24 @@ independiente.
 
 - A definir en el Sprint Planning correspondiente
 
+> **Reestimada de 3 a 1 SP (Sprint Planning 5, 2026-10-12):** la columna `articles.image_url`, la
+> carga con vista previa en el ABM, el renderizado en la tienda online y las 35 imágenes reales de
+> la semilla ya se construyeron durante el Sprint 4.
+
 ## HU-009 - Buscar artículos en el catálogo
 
-**Tipo:** Historia · **Módulo:** ART · **Estimación:** 5 SP · **Estado:** Pendiente · **Alcance:** `ART-05` · **Depende de:** HU-008, HU-032
+**Tipo:** Historia · **Módulo:** ART · **Estimación:** 2 SP (reestimada, antes 5) · **Estado:** Pendiente · **Alcance:** `ART-05` · **Depende de:** HU-008, HU-032
 
 **Como** Encargado de compras, **necesito** buscar y filtrar artículos y ver su imagen, **para** encontrar rápidamente el artículo que necesito entre miles de registros.
 
 **Criterios de aceptación**
 
 - A definir en el Sprint Planning correspondiente
+
+> **Reestimada de 5 a 2 SP (Sprint Planning 5, 2026-10-12):** el buscador por descripción, código
+> interno y código de barras y el ordenamiento por columnas ya se construyeron en `HU-008`. Queda
+> para el Sprint 6 agregar los selectores de filtro combinables (categoría, marca, estado,
+> publicable online) y la exportación del catálogo.
 
 ## HU-010 - Importar el catálogo desde un archivo CSV
 
@@ -363,34 +375,60 @@ independiente.
 
 ## HU-003 - Administrar los usuarios del sistema
 
-**Tipo:** Historia · **Módulo:** SEG · **Estimación:** 5 SP · **Estado:** Pendiente · **Alcance:** `SEG-01` · **Depende de:** nada
+**Tipo:** Historia · **Módulo:** SEG · **Estimación:** 5 SP · **Estado:** Pendiente · **Sprint:** 5 · **Alcance:** `SEG-01` · **Depende de:** nada
 
 **Como** Administrador, **necesito** registrar, modificar y dar de baja usuarios, **para** controlar quién puede operar el sistema y que toda operación quede asociada a un responsable.
 
 **Criterios de aceptación**
 
-- A definir en el Sprint Planning correspondiente
+- **Datos:** nombre y apellido, correo electrónico, contraseña inicial o temporal, rol asignado (`users.role`, enum `UserRole` de `HU-004`: `administrador`, `gerente`, `compras`, `deposito`, `cajero`), sucursal predeterminada opcional (`branch_id`), estado (`is_active`: `activo` o `inactivo`) y fecha de alta
+- **Validaciones:**
+    - nombre, correo electrónico y rol de personal interno son obligatorios
+    - el correo electrónico tiene formato válido y es único en la tabla de usuarios (normalizado en minúsculas)
+    - no se puede desactivar al propio usuario con sesión iniciada ni dejar al sistema sin ningún usuario con rol `administrador` activo
+    - la baja de un usuario es siempre lógica (`is_active = false`) para preservar la integridad referencial de movimientos de stock, órdenes, comprobantes, ventas, facturas, entregas de pedidos web y turnos de caja históricos
+    - no se puede dar de baja a un usuario que tenga un turno de caja abierto en ese momento
+- **Comportamiento:**
+    - al dar de alta un usuario o restablecer su contraseña, el Administrador puede definir una contraseña o generar una aleatoria segura que se muestra por única vez en pantalla para entregársela al empleado
+    - un usuario en estado `inactivo` no puede iniciar sesión y, si tenía sesión activa al ser desactivado, el middleware de autenticación la cierra en su próxima petición
+    - el listado de usuarios del panel interno excluye las cuentas con rol `cliente` de la tienda online (`customer_id IS NOT NULL` / `role = 'cliente'`) y permite buscar por nombre o correo y filtrar por rol y estado
+    - se deshabilita la ruta pública `/register` de Fortify para el panel interno: el personal solo es dado de alta por un Administrador
+- **Verificación:** el Administrador crea un usuario con rol `cajero`, inicia sesión con él en otra ventana, luego lo desactiva desde la cuenta de Administrador y comprueba que el cajero ya no puede operar ni volver a iniciar sesión, y que no es posible desactivar al último `administrador` activo
 
-> **Resuelto (2026-08-12, a confirmar con el PO):** se descarta el autoregistro de empleados
-> -ese patrón es el de `EPIC-11` para clientes de la tienda online, no para personal interno
-> que ya gestiona el Administrador en esta misma historia-. También se descarta el envío de
-> mail con la contraseña inicial: `LaLindaAlcanceV1.md` (línea 179) ya deja la "recuperación de
-> contraseña por correo electrónico" en **Deseable**, fuera del alcance comprometido de
-> `SEG-02`, así que construir envío de mails ahora sería alcance nuevo sin aprobar. La solución
-> dentro de alcance es mostrar la contraseña generada en pantalla al Admin. Si
-> más adelante se aprueba el ítem deseable, el mecanismo a implementar es
-> un link de invitación reutilizando el flujo de recuperación de contraseña del starter kit,
-> no reenviar la contraseña en texto plano por mail.
+> **Resuelto (2026-08-12):** se descarta el autoregistro de empleados —ese patrón es el de `EPIC-11`
+> para clientes de la tienda online, no para personal interno que gestiona el Administrador en esta
+> historia— y se cierra la ruta `/register` de Fortify. La contraseña inicial o restablecida se
+> muestra en pantalla al Administrador al crearla o resetearla.
 
 ## HU-004 - Administrar roles y sus permisos
 
-**Tipo:** Historia · **Módulo:** SEG · **Estimación:** 8 SP · **Estado:** Pendiente · **Alcance:** `SEG-03`, `SEG-04` · **Depende de:** HU-003
+**Tipo:** Historia · **Módulo:** SEG · **Estimación:** 8 SP · **Estado:** Pendiente · **Sprint:** 5 · **Alcance:** `SEG-03`, `SEG-04` · **Depende de:** HU-003
 
-**Como** Administrador, **necesito** definir los roles y los permisos que cada uno tiene sobre cada módulo y operación, **para** que cada usuario acceda únicamente a las funciones que le corresponden según su puesto.
+**Como** Administrador, **necesito** que cada rol del sistema tenga definidos los módulos y operaciones a los que puede acceder y su pantalla principal de trabajo, **para** que cada usuario opere únicamente las funciones que corresponden a su puesto.
 
 **Criterios de aceptación**
 
-- A definir en el Sprint Planning correspondiente
+- **Datos:** rol del usuario (`users.role`, enum `UserRole`: `administrador`, `gerente`, `compras`, `deposito`, `cajero` para el personal interno y `cliente` para la tienda online), catálogo de Gates por módulo definidos en código (`view-dashboard`, `manage-users`, `manage-organization`, `manage-catalog`, `manage-pricing`, `manage-purchases`, `manage-stock`, `manage-web-orders`, `operate-cash`, `manage-customers`) y pantalla de inicio asociada a cada rol
+- **Validaciones:**
+    - todo usuario interno tiene asignado uno de los cinco roles operativos del enum `UserRole` (`administrador`, `gerente`, `compras`, `deposito`, `cajero`); los usuarios existentes con `personal_interno` se migran a `administrador`
+    - el rol `administrador` conserva siempre acceso irrestricto a todos los módulos mediante `Gate::before`
+- **Comportamiento:**
+    - el sistema aplica los cinco roles operativos de La Linda:
+        - `administrador`: acceso total e irrestricto a todos los módulos, incluyendo la gestión de usuarios (`HU-003`)
+        - `gerente`: acceso al Tablero Gerencial (`/dashboard`), listas de precios, organización/parámetros y consulta de operaciones (ventas, comprobantes, turnos de caja, cuentas corrientes, stock y pedidos web); sin acceso al ABM de usuarios
+        - `compras` (*Encargado de compras*): acceso a catálogo, proveedores, órdenes de compra, comprobantes de proveedor, órdenes de pago, cuentas corrientes, pagos/egresos y consulta de existencias de stock
+        - `deposito` (*Encargado de depósito*): acceso a existencias de stock, movimientos manuales, historial de movimientos y preparación/entrega de pedidos web (`EPIC-17`)
+        - `cajero` (*Cajero / Vendedor*): acceso a apertura/cierre de su caja, movimientos de caja, ventas de mostrador, cobro, facturación y clientes
+    - **pantalla principal por rol al iniciar sesión (`LoginResponse`) y al entrar a `/`:** el `gerente` (y el `administrador`) entra a `/dashboard`, `deposito` entra a la bandeja de pedidos web a preparar, `cajero` entra a la caja (`/sales/cash-sessions`), `compras` entra al módulo de compras (`/purchases/orders`) y `cliente` a la tienda online (`/tienda`)
+    - cada grupo de rutas del panel interno verifica el Gate correspondiente en el servidor mediante middleware `can:<gate>`; si un usuario intenta acceder por URL directa o ejecutar una acción de un módulo no autorizado, recibe `403 Forbidden`
+    - la barra lateral de navegación (`app-sidebar.tsx`) y las acciones de pantalla se adaptan a las capacidades compartidas en las props de Inertia (`auth.can`), mostrando únicamente los módulos habilitados para el rol del usuario
+- **Verificación:** se inicia sesión con cada uno de los cinco roles de personal y se comprueba que cada uno aterriza en su pantalla principal correspondiente (`Gerente` en `/dashboard`, `Depósito` en pedidos a preparar, `Cajero` en la caja) y que un usuario `cajero` puede operar Caja, Ventas y Clientes pero no ve en el menú ni puede abrir por URL directa Compras, Listas de Precios, Tablero Gerencial ni Usuarios (recibe `403`)
+
+> **Decisión técnica del Sprint Planning 5 (2026-10-12):** se amplía el enum `UserRole` existente sobre
+> `users.role` y se definen Gates por módulo en código en lugar de agregar las tablas `roles`,
+> `permissions` y `permission_role`. La matriz editable de permisos por rol queda fuera del sprint como
+> deseable y se consulta con el PO. Conserva sus 8 SP por el barrido de autorización sobre las rutas y
+> tests de todos los módulos del sistema.
 
 ## HU-013 - Administrar proveedores
 
@@ -410,13 +448,17 @@ independiente.
 
 ## HU-014 - Registrar los contactos de un proveedor y consultar el listado
 
-**Tipo:** Historia · **Módulo:** CMP · **Estimación:** 3 SP · **Estado:** Pendiente · **Alcance:** `CMP-02` · **Depende de:** HU-013
+**Tipo:** Historia · **Módulo:** CMP · **Estimación:** 2 SP (reestimada, antes 3) · **Estado:** Pendiente · **Alcance:** `CMP-02` · **Depende de:** HU-013
 
 **Como** Encargado de compras, **necesito** registrar varios contactos por proveedor y buscar proveedores por distintos criterios, **para** saber a quién dirigirme por cada gestión sin depender de la agenda personal de nadie.
 
 **Criterios de aceptación**
 
 - A definir en el Sprint Planning correspondiente
+
+> **Reestimada de 3 a 2 SP (Sprint Planning 5, 2026-10-12):** la búsqueda y los filtros del listado
+> de proveedores ya se construyeron en `HU-013`. Queda para el Sprint 6 el ABM de contactos
+> múltiples por proveedor.
 
 ## HU-015 - Asociar artículos a sus proveedores
 
@@ -471,7 +513,7 @@ independiente.
 - **Datos:** depósito, tipo de movimiento (que trae su signo fijo), observaciones, y detalle con artículo y **cantidad que entra o sale** (siempre positiva). El sistema calcula el nuevo saldo; el usuario nunca ingresa el total ni la diferencia.
 - **Validaciones:**
     - el tipo de movimiento es obligatorio y se elige del catálogo de tipos, no se escribe en texto libre
-    - no se puede elegir un tipo que genera automáticamente otro módulo (compra, venta, devolución, transferencia)
+    - no se puede elegir un tipo que genera automáticamente otro módulo (compra, venta, entrega de pedido web, devolución, transferencia)
     - la cantidad ingresada por renglón es mayor que cero
     - la existencia resultante de aplicar el movimiento no puede quedar negativa
     - las observaciones son obligatorias (justificación del movimiento)
@@ -504,13 +546,17 @@ independiente.
 
 ## HU-019 - Transferir mercadería entre depósitos
 
-**Tipo:** Historia · **Módulo:** STK · **Estimación:** 8 SP · **Estado:** Pendiente · **Alcance:** `STK-05`, `STK-02` · **Depende de:** HU-017
+**Tipo:** Historia · **Módulo:** STK · **Estimación:** 5 SP (reestimada, antes 8) · **Estado:** Pendiente · **Alcance:** `STK-05`, `STK-02` · **Depende de:** HU-017
 
 **Como** Encargado de depósito, **necesito** transferir mercadería de un depósito a otro, **para** reponer una sucursal desde el depósito central sin perder el rastro de la mercadería.
 
 **Criterios de aceptación**
 
 - A definir en el Sprint Planning correspondiente
+
+> **Reestimada de 8 a 5 SP (Sprint Planning 5, 2026-10-12):** toda la infraestructura de
+> `StockMovement`, el cálculo de saldos y los tipos de sistema `warehouse_transfer_out` y
+> `warehouse_transfer_in` ya existen desde el Sprint 1.
 
 ## HU-020 - Definir el stock mínimo y ver los artículos en faltante
 
@@ -1256,7 +1302,7 @@ reimputación innecesarios.
 - A definir en el Sprint Planning correspondiente
 
 > **Historia nueva del Sprint Planning 4 (2026-09-27).** `HU-060` muestra la rendición del turno que
-> se cierra; esta es la consulta histórica. Candidata del Sprint 4 si sobra capacidad.
+> se cierra; esta es la consulta histórica para supervisión y gerencia.
 
 ## HU-059 - Registrar un préstamo de dinero entre cajas
 
@@ -1270,7 +1316,7 @@ reimputación innecesarios.
 
 > **Historia nueva del Sprint Planning 4 (2026-09-27).** Separada de `HU-058`: genera en una sola
 > operación un egreso en una caja y un ingreso en la otra. Mientras no esté, se registra con un
-> egreso y un ingreso manuales. Candidata del Sprint 4 si sobra capacidad.
+> egreso y un ingreso manuales.
 
 ---
 
@@ -1426,23 +1472,49 @@ reimputación innecesarios.
 
 ## HU-048 - Mostrar la disponibilidad online e impedir la compra sin stock
 
-**Tipo:** Historia · **Módulo:** ECO · **Estimación:** 3 SP · **Estado:** Pendiente · **Alcance:** `ECO-03` · **Depende de:** HU-046, HU-016
+**Tipo:** Historia · **Módulo:** ECO · **Estimación:** 3 SP · **Estado:** Pendiente · **Sprint:** 5 · **Alcance:** `ECO-03` · **Depende de:** HU-046, HU-016
 
 **Como** Cliente, **necesito** saber si el artículo está disponible antes de agregarlo, **para** no llevarme la sorpresa de que no hay stock al momento de pagar.
 
 **Criterios de aceptación**
 
-- A definir en el Sprint Planning correspondiente
+- **Datos:** por cada artículo publicado en la tienda online, cantidad disponible para la venta online (`available_quantity`), calculada como la existencia actual en el depósito asignado al canal online (`warehouses.is_ecommerce = true`) **menos** las unidades comprometidas en pedidos web ya pagados o en preparación pendientes de salida de depósito (`web_orders.status IN ('pagado', 'en_preparacion')`), e indicador de disponibilidad (`disponible`, `ultimas_unidades`, `sin_stock`)
+- **Validaciones:**
+    - no se puede agregar al carrito ni incrementar una línea por encima de la cantidad disponible online (`available_quantity`) del artículo
+    - al confirmar el pedido desde el carrito (`HU-062` / `PlaceWebOrder`), se vuelve a verificar dentro de la transacción la disponibilidad de cada renglón: si otro cliente agotó o comprometió el stock antes, la confirmación se rechaza nombrando el artículo afectado y la cantidad disponible real
+- **Comportamiento:**
+    - como en el canal online el stock físico recién se descuenta cuando el depósito entrega el pedido (`EPIC-17`), descontar las unidades comprometidas en pedidos `pagado` y `en_preparacion` impide que dos clientes compren la misma mercadería mientras aguarda despacho
+    - en el catálogo público (`/tienda`) y en el detalle del artículo se muestra su estado de disponibilidad y, cuando está `sin_stock` (`available_quantity <= 0`), el botón `"Agregar al carrito"` queda deshabilitado con la leyenda `"Sin stock"`
+    - si un artículo que ya estaba en el carrito queda sin stock suficiente antes de confirmar, el carrito informa la cantidad máxima disponible y bloquea el paso al pago hasta ajustar o quitar la línea
+- **Verificación:** un artículo tiene 3 unidades en el depósito online; el Cliente A compra y paga 2 unidades (el pedido queda `pagado`, aún sin entregarse en depósito); el Cliente B entra a la tienda, ve que solo queda 1 unidad disponible y si intenta comprar 2 unidades el sistema lo rechaza
+
+> **Entra al Sprint 5 (2026-10-12):** dado que el egreso físico de stock ocurre recién al entregar
+> el pedido en depósito (`EPIC-17`), esta historia evita que dos clientes se vean afectados por
+> comprar las mismas unidades antes de que salgan del depósito.
 
 ## HU-047 - Buscar, filtrar y ordenar artículos en la tienda online
 
-**Tipo:** Historia · **Módulo:** ECO · **Estimación:** 5 SP · **Estado:** Pendiente · **Alcance:** `ECO-02` · **Depende de:** HU-046
+**Tipo:** Historia · **Módulo:** ECO · **Estimación:** 3 SP (reestimada, antes 5) · **Estado:** Pendiente · **Sprint:** 5 · **Alcance:** `ECO-02` · **Depende de:** HU-046
 
 **Como** Cliente, **necesito** filtrar el catálogo y ordenarlo a mi gusto, **para** encontrar lo que busco sin recorrer todo el listado.
 
 **Criterios de aceptación**
 
-- A definir en el Sprint Planning correspondiente
+- **Datos:** criterios de filtrado del catálogo en `/tienda` (búsqueda por texto `search`, categoría o subcategoría `category_id`, marca `brand_id`, rango de precios `min_price` y `max_price`) y criterio de ordenamiento (`sort`: `relevance` por defecto, `price_asc` de menor a mayor precio, `price_desc` de mayor a menor precio, `name_asc` alfabético A–Z, `name_desc` alfabético Z–A), junto con el listado de marcas activas que tienen artículos publicados en el canal online
+- **Validaciones:**
+    - `min_price` y `max_price`, cuando se informan, deben ser numéricos mayores o iguales a cero; si se informan ambos, `max_price >= min_price`
+    - `brand_id` y `category_id` deben corresponder a registros activos existentes
+    - el filtrado por rango de precios y el ordenamiento por menor/mayor precio se aplican sobre el **precio efectivo resuelto para el visitante actual** según la cascada de `HU-056` (lista particular del cliente si inició sesión y tiene una asignada, o lista del canal online / general)
+- **Comportamiento:**
+    - los filtros de búsqueda, categoría/subcategoría, marca y rango de precios son combinables entre sí y con el selector de ordenamiento
+    - los filtros activos y el criterio de ordenamiento se mantienen sincronizados en los query params de la URL (Inertia `router.get` con `preserveState`) y se conservan al cambiar de página en la paginación
+    - la interfaz muestra los filtros activos como etiquetas (*chips*) removibles individualmente, el contador total de artículos encontrados y una acción `"Limpiar filtros"` para restablecer el catálogo completo
+- **Verificación:** en `/tienda` se filtra por una categoría y una marca, se define un rango de precio mínimo y máximo y se ordena por `"Menor precio"`; se comprueba que solo aparecen los artículos que cumplen todas las condiciones ordenados por su precio vigente de menor a mayor, y que al limpiar los filtros vuelve el listado original
+
+> **Reestimada de 5 a 3 SP (Sprint Planning 5, 2026-10-12):** la búsqueda insensible a acentos con
+> sugerencias y la navegación jerárquica por categorías ya se entregaron dentro de `HU-046`. Entra
+> al Sprint 5 para completar el filtrado por marca y rango de precios y el ordenamiento por precio y
+> nombre.
 
 ---
 
@@ -1468,7 +1540,7 @@ reimputación innecesarios.
 
 ## EPIC-08 - Consultar los comprobantes emitidos
 
-**Tipo:** Epic · **Módulo:** VTA · **Estimación:** 5 SP · **Estado:** Pendiente · **Alcance:** `VTA-09` · **Depende de:** HU-042
+**Tipo:** Epic · **Módulo:** VTA · **Estimación:** 5 SP · **Estado:** Pendiente · **Alcance:** `VTA-09` · **Depende de:** HU-044
 
 **Como** Gerente, **necesito** consultar y filtrar los comprobantes emitidos por distintos criterios, **para** controlar la facturación de cada sucursal y canal.
 
@@ -1506,19 +1578,37 @@ reimputación innecesarios.
 
 - A definir en el Sprint Planning correspondiente
 
-## EPIC-15 - Procesar el pedido pagado como una venta con factura y egreso de stock
+## EPIC-15 - Procesar el pedido pagado como una venta online con su factura
 
-**Tipo:** Epic · **Módulo:** ECO · **Estimación:** 8 SP · **Estado:** Pendiente · **Alcance:** `ECO-08` · **Depende de:** HU-050
+**Tipo:** Historia (antes Epic) · **Módulo:** ECO · **Estimación:** 5 SP (reestimada, antes 8) · **Estado:** Pendiente · **Sprint:** 5 · **Alcance:** `ECO-08` · **Depende de:** HU-050, HU-042
 
-**Como** Gerente, **necesito** que el pedido web pagado genere la misma venta, factura y movimiento de stock que una venta de mostrador, **para** no tener dos circuitos de facturación distintos ni diferencias de stock entre canales.
+**Como** Gerente, **necesito** que el pedido web pagado genere automáticamente su venta online confirmada y su factura correspondiente, **para** unificar la facturación y los ingresos de ambos canales dejando la venta lista para que el depósito la prepare y despache.
 
 **Criterios de aceptación**
 
-- A definir en el Sprint Planning correspondiente
+- **Datos:** pedido web en estado `pagado`, venta asociada (`sales.web_order_id` único, `channel = 'online'`, `cash_session_id = null`, `point_of_sale_id` asociado al depósito del canal online) y factura emitida (`A` o `B` según la condición fiscal del cliente)
+- **Validaciones:**
+    - un pedido web genera a lo sumo una venta y una factura (idempotente ante notificaciones repetidas del webhook de Mercado Pago)
+    - solo se procesa cuando el pago fue acreditado (`status = 'pagado'`)
+    - el punto de venta utilizado corresponde al depósito activo asignado al canal online (`warehouses.is_ecommerce = true`)
+    - integridad de canal: toda venta con `channel = 'online'` tiene `web_order_id IS NOT NULL` y toda venta con `channel = 'mostrador'` tiene `web_order_id IS NULL`
+- **Comportamiento:**
+    - al acreditarse el pago del pedido web (`MarkWebOrderAsPaid`), dentro de la misma transacción atómica se ejecuta `ConvertPaidWebOrderToSale`: 1) crea la `Sale` en estado `confirmada` con `channel = 'online'`, `cash_session_id = null` y los precios congelados en `web_order_items` (respetando la alícuota de IVA de cada artículo), 2) si el pedido incluye costo de envío (`shipping_cost > 0`), lo incorpora en el total de la venta (`sales.shipping_amount`) y como renglón de concepto "Envío a domicilio" en la factura (al 21% de IVA contenido) para que el total facturado coincida al centavo con lo cobrado por Mercado Pago, y 3) emite la `Invoice` correlativa reutilizando `IssueInvoice`
+    - **el pago del pedido online NO descuenta el stock físico en ese instante**: por definición de negocio del PO en la Review del Sprint 4, la mercadería sigue en el depósito hasta que el encargado de depósito arma el pedido y registra su entrega/despacho (`EPIC-17`), momento en el cual recién se ejecuta la baja de stock
+    - las ventas online no generan movimientos en `cash_movements` (que representan el arqueo de cajas físicas de mostrador), sino que su cobro queda registrado por el pago acreditado del pedido web (`mp_payment_id` y `paid_amount`)
+    - desde el detalle del pedido web (tanto en el panel interno como en "Mis pedidos" del cliente) queda disponible su factura asociada para consultar o descargar en PDF
+- **Verificación:** se acredita el pago de un pedido web con envío a domicilio; se comprueba que en una sola operación quedan creadas la venta online confirmada y la factura con los artículos más el renglón de envío por el total exacto pagado, mientras que la existencia física del depósito aún no baja hasta que el depósito registre la entrega en `EPIC-17`
+
+> **Pasa de Epic a Historia y se reestima de 8 a 5 SP en el Sprint Planning 5 (2026-10-12) según la
+> devolución del Profesor en la Review del Sprint 4 (`06:09` a `07:42` del audio):** *"¿Cuándo baja
+> el stock acá? El stock baja cuando entregás, cuando vos lo sacás del depósito, no cuando lo
+> vendés"*. Como ya no mueve stock y reutiliza `IssueInvoice`, se estima en 5 SP (Fibonacci) y la
+> baja del stock pasa a ejecutarse cuando el Encargado de depósito registra la entrega en `EPIC-17`
+> (8 SP).
 
 ## EPIC-16 - Seguir el estado del pedido y recibir notificaciones por correo
 
-**Tipo:** Epic · **Módulo:** ECO · **Estimación:** 8 SP · **Estado:** Pendiente · **Alcance:** `ECO-07`, `ECO-09` · **Depende de:** EPIC-15
+**Tipo:** Epic · **Módulo:** ECO · **Estimación:** 5 SP (reestimada, antes 8) · **Estado:** Pendiente · **Alcance:** `ECO-07`, `ECO-09` · **Depende de:** EPIC-15, EPIC-17
 
 **Como** Cliente, **necesito** ver en qué estado está mi pedido y recibir un aviso cuando se despacha o está listo para retirar, **para** saber cuándo voy a recibir mi compra sin tener que llamar.
 
@@ -1526,57 +1616,115 @@ reimputación innecesarios.
 
 - A definir en el Sprint Planning correspondiente
 
-## EPIC-17 - Administrar los pedidos web desde el panel interno
+## EPIC-17 - Despachar y entregar pedidos web desde depósito con baja de stock
 
-**Tipo:** Epic · **Módulo:** ECO · **Estimación:** 8 SP · **Estado:** Pendiente · **Alcance:** `ECO-10` · **Depende de:** EPIC-15
+**Tipo:** Historia (antes Epic) · **Módulo:** STK / ECO · **Estimación:** 8 SP · **Estado:** Pendiente · **Sprint:** 5 · **Alcance:** `ECO-10` · **Depende de:** EPIC-15, EPIC-06
 
-**Como** Encargado de depósito, **necesito** ver y gestionar los pedidos web pendientes de preparación, **para** preparar y despachar los pedidos online sin depender de correos ni planillas.
+**Como** Encargado de depósito, **necesito** ver los pedidos web pendientes de entrega, juntar la mercadería y registrar su preparación y su salida del depósito asociándola a la venta online, **para** entregar los pedidos y que el stock del depósito se descuente en el momento exacto en que la mercadería sale del depósito con un tipo de movimiento propio.
 
 **Criterios de aceptación**
 
-- A definir en el Sprint Planning correspondiente
+- **Datos:** listado y detalle de pedidos web con número de pedido y número de venta asociada (`EPIC-15`), fecha, cliente ("Juan Pérez"), modalidad de entrega (`retiro` en sucursal o `envio` a domicilio), domicilio o sucursal de destino, detalle de artículos y cantidades a juntar del depósito (*picking list*), depósito desde el cual se entrega (`warehouses.is_ecommerce = true`), estado operativo (`pendiente`, `pagado`, `en_preparacion`, `entregado`), auditoría de preparación (`preparation_started_at`, `prepared_by`), auditoría de entrega/despacho (`delivered_at`, `delivered_by`) y movimiento de stock generado (`stock_movements` con `sale_id` y tipo de sistema `"Salida por Entrega de Pedido Web"`)
+- **Validaciones:**
+    - el ciclo de vida del pedido tiene exactamente cuatro estados (`pendiente` → `pagado` → `en_preparacion` → `entregado`) y el pedido se cierra al salir del depósito (no existen los estados `listo_para_retiro`, `en_camino` ni `cancelado`)
+    - las transiciones operativas las ejecuta el personal con permiso `manage-web-orders` (`deposito`, `gerente`, `administrador`):
+        - un pedido `pagado` pasa a `en_preparacion` cuando el encargado de depósito comienza a juntar la mercadería, registrando `preparation_started_at` y `prepared_by`
+        - un pedido `en_preparacion` pasa a `entregado` cuando el encargado de depósito confirma la salida de la mercadería del depósito, registrando `delivered_at` y `delivered_by` (con restricción de integridad `status = 'entregado' ⇔ delivered_at IS NOT NULL AND delivered_by IS NOT NULL`)
+    - el tipo de movimiento `"Salida por Entrega de Pedido Web"` (`code = 'web_order_delivery'`, `sign = -1`, `is_system = true`) forma parte de los códigos automáticos del sistema y **no es elegible en los ajustes manuales de stock** (`HU-017`)
+    - la baja de stock se ejecuta **una única vez por pedido/venta**, en el acto de pasar a `entregado`
+- **Comportamiento:**
+    - pantalla operativa de pedidos a preparar (que además es la pantalla principal a la que ingresa el rol `deposito`) con contadores por estado (`Pagados por preparar`, `En preparación`, `Entregados / Despachados`) y filtros combinables por estado, modalidad de entrega, sucursal, rango de fechas y búsqueda por cliente o número de pedido/venta, respaldada por el índice `(status, paid_at)`
+    - cuando el pedido está en estado `entregado`, la interfaz muestra la etiqueta **"Despachado"** si su modalidad es `envio` a domicilio y **"Entregado"** si es `retiro` en sucursal
+    - al abrir un pedido pendiente de entrega, el encargado de depósito ve la hoja de preparación (*picking*) con los artículos y cantidades a retirar del depósito (ej. *"5 leches, 10 aguas..."*) y los datos del cliente y de entrega/retiro
+    - al confirmar la entrega/despacho (`en_preparacion` → `entregado`), en una única transacción atómica el sistema: 1) genera el movimiento de stock inmutable de tipo `"Salida por Entrega de Pedido Web"` (`web_order_delivery`) sobre el depósito online reutilizando `stock_movements.sale_id` con el `user_id` del encargado de depósito, dejando distinguible en el historial (`HU-018`) la salida de mostrador de la entrega online (y aplicando la regla de conflicto de stock de `EPIC-06` si la existencia física quedara negativa), y 2) registra `delivered_at`, `delivered_by` y el estado `entregado` (visible también en `"Mis pedidos"` del cliente con la etiqueta `"Entregado"` o `"Despachado"`)
+- **Verificación:** se paga un pedido online de 5 unidades de leche (`EPIC-15`) y se comprueba que la existencia física del depósito aún no bajó; el usuario de `deposito` inicia sesión (entrando directo a los pedidos a preparar), inicia la preparación del pedido de Juan Pérez (quedando `prepared_by` y `preparation_started_at`) y luego confirma la entrega: en ese instante se registra el movimiento `"Salida por Entrega de Pedido Web"` vinculado a la venta, quedan grabados `delivered_by` y `delivered_at`, y la existencia del depósito disminuye en 5 unidades
+
+> **Pasa de Epic a Historia en el Sprint Planning 5 (2026-10-12) con el diseño pedido por el
+> Profesor en la Review del Sprint 4 (`06:14` a `07:38` del audio):** *"¿Hacemos un ajuste? No,
+> cuando se entrega la mercadería... El stock baja cuando entregás, cuando vos lo sacás del
+> depósito, no cuando lo vendés"*. Se usa el tipo de movimiento propio `"Salida por Entrega de
+> Pedido Web"` (`is_system = true`) y se simplifica la máquina de estados a `pendiente → pagado →
+> en_preparacion → entregado` (etiqueta `"Despachado"` si es envío), cerrando el pedido al salir del
+> depósito con auditoría separada de quién preparó (`prepared_by`) y quién entregó (`delivered_by`).
 
 ---
 
 ## EPIC-18 - Visualizar los ingresos del periodo
 
-**Tipo:** Epic · **Módulo:** DSH · **Estimación:** 8 SP · **Estado:** Pendiente · **Alcance:** `DSH-01` · **Depende de:** EPIC-15
+**Tipo:** Historia (antes Epic) · **Módulo:** DSH · **Estimación:** 5 SP (reestimada, antes 8) · **Estado:** Pendiente · **Sprint:** 5 · **Alcance:** `DSH-01` · **Depende de:** EPIC-15, HU-042
 
 **Como** Gerente, **necesito** ver cuánto se facturó y cuánto se cobró en el periodo discriminado por medio de pago canal y sucursal, **para** conocer el ingreso real del negocio sin recopilar información a mano.
 
 **Criterios de aceptación**
 
-- A definir en el Sprint Planning correspondiente
+- **Datos:** en el período seleccionado (por defecto el mes en curso), total facturado (con IVA y neto sin IVA), cantidad de ventas confirmadas, ticket promedio, e ingresos cobrados desglosados por canal (`mostrador` vs `online`), por sucursal y por medio de pago
+- **Validaciones:**
+    - las ventas en estado `abierta` o `descartada` y los pedidos web en estado `pendiente` no participan en los ingresos
+- **Comportamiento:**
+    - en el Tablero Gerencial (`/dashboard`) se muestran las tarjetas de KPIs de ingresos (Total Facturado, Ingreso Neto sin IVA, Operaciones Confirmadas y Ticket Promedio) junto con el desglose gráfico y tabular por canal de venta, por sucursal y por medio de pago (movimientos `venta` de mostrador más cobros acreditados de Mercado Pago en canal online)
+- **Verificación:** se confirma una venta en mostrador y un pedido online pagado; se comprueba que el Total Facturado del tablero coincide con la suma de ambas facturas y que el desglose por canal separa mostrador y online
+
+> **Pasa de Epic a Historia y se reestima de 8 a 5 SP (Fibonacci) en el Sprint Planning 5
+> (2026-10-12):** comparte controlador (`DashboardController`), filtros globales y layout con
+> `EPIC-19`..`EPIC-22`.
 
 ## EPIC-19 - Visualizar los egresos del periodo
 
-**Tipo:** Epic · **Módulo:** DSH · **Estimación:** 5 SP · **Estado:** Pendiente · **Alcance:** `DSH-02` · **Depende de:** HU-027
+**Tipo:** Historia (antes Epic) · **Módulo:** DSH · **Estimación:** 5 SP · **Estado:** Pendiente · **Sprint:** 5 · **Alcance:** `DSH-02` · **Depende de:** HU-027, HU-058
 
 **Como** Gerente, **necesito** ver el total de comprobantes de proveedor recibidos y de pagos realizados en el periodo, **para** conocer cuánto se gastó y cuánto efectivamente se pagó.
 
 **Criterios de aceptación**
 
-- A definir en el Sprint Planning correspondiente
+- **Datos:** en el período seleccionado, total de deuda/gasto devengado con proveedores (facturas de proveedor más notas de débito menos notas de crédito de proveedor confirmadas en el período), total efectivamente pagado a proveedores (órdenes de pago confirmadas en el período), egresos operativos de caja (`cash_movements` de tipo `egreso`) y desglose de pagos por medio de pago
+- **Validaciones:**
+    - los comprobantes de proveedor de tipo `remito` (no valorizados) y los comprobantes u órdenes de pago en estado `anulada` se excluyen del cálculo
+- **Comportamiento:**
+    - el Tablero Gerencial muestra las tarjetas y gráficos de egresos distinguiendo claramente entre **compromisos/gastos facturados por proveedores** (devengado) y **desembolsos reales de dinero** (órdenes de pago emitidas + egresos de caja), con enlace directo al listado de pagos y egresos (`HU-055`) y a cuentas corrientes (`HU-028`)
+- **Verificación:** se registra una factura de proveedor de $100.000 y una orden de pago parcial de $40.000; el tablero refleja $100.000 en comprobantes recibidos y $40.000 en pagos realizados, y si se anula la orden de pago el desembolso vuelve a $0
+
+> **Pasa de Epic a Historia en el Sprint Planning 5 (2026-10-12) conservando sus 5 SP (Fibonacci):**
+> reutiliza las reglas de negocio ya probadas en `HU-028` y `HU-055`.
 
 ## EPIC-20 - Visualizar la relación entre ingresos y egresos y su evolución
 
-**Tipo:** Epic · **Módulo:** DSH · **Estimación:** 8 SP · **Estado:** Pendiente · **Alcance:** `DSH-03` · **Depende de:** EPIC-18, EPIC-19
+**Tipo:** Historia (antes Epic) · **Módulo:** DSH · **Estimación:** 5 SP (reestimada, antes 8) · **Estado:** Pendiente · **Sprint:** 5 · **Alcance:** `DSH-03` · **Depende de:** EPIC-18, EPIC-19
 
 **Como** Gerente, **necesito** ver la relación entre lo que entra y lo que sale y cómo evolucionó mes a mes, **para** tener una lectura rápida de si el negocio está mejorando o empeorando.
 
 **Criterios de aceptación**
 
-- A definir en el Sprint Planning correspondiente
+- **Datos:** resultado neto del período (`ingresos − egresos`), margen porcentual, variación respecto al período inmediato anterior y serie temporal evolutiva (día a día para rangos cortos o mes a mes para los últimos 6/12 meses) comparando ingresos vs. egresos
+- **Validaciones:**
+    - la serie temporal cubre todos los períodos del rango consultado, completando con `0.00` aquellos días o meses sin movimientos para que la gráfica no tenga saltos engañosos
+- **Comportamiento:**
+    - el Tablero Gerencial presenta el indicador de Resultado Neto (positivo en verde / superávit, negativo en rojo / déficit) y un gráfico comparativo de barras/líneas con la evolución de Ingresos vs. Egresos y el saldo neto de cada período
+- **Verificación:** con datos en dos meses consecutivos, se comprueba que el gráfico evolutivo muestra ambos meses con sus barras de ingresos y egresos y que el resultado neto coincide con la diferencia entre los totales de `EPIC-18` y `EPIC-19`
+
+> **Pasa de Epic a Historia y se reestima de 8 a 5 SP (Fibonacci) en el Sprint Planning 5
+> (2026-10-12).**
 
 ## EPIC-21 - Visualizar indicadores operativos complementarios
 
-**Tipo:** Epic · **Módulo:** DSH · **Estimación:** 5 SP · **Estado:** Pendiente · **Alcance:** `DSH-04` · **Depende de:** EPIC-20
+**Tipo:** Historia (antes Epic) · **Módulo:** DSH · **Estimación:** 3 SP (reestimada, antes 5) · **Estado:** Pendiente · **Sprint:** 5 · **Alcance:** `DSH-04` · **Depende de:** EPIC-20, EPIC-17
 
-**Como** Gerente, **necesito** ver los artículos más vendidos los artículos por debajo del mínimo y las compras por proveedor, **para** detectar oportunidades y problemas operativos desde el mismo tablero.
+**Como** Gerente, **necesito** ver los artículos más vendidos los artículos con alerta de stock y las compras por proveedor, **para** detectar oportunidades y problemas operativos desde el mismo tablero.
 
 **Criterios de aceptación**
 
-- A definir en el Sprint Planning correspondiente
+- **Datos:**
+    - **Top artículos más vendidos** en el período (por cantidad y por importe facturado sobre ventas confirmadas)
+    - **Artículos sin stock o en conflicto de stock** (artículos activos con existencia `<= 0` o con conflicto de stock por ventas sin existencia `EPIC-06`, indicando depósito y existencia actual)
+    - **Ranking de compras por proveedor** en el período (monto total de comprobantes confirmados y saldo pendiente de cuenta corriente)
+    - **Alertas operativas de despacho online:** cantidad de pedidos web en estado `pagado` o `en_preparacion` pendientes de entrega en depósito (`EPIC-17`)
+- **Validaciones:**
+    - todos los rankings respetan los filtros activos del tablero cuando corresponden (rango de fechas, sucursal y canal)
+- **Comportamiento:**
+    - cada tarjeta operativa muestra el top 5/10 y ofrece un enlace directo a la pantalla operativa correspondiente (Existencias de stock, Pedidos web por preparar, Cuenta corriente de proveedores)
+- **Verificación:** se vende un artículo convirtiéndolo en el número 1 del período y queda un pedido online pagado pendiente de entrega; ambos aparecen en sus respectivos paneles del tablero gerencial
+
+> **Pasa de Epic a Historia y se reestima de 5 a 3 SP (Fibonacci) en el Sprint Planning 5
+> (2026-10-12).**
 
 ## HU-053 - Exportar a CSV y Excel los listados de stock
 
@@ -1591,17 +1739,27 @@ reimputación innecesarios.
 > **Desglosada de `HU-016` y `HU-018` el 2026-08-22.** El PO pidió no invertir tiempo en nada que no
 > hubiera pedido explícitamente, y la exportación no estaba entre lo que pidió para el arranque de
 > artículos y stock. Se baja de prioridad en vez de descartarse. Vale 3 SP y no 5 porque para
-> cuando llegue, el patrón de exportación ya lo construyó `HU-009`.
+> cuando llegue, el patrón de exportación ya está construido en `HU-028` y `HU-055`.
 
 ## EPIC-22 - Filtrar y exportar el tablero gerencial
 
-**Tipo:** Epic · **Módulo:** DSH · **Estimación:** 5 SP · **Estado:** Pendiente · **Alcance:** `DSH-05` · **Depende de:** EPIC-20
+**Tipo:** Historia (antes Epic) · **Módulo:** DSH · **Estimación:** 3 SP (reestimada, antes 5) · **Estado:** Pendiente · **Sprint:** 5 · **Alcance:** `DSH-05` · **Depende de:** EPIC-20
 
 **Como** Gerente, **necesito** filtrar todo el tablero por fecha sucursal y canal y exportar la información, **para** poder analizar la información por fuera del sistema y presentarla a la dirección.
 
 **Criterios de aceptación**
 
-- A definir en el Sprint Planning correspondiente
+- **Datos:** filtros globales del tablero (rango de fechas `date_from` y `date_to` con atajos rápidos *Hoy*, *Este mes*, *Mes anterior*, *Últimos 6 meses*, *Este año*; `branch_id` opcional; `channel` opcional: `todos`, `mostrador`, `online`) y archivo exportable (CSV / Excel `.xlsx`)
+- **Validaciones:**
+    - `date_to` no puede ser anterior a `date_from`
+    - si se filtra por canal `online`, los egresos generales de proveedores se aclaran como globales de la empresa o se filtran por el depósito asignado a la sucursal seleccionada
+- **Comportamiento:**
+    - la barra superior del Tablero Gerencial mantiene sincronizados los filtros en la URL (query params con Inertia) y actualiza todos los bloques (`EPIC-18`, `EPIC-19`, `EPIC-20` y `EPIC-21`) de manera consistente
+    - el botón de exportación descarga un archivo (Excel/CSV siguiendo el patrón de `HU-028`/`HU-055`) con el resumen de ingresos, egresos, evolución y rankings correspondientes exactamente a los filtros aplicados
+- **Verificación:** se filtra el tablero por una sucursal y el canal `mostrador`, se comprueba que los KPIs reflejan solo esa sucursal y canal, y al exportar el archivo descargado contiene esas mismas cifras
+
+> **Pasa de Epic a Historia y se reestima de 5 a 3 SP (Fibonacci) en el Sprint Planning 5
+> (2026-10-12).**
 
 ## HAB-03 - Estabilización y cierre
 

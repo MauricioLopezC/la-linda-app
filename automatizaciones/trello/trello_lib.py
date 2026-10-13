@@ -189,6 +189,8 @@ def parse_markdown(filepath, product_backlog_path=None, asignaciones=None):
         body_start = h.end()
         body_end = headers[i + 1].start() if i + 1 < len(headers) else len(content)
         body = content[body_start:body_end].strip()
+        if h.group(0).lstrip().startswith("###"):
+            body = re.split(r"^##\s", body, maxsplit=1, flags=re.MULTILINE)[0].strip()
 
         if sp_from_header:
             estimacion = sp_from_header
