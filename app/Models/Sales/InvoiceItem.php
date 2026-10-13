@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  *
  * @property int $id
  * @property int $invoice_id
- * @property int $article_id
+ * @property int|null $article_id
  * @property string $description
  * @property string $quantity
  * @property string $unit_price
@@ -23,7 +23,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $vat_amount
  * @property string $line_total
  * @property Invoice $invoice
- * @property Article $article
+ * @property Article|null $article
  */
 #[Fillable([
     'invoice_id',

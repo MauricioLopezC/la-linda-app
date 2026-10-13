@@ -36,6 +36,12 @@ class StockMovementTypeSeeder extends Seeder
                 'description' => 'Egreso de mercadería por confirmación de venta de mostrador o e-commerce',
             ],
             [
+                'name' => 'Salida por Entrega de Pedido Web',
+                'code' => StockMovementType::CODE_WEB_ORDER_DELIVERY,
+                'sign' => -1,
+                'description' => 'Egreso de mercadería por entrega o despacho de pedido web desde depósito',
+            ],
+            [
                 'name' => 'Devolución de Cliente',
                 'code' => StockMovementType::CODE_CUSTOMER_RETURN,
                 'sign' => 1,

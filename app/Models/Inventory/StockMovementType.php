@@ -40,6 +40,8 @@ class StockMovementType extends Model
 
     public const CODE_SALE_EXIT = 'sale_exit';
 
+    public const CODE_WEB_ORDER_DELIVERY = 'web_order_delivery';
+
     public const CODE_CUSTOMER_RETURN = 'customer_return';
 
     public const CODE_WAREHOUSE_TRANSFER_OUT = 'warehouse_transfer_out';
@@ -58,6 +60,7 @@ class StockMovementType extends Model
         self::CODE_PURCHASE_ENTRY,
         self::CODE_PURCHASE_ENTRY_REVERSAL,
         self::CODE_SALE_EXIT,
+        self::CODE_WEB_ORDER_DELIVERY,
         self::CODE_CUSTOMER_RETURN,
         self::CODE_WAREHOUSE_TRANSFER_OUT,
         self::CODE_WAREHOUSE_TRANSFER_IN,

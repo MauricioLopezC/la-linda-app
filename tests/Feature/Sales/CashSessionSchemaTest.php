@@ -69,13 +69,25 @@ test('a denomination is counted once per session and moment', function () {
     expect($session->openingCounts()->sole()->denomination()->label())->toBe('$1.000');
 });
 
-test('a counter sale cannot exist without a cash session, an online sale can', function () {
+test('a counter sale cannot exist without a cash session and an online sale requires a unique web order', function () {
     expect(inSavepoint(fn () => Sale::factory()->create(['cash_session_id' => null])))
         ->toThrow(QueryException::class);
 
-    $online = Sale::factory()->online()->create();
+    $online = Sale::factory()->online()->create(['shipping_amount' => '2500.00']);
 
-    expect($online->cash_session_id)->toBeNull();
+    expect($online->cash_session_id)->toBeNull()
+        ->and($online->webOrder)->not->toBeNull()
+        ->and($online->webOrder->sale->id)->toBe($online->id)
+        ->and($online->shipping_amount)->toBe('2500.00');
+
+    expect(inSavepoint(fn () => Sale::factory()->online()->create(['web_order_id' => null])))
+        ->toThrow(QueryException::class)
+        ->and(inSavepoint(fn () => Sale::factory()->create(['web_order_id' => $online->web_order_id])))
+        ->toThrow(QueryException::class)
+        ->and(inSavepoint(fn () => Sale::factory()->online()->create(['web_order_id' => $online->web_order_id])))
+        ->toThrow(QueryException::class)
+        ->and(inSavepoint(fn () => Sale::factory()->online()->create(['shipping_amount' => '-1.00'])))
+        ->toThrow(QueryException::class);
 });
 
 test('a sale is confirmed exactly when it has a confirmation time', function () {

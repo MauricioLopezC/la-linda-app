@@ -101,3 +101,40 @@ test('a sale originates at most one stock movement', function () {
         ->and(inSavepoint(fn () => StockMovement::factory()->create(['sale_id' => $sale->id])))
         ->toThrow(QueryException::class);
 });
+
+test('an online invoice allows null cash session and user and a shipping item without article', function () {
+    $onlineSale = Sale::factory()->online()->confirmed()->create(['total_amount' => '3710.00']);
+
+    $invoice = Invoice::factory()->create([
+        'sale_id' => $onlineSale->id,
+        'cash_session_id' => null,
+        'user_id' => null,
+        'net_amount' => '3066.12',
+        'vat_amount' => '643.88',
+        'total_amount' => '3710.00',
+    ]);
+
+    $shippingItem = InvoiceItem::factory()->create([
+        'invoice_id' => $invoice->id,
+        'article_id' => null,
+        'description' => 'Envío a domicilio',
+        'quantity' => '1.000',
+        'unit_price' => '2500.00',
+        'vat_rate' => '21.00',
+        'net_amount' => '2066.12',
+        'vat_amount' => '433.88',
+        'line_total' => '2500.00',
+    ]);
+
+    expect($invoice->cash_session_id)->toBeNull()
+        ->and($invoice->user_id)->toBeNull()
+        ->and($shippingItem->article_id)->toBeNull()
+        ->and($shippingItem->description)->toBe('Envío a domicilio');
+
+    $migration = require database_path('migrations/2026_10_12_100004_revise_invoices_for_online_sales.php');
+
+    expect(fn () => $migration->down())->toThrow(
+        RuntimeException::class,
+        'existen facturas sin turno/usuario o renglones sin artículo'
+    );
+});

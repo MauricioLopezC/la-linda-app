@@ -8,6 +8,7 @@ use App\Enums\Sales\InvoiceType;
 use App\Enums\Sales\SaleChannel;
 use App\Enums\Sales\SaleStatus;
 use App\Models\Customers\Customer;
+use App\Models\Ecommerce\WebOrder;
 use App\Models\Inventory\StockMovement;
 use App\Models\Pricing\PriceList;
 use App\Models\User;
@@ -23,27 +24,30 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 
 /**
- * A sale being built at a point of sale (HU-039).
+ * A sale being built at a point of sale (HU-039) or originated from a paid online order (EPIC-15).
  *
  * The branch is not stored: it is derived from point_of_sale → warehouse → branch. A counter
  * sale always belongs to the cash session it was opened in (a CHECK enforces it); only online
- * sales (EPIC-15) have no session.
+ * sales (EPIC-15) have no session and carry their originating `web_order_id`.
  *
  * @property int $id
  * @property int $point_of_sale_id
  * @property SaleChannel $channel
  * @property int|null $cash_session_id
+ * @property int|null $web_order_id
  * @property int|null $price_list_id
  * @property int $customer_id
  * @property int|null $user_id
  * @property Carbon $opened_at
  * @property SaleStatus $status
  * @property Carbon|null $confirmed_at
+ * @property string $shipping_amount
  * @property string $total_amount
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property PointOfSale $pointOfSale
  * @property CashSession|null $cashSession
+ * @property WebOrder|null $webOrder
  * @property PriceList|null $priceList
  * @property Customer $customer
  * @property User|null $user
@@ -56,12 +60,14 @@ use Illuminate\Support\Carbon;
     'point_of_sale_id',
     'channel',
     'cash_session_id',
+    'web_order_id',
     'price_list_id',
     'customer_id',
     'user_id',
     'opened_at',
     'status',
     'confirmed_at',
+    'shipping_amount',
     'total_amount',
 ])]
 class Sale extends Model
@@ -75,6 +81,7 @@ class Sale extends Model
     protected $attributes = [
         'channel' => SaleChannel::Mostrador,
         'status' => SaleStatus::Open,
+        'shipping_amount' => '0.00',
         'total_amount' => '0.00',
     ];
 
@@ -86,6 +93,7 @@ class Sale extends Model
             'status' => SaleStatus::class,
             'opened_at' => 'datetime',
             'confirmed_at' => 'datetime',
+            'shipping_amount' => 'decimal:2',
             'total_amount' => 'decimal:2',
         ];
     }
@@ -100,6 +108,12 @@ class Sale extends Model
     public function cashSession(): BelongsTo
     {
         return $this->belongsTo(CashSession::class);
+    }
+
+    /** @return BelongsTo<WebOrder, $this> */
+    public function webOrder(): BelongsTo
+    {
+        return $this->belongsTo(WebOrder::class);
     }
 
     /** @return BelongsTo<Customer, $this> */
@@ -143,7 +157,7 @@ class Sale extends Model
     }
 
     /**
-     * The "Salida por Venta" stock movement generated on confirmation (EPIC-06).
+     * The "Salida por Venta" or "Salida por Entrega de Pedido Web" stock movement (EPIC-06 / EPIC-17).
      *
      * @return HasOne<StockMovement, $this>
      */
@@ -194,18 +208,21 @@ class Sale extends Model
     }
 
     /**
-     * Recompute total_amount as the sum of the line totals, in cents to avoid float drift.
+     * Recompute total_amount as the sum of the line totals plus shipping_amount, in cents to
+     * avoid float drift.
      *
      * List prices are final prices with VAT included, so the total needs no VAT breakdown:
      * each line keeps its own net and VAT (HU-063).
      */
     public function recalculateTotal(): void
     {
-        $totalCents = $this->items()
+        $itemsCents = $this->items()
             ->pluck('line_total')
             ->sum(fn (string $lineTotal): int => $this->moneyToCents($lineTotal));
 
-        $this->update(['total_amount' => $this->centsToMoney($totalCents)]);
+        $shippingCents = $this->moneyToCents((string) ($this->shipping_amount ?? '0.00'));
+
+        $this->update(['total_amount' => $this->centsToMoney($itemsCents + $shippingCents)]);
     }
 
     /**

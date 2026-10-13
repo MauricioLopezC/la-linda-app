@@ -7,6 +7,7 @@ use App\Enums\Ecommerce\WebOrderStatus;
 use App\Models\Customers\Customer;
 use App\Models\Ecommerce\WebOrder;
 use App\Models\Organization\Branch;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -58,6 +59,24 @@ class WebOrderFactory extends Factory
             'mp_payment_id' => (string) fake()->unique()->numerify('##########'),
             'paid_amount' => $attributes['total_amount'] ?? $attributes['items_amount'],
             'paid_at' => now(),
+        ]);
+    }
+
+    public function inPreparation(?User $user = null): static
+    {
+        return $this->paid()->state(fn (): array => [
+            'status' => WebOrderStatus::InPreparation,
+            'preparation_started_at' => now(),
+            'prepared_by' => $user->id ?? User::factory(),
+        ]);
+    }
+
+    public function delivered(?User $user = null): static
+    {
+        return $this->inPreparation($user)->state(fn (array $attributes): array => [
+            'status' => WebOrderStatus::Delivered,
+            'delivered_at' => now(),
+            'delivered_by' => $user->id ?? $attributes['prepared_by'] ?? User::factory(),
         ]);
     }
 }

@@ -7,6 +7,8 @@ use App\Models\Ecommerce\CartItem;
 use App\Models\Ecommerce\CustomerAccount;
 use App\Models\Ecommerce\WebOrder;
 use App\Models\Ecommerce\WebOrderItem;
+use App\Models\Organization\Branch;
+use App\Models\User;
 use Illuminate\Database\QueryException;
 
 test('a customer has at most one store account', function () {
@@ -103,4 +105,94 @@ test('a customer with online orders has associated records', function () {
     WebOrder::factory()->create(['customer_id' => $customer->id]);
 
     expect($customer->hasAssociatedRecords())->toBeTrue();
+});
+
+test('an order in preparation or delivered requires preparation audit fields', function () {
+    $inPreparation = WebOrder::factory()->inPreparation()->create();
+
+    expect($inPreparation->status)->toBe(WebOrderStatus::InPreparation)
+        ->and($inPreparation->paid_at)->not->toBeNull()
+        ->and($inPreparation->preparation_started_at)->not->toBeNull()
+        ->and($inPreparation->preparedBy)->not->toBeNull()
+        ->and($inPreparation->delivered_at)->toBeNull()
+        ->and($inPreparation->delivered_by)->toBeNull();
+
+    expect(inSavepoint(fn () => WebOrder::factory()->create(['preparation_started_at' => now()])))
+        ->toThrow(QueryException::class)
+        ->and(inSavepoint(fn () => WebOrder::factory()->paid()->create(['preparation_started_at' => now()])))
+        ->toThrow(QueryException::class)
+        ->and(inSavepoint(fn () => WebOrder::factory()->inPreparation()->create(['preparation_started_at' => null])))
+        ->toThrow(QueryException::class)
+        ->and(inSavepoint(fn () => WebOrder::factory()->inPreparation()->create(['prepared_by' => null])))
+        ->toThrow(QueryException::class);
+});
+
+test('a delivered order requires delivery audit fields and resolves its status label by delivery method', function () {
+    $pickupDelivered = WebOrder::factory()->delivered()->create();
+    $shippingDelivered = WebOrder::factory()->shipping('2500.00')->delivered()->create();
+
+    expect($pickupDelivered->status)->toBe(WebOrderStatus::Delivered)
+        ->and($pickupDelivered->delivered_at)->not->toBeNull()
+        ->and($pickupDelivered->deliveredBy)->not->toBeNull()
+        ->and($pickupDelivered->statusLabel())->toBe('Entregado')
+        ->and($shippingDelivered->statusLabel())->toBe('Despachado');
+
+    expect(inSavepoint(fn () => WebOrder::factory()->inPreparation()->create(['delivered_at' => now()])))
+        ->toThrow(QueryException::class)
+        ->and(inSavepoint(fn () => WebOrder::factory()->delivered()->create(['delivered_at' => null])))
+        ->toThrow(QueryException::class)
+        ->and(inSavepoint(fn () => WebOrder::factory()->delivered()->create(['delivered_by' => null])))
+        ->toThrow(QueryException::class);
+});
+
+test('web orders preparation migration blocks rollback when orders in preparation or delivered exist', function () {
+    $order = WebOrder::factory()->inPreparation()->create();
+    $migration = require database_path('migrations/2026_10_12_100002_revise_web_orders_for_preparation_and_delivery.php');
+
+    expect(fn () => $migration->down())->toThrow(
+        RuntimeException::class,
+        'existen pedidos en preparación o entregados'
+    );
+
+    $this->assertDatabaseHas('web_orders', ['id' => $order->id]);
+});
+
+test('a user has an active flag defaulting to true and an optional default branch that nulls on delete', function () {
+    $branch = Branch::factory()->create();
+    $user = User::factory()->create(['branch_id' => $branch->id]);
+    $inactive = User::factory()->create(['is_active' => false]);
+
+    expect($user->is_active)->toBeTrue()
+        ->and($user->branch?->id)->toBe($branch->id)
+        ->and(User::query()->active()->pluck('id')->all())->toContain($user->id)
+        ->and(User::query()->active()->pluck('id')->all())->not->toContain($inactive->id);
+
+    $branch->delete();
+
+    expect($user->fresh()->branch_id)->toBeNull();
+});
+
+test('all five sprint 5 schema migrations roll back and re-run cleanly when data is compatible', function () {
+    $paidOrder = WebOrder::factory()->paid()->create();
+
+    $migrations = [
+        require database_path('migrations/2026_10_12_100001_add_branch_and_active_to_users_table.php'),
+        require database_path('migrations/2026_10_12_100002_revise_web_orders_for_preparation_and_delivery.php'),
+        require database_path('migrations/2026_10_12_100003_revise_sales_for_online_orders.php'),
+        require database_path('migrations/2026_10_12_100004_revise_invoices_for_online_sales.php'),
+        require database_path('migrations/2026_10_12_100005_ensure_web_order_delivery_stock_movement_type_exists.php'),
+    ];
+
+    foreach (array_reverse($migrations) as $migration) {
+        $migration->down();
+    }
+
+    foreach ($migrations as $migration) {
+        $migration->up();
+    }
+
+    $delivered = WebOrder::factory()->delivered()->create();
+
+    expect($delivered->status)->toBe(WebOrderStatus::Delivered)
+        ->and(WebOrder::query()->find($paidOrder->id)?->mp_payment_id)->toBe($paidOrder->mp_payment_id);
 });
