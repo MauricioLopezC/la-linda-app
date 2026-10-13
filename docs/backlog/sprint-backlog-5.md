@@ -90,128 +90,128 @@ Gerencia:        Iniciar sesión como Gerente → aterriza directo en /dashboard
 
 ## Ítems comprometidos (53 SP — escala de Fibonacci)
 
-| # | ID | Título | SP | Carril | Depende de |
+| # | ID | Título | SP | Carril / Responsable | Depende de |
 |---:|---|---|---:|---|---|
-| 1 | **EPIC-15** | Procesar el pedido pagado como una venta online con su factura (reestimada, antes 8) | 5 | Carril 1 | HU-050, HU-042 |
-| 2 | **HU-048** | Mostrar la disponibilidad online e impedir la compra sin stock | 3 | Carril 1 | HU-046, HU-016 |
-| 3 | **EPIC-17** | Despachar y entregar pedidos web desde depósito con baja de stock | 8 | Carril 2 | EPIC-15, EPIC-06 |
-| 4 | **HU-003** | Administrar los usuarios del sistema | 5 | Carril 3 | — |
-| 5 | **HU-047** | Buscar, filtrar y ordenar artículos en la tienda online (reestimada, antes 5) | 3 | Carril 3 | HU-046 |
-| 6 | **HU-004** | Administrar roles y sus permisos (enum `UserRole` + Gates + inicio por rol) | 8 | Carril 4 | HU-003 |
-| 7 | **EPIC-18** | Visualizar los ingresos del período (reestimada, antes 8) | 5 | Carril 5 | EPIC-15, HU-042 |
-| 8 | **EPIC-20** | Visualizar la relación entre ingresos y egresos y su evolución (reestimada, antes 8) | 5 | Carril 5 | EPIC-18, EPIC-19 |
-| 9 | **EPIC-19** | Visualizar los egresos del período | 5 | Carril 6 | HU-027, HU-058 |
-| 10 | **EPIC-21** | Visualizar indicadores operativos complementarios (reestimada, antes 5) | 3 | Carril 6 | EPIC-20, EPIC-17 |
-| 11 | **EPIC-22** | Filtrar y exportar el tablero gerencial (reestimada, antes 5) | 3 | Carril 6 | EPIC-20 |
+| 1 | **EPIC-15** | Procesar el pedido pagado como una venta online con su factura (reestimada, antes 8) | 5 | Carril 1 · **Chiari** | HU-050, HU-042 |
+| 2 | **HU-048** | Mostrar la disponibilidad online e impedir la compra sin stock | 3 | Carril 1 · **Chiari** | HU-046, HU-016 |
+| 3 | **EPIC-17** | Despachar y entregar pedidos web desde depósito con baja de stock | 8 | Carril 2 · **Facu** | EPIC-15, EPIC-06 |
+| 4 | **HU-003** | Administrar los usuarios del sistema | 5 | Carril 3 · **Aza** | — |
+| 5 | **HU-047** | Buscar, filtrar y ordenar artículos en la tienda online (reestimada, antes 5) | 3 | Carril 3 · **Aza** | HU-046 |
+| 6 | **HU-004** | Administrar roles y sus permisos (enum `UserRole` + Gates + inicio por rol) | 8 | Carril 4 · **Mauri** | HU-003 |
+| 7 | **EPIC-18** | Visualizar los ingresos del período (reestimada, antes 8) | 5 | Carril 5 · **Clarita** | EPIC-15, HU-042 |
+| 8 | **EPIC-20** | Visualizar la relación entre ingresos y egresos y su evolución (reestimada, antes 8) | 5 | Carril 5 · **Clarita** | EPIC-18, EPIC-19 |
+| 9 | **EPIC-19** | Visualizar los egresos del período | 5 | Carril 6 · **Pablo** | HU-027, HU-058 |
+| 10 | **EPIC-21** | Visualizar indicadores operativos complementarios (reestimada, antes 5) | 3 | Carril 6 · **Pablo** | EPIC-20, EPIC-17 |
+| 11 | **EPIC-22** | Filtrar y exportar el tablero gerencial (reestimada, antes 5) | 3 | Carril 6 · **Pablo** *(propuesta: **Clarita**)* | EPIC-20 |
 | | | **Total comprometido** | **53** | | |
 
 ---
 
-## Orden de ataque y paralelización (6 carriles individuales)
+## Orden de ataque y paralelización (6 carriles individuales · 12/10 → 23/10)
 
-Cada developer es dueño de sus ítems de punta a punta (backend, frontend y tests).
+Cada developer es dueño de sus ítems de punta a punta (backend, frontend y tests). Promedio parejo: **8,8 SP por persona** (~1,6 SP por día hábil).
 
 ```text
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│ CARRIL 1 (Dev 1 — 8 SP): Venta Online y Disponibilidad                       │
-│ • D1: PR de Esquema (migraciones + CHECKs + tipo movimiento + factories)     │
-│ • 1. EPIC-15 (5 SP) Pedido pagado → venta online confirmada + factura A/B    │
-│ • 2. HU-048  (3 SP) Disponibilidad online descontando comprometido y bloqueo │
+│ CARRIL 1 — Chiari (8 SP): Esquema D1 + Venta Online y Disponibilidad         │
+│ • Portón D1 (0 SP): PR de Esquema del Sprint 5 (hoy, Lu 12/10)               │
+│ • 1. EPIC-15 (5 SP, Ma 13/10 → Ju 15/10) Pedido pagado → venta + factura A/B │
+│ • 2. HU-048  (3 SP, Vi 16/10 → Mi 21/10) Disponibilidad online y bloqueo     │
 ├──────────────────────────────────────────────────────────────────────────────┤
-│ CARRIL 2 (Dev 2 — 8 SP): Preparación y Entrega en Depósito                   │
-│ • 1. EPIC-17 (8 SP) Bandeja de depósito, en_preparacion → entregado          │
-│                     ("Despachado" si envío) + "Salida por Entrega Pedido Web"│
+│ CARRIL 2 — Facu (8 SP): Preparación y Entrega en Depósito                    │
+│ • 1. EPIC-17 (8 SP, Lu 12/10 → Lu 19/10) Bandeja de depósito, en_preparacion │
+│                     → entregado ("Despachado" si envío) + movimiento         │
+│                     web_order_delivery (D1–D4 con factories; D5 integra Sale)│
 ├──────────────────────────────────────────────────────────────────────────────┤
-│ CARRIL 3 (Dev 3 — 8 SP): Usuarios Internos y Catálogo Tienda                 │
-│ • 1. HU-003  (5 SP) ABM de usuarios internos, baja lógica, cierre /register  │
-│ • 2. HU-047  (3 SP) Filtros por marca/rango de precio y orden en /tienda     │
+│ CARRIL 3 — Aza (8 SP): Usuarios Internos y Catálogo Tienda                   │
+│ • 1. HU-003  (5 SP, Lu 12/10 → Ju 15/10) ABM de usuarios, baja lógica,       │
+│                     EnsureUserIsActive y cierre de /register                 │
+│ • 2. HU-047  (3 SP, Vi 16/10 → Mi 21/10) Filtros por marca/precio + orden en │
+│                     pages/ecommerce/index.tsx y ConsultOnlineCatalog         │
 ├──────────────────────────────────────────────────────────────────────────────┤
-│ CARRIL 4 (Dev 4 — 8 SP): Roles, Gates, Inicio por Rol y Barrido de Tests     │
-│ • D2: PR Contrato de Roles (UserRole, Gates, UserFactory states, Login)      │
-│ • 1. HU-004  (8 SP) Middleware can: por módulo, sidebar por rol y barrido    │
-│                     de tests de autorización (mergeado a más tardar el D6)   │
+│ CARRIL 4 — Mauri (8 SP): Contrato de Roles, Gates y Barrido de Tests         │
+│ • Portón D2 (0 SP): Contrato de Roles (Lu 12/10 → Ma 13/10)                  │
+│ • 1. HU-004  (8 SP, Mi 14/10 → Lu 19/10) Gates por módulo, sidebar y barrido │
+│                     de tests 200/403 por rol (mergeado a más tardar el D6)   │
 ├──────────────────────────────────────────────────────────────────────────────┤
-│ CARRIL 5 (Dev 5 — 10 SP): Tablero Gerencial — Base, Ingresos y Evolución     │
-│ • D2: PR Base del Tablero (DashboardController, Request, DTO y layout shell) │
-│ • 1. EPIC-18 (5 SP) Ingresos por canal, sucursal y medio de pago             │
-│ • 2. EPIC-20 (5 SP) Resultado neto y gráfico evolutivo ingresos vs. egresos  │
+│ CARRIL 5 — Clarita (10 SP, o 13 SP con propuesta): Base, Ingresos, Evolución │
+│ • Portón D2 (0 SP): Base del Tablero (Lu 12/10 → Ma 13/10)                   │
+│ • 1. EPIC-18 (5 SP, Ma 13/10 → Ju 15/10) Ingresos por canal, sucursal y pago │
+│ • 2. EPIC-20 (5 SP, Vi 16/10 → Ma 20/10) Resultado neto y evolución          │
 ├──────────────────────────────────────────────────────────────────────────────┤
-│ CARRIL 6 (Dev 6 — 11 SP): Tablero Gerencial — Egresos, KPIs y Exportación    │
-│ • 1. EPIC-19 (5 SP) Egresos devengados en comprobantes vs. pagos y caja      │
-│ • 2. EPIC-21 (3 SP) Top vendidos, compras por proveedor y alertas operativas │
-│ • 3. EPIC-22 (3 SP) Filtros globales por sucursal/canal y exportación Excel  │
+│ CARRIL 6 — Pablo (11 SP, o 8 SP con propuesta): Egresos, KPIs y Exportación  │
+│ • 1. EPIC-19 (5 SP, Lu 12/10 → Ju 15/10) Egresos devengados vs. pagados      │
+│ • 2. EPIC-21 (3 SP, Vi 16/10 → Ma 20/10) Indicadores operativos              │
+│ • 3. EPIC-22 (3 SP, Mi 21/10 → Ju 22/10) Barra de filtros y exportación      │
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Contratos de arranque (D1 y D2)
+> **Propuesta de balanceo (`EPIC-22` a Clarita):** la barra de filtros y el export viven sobre `DashboardFilterRequest` y el shell de `dashboard.tsx` que arma Clarita en la base del D2, y `EPIC-20` también es de ella. Si `EPIC-22` pasa a Clarita, Pablo baja de 11 a 8 SP y le quedan libres D8–D9 para las pruebas cruzadas del tablero.
 
-1. **Esquema mergeado el D1 (Carril 1):**
-   - Migraciones de `users`, `web_orders`, `sales`, `invoices`, `invoice_items` y el tipo de movimiento `"Salida por Entrega de Pedido Web"` (`web_order_delivery` en `StockMovementType` y `StockMovementTypeSeeder`).
-   - Restricciones `CHECK` e índice `(status, paid_at)` en `web_orders`.
-   - States de factory `paid()`, `inPreparation()`, `delivered()` en `WebOrderFactory`.
-2. **Contrato de roles mergeado el D2 (Carril 4):**
-   - Enum `UserRole` ampliado (`administrador`, `gerente`, `cajero`, `deposito`, `compras`, `cliente`) y migración de datos `personal_interno` → `administrador`.
-   - `Gate::before` para `Administrador` y definición de los Gates por módulo (`view-dashboard`, `manage-web-orders`, `manage-users`, `operate-cash`, `manage-catalog`, `manage-pricing`, `manage-purchases`, `manage-stock`, `manage-customers`, `manage-organization`).
-   - Un state por rol en `UserFactory` (`User::factory()->gerente()`, `->cajero()`, `->deposito()`, `->compras()`, `->administrador()`, `->cliente()`), dejando `administrador` como rol por defecto del factory para no romper los tests existentes antes del barrido del D6.
-   - `LoginResponse` con redirección a la pantalla principal según el rol.
-3. **Base del tablero mergeada el D2 (Carril 5):**
-   - `DashboardController@index`, `DashboardFilterRequest` (fechas, `branch_id`, `channel`) y DTO `DashboardData` con propiedades anulables por bloque (`revenues`, `expenses`, `evolution`, `operational`).
-   - Esqueleto de `resources/js/pages/dashboard.tsx` dividido en subcomponentes independientes (`DashboardRevenuesSection`, `DashboardExpensesSection`, `DashboardEvolutionSection`, `DashboardOperationalSection`) para que los Carriles 5 y 6 trabajen en paralelo sin pisarse.
+### Contratos del día 1 y 2
 
-### Cronograma día por día (D1 a D10)
+1. **Portón 0 — Mergear el PR de esquema del Sprint 5 (Chiari, D1 · Lu 12/10):**
+   - Migraciones de `users`, `web_orders`, `sales`, `invoices` e `invoice_items`, restricciones `CHECK`, índice `(status, paid_at)`, el tipo `web_order_delivery` en `StockMovementType` + `StockMovementTypeSeeder` y los states `paid()`, `inPreparation()` y `delivered()` de `database/factories/Ecommerce/WebOrderFactory.php`. Holgura cero: una vez en `master`, nadie espera la Action de otro y todos arrancan con factories.
+2. **`ConvertPaidWebOrderToSale(WebOrder): Sale` (Chiari → Facu):**
+   - La implementa Chiari en `EPIC-15`, la llama `MarkWebOrderAsPaid`, y Facu lee la `Sale` por `web_order_id` en `DeliverWebOrder`. Mientras tanto (D1–D4), Facu usa `WebOrder::factory()->paid()` con `Sale::factory()` online vinculada al pedido.
+3. **Contrato de roles (Mauri, D2 · Ma 13/10):**
+   - Nombres de los casos de `UserRole`, `Gate::before` y los 10 Gates, un state por rol en `UserFactory` (con `administrador` por defecto para que no se rompa ningún test) y `LoginResponse` por rol. Destraba a Aza y a Facu. **Una vez mergeado, nadie más toca `UserFactory.php`.**
+4. **Base del tablero + firmas de ingresos/egresos (Clarita y Pablo, D2 · Ma 13/10):**
+   - `DashboardController@index`, `DashboardFilterRequest`, `DashboardData` con un bloque anulable por sección y `dashboard.tsx` partido en `pages/dashboard/partials/*.tsx` (no necesita el esquema: puede salir desde el D1). Clarita y Pablo acuerdan las firmas de `GetDashboardRevenues` y `GetDashboardExpenses` y qué total de egresos usa el resultado neto de `EPIC-20` (el devengado, aclarando el pagado).
+5. **Grupos de rutas por módulo en `routes/web.php` (D1/D2):**
+   - Cada uno declara su grupo de rutas el D1/D2. Mauri agrega los `->middleware('can:...')` sobre esos grupos ya existentes recién en su PR de `HU-004`.
 
-| Día | Carril 1 (Venta Online + Stock Tienda) | Carril 2 (Entrega en Depósito) | Carril 3 (Usuarios + Filtros Tienda) | Carril 4 (Roles + Gates + Tests) | Carril 5 (Dashboard: Base + Ingresos + Evolución) | Carril 6 (Dashboard: Egresos + KPIs + Export) |
+### Cronograma día por día (Lu 12/10 a Vi 23/10)
+
+| Día | Chiari (Esquema + `EPIC-15` + `HU-048`) | Facu (`EPIC-17`) | Aza (`HU-003` + `HU-047`) | Mauri (Roles + `HU-004`) | Clarita (Base + `EPIC-18` + `EPIC-20`) | Pablo (`EPIC-19` + `EPIC-21` + `EPIC-22`) |
 |---|---|---|---|---|---|---|
-| **D1** | **PR Esquema D1** (migraciones, CHECKs, `web_order_delivery`, states `WebOrderFactory`) | Diseño de Actions `StartWebOrderPreparation` y `DeliverWebOrder` sobre states de factory | Backend de `HU-003`: `EnsureUserIsActive`, cierre de `/register`, Actions de usuarios | Preparar enum `UserRole`, Gates por módulo, states en `UserFactory` y `LoginResponse` | Armar `DashboardController`, `DashboardFilterRequest`, `DashboardData` y shell de `dashboard.tsx` | Diseño de queries de `GetDashboardExpenses` (`EPIC-19`) con tests unitarios |
-| **D2** | `EPIC-15`: `ConvertPaidWebOrderToSale` + renglón de envío en `IssueInvoice` | `EPIC-17`: Actions de preparación y entrega con `"Salida por Entrega de Pedido Web"` | `HU-003`: Controlador, Form Requests y validaciones (último admin, caja abierta) | **PR Contrato Roles D2** mergeado (`UserRole`, Gates, `UserFactory`, inicio por rol) | **PR Base Tablero D2** mergeado + arranque de `GetDashboardRevenues` (`EPIC-18`) | Enchufar `GetDashboardExpenses` (`EPIC-19`) sobre la base del tablero mergeada |
-| **D3** | `EPIC-15`: Integración con `MarkWebOrderAsPaid`, PDF en "Mis pedidos" y tests | `EPIC-17`: Controlador y bandeja de pedidos en depósito con índice `(status, paid_at)` | `HU-003`: Pantalla de usuarios, modal de clave temporal por única vez y filtros | `HU-004`: Compartir `auth.can` en Inertia y filtrar `app-sidebar.tsx` por rol | `EPIC-18`: Desglose por canal, sucursal y medio de pago + tarjetas KPI en frontend | `EPIC-19`: Tarjetas devengado vs. pagado, gráfico por medio de pago y tests |
-| **D4** | **PR `EPIC-15` mergeado** · **Control D4** | `EPIC-17`: Vista de detalle (*picking*), etiqueta `"Despachado"`/`"Entregado"` en tienda | **PR `HU-003` mergeado** · **Control D4** | `HU-004`: Aplicar middleware `can:` por grupo de rutas en `routes/web.php` | **PR `EPIC-18` mergeado** · **Control D4** | **PR `EPIC-19` mergeado** · **Control D4** |
-| **D5** | `HU-048`: Cálculo de `available_quantity` (saldo depósito − `pagado`/`en_preparacion`) | `EPIC-17`: Integración con la `Sale` real de `EPIC-15` y tests de punta a punta | `HU-047`: Backend de filtros (`brand_id`, `min_price`, `max_price`) y `sort` en `/tienda` | `HU-004`: Barrido de tests de todos los módulos usando los states de `UserFactory` | `EPIC-20`: Action `GetDashboardEvolution` (resultado neto, margen y serie sin huecos) | `EPIC-21`: Queries de top artículos vendidos y ranking de compras por proveedor |
-| **D6** | `HU-048`: Validación en carrito y en `PlaceWebOrder` con bloqueo transaccional | **PR `EPIC-17` mergeado** · **Control D6** | `HU-047`: UI de filtros, chips removibles y selector de orden en `shop/index.tsx` | **PR `HU-004` + Barrido de tests mergeado (Tope D6)** · **Control D6** | `EPIC-20`: Gráfico comparativo ingresos vs. egresos y tarjeta de superávit/déficit | `EPIC-21`: Alertas de stock (`<= 0`) y conteo de pedidos `pagado`/`en_preparacion` |
-| **D7** | `HU-048`: Badges en `/tienda`, bloqueo de botón sin stock y tests de concurrencia | Apoyo en pruebas cruzadas del circuito online → depósito → kardex (`HU-018`) | `HU-047`: Tests de filtrado por precio resuelto (`HU-056`) y ordenamiento | Verificación de redirección inicial por rol y permisos finos en botones de acción | **PR `EPIC-20` mergeado** | **PR `EPIC-21` mergeado** · Arranque de exportación en `EPIC-22` |
-| **D8** | **PR `HU-048` mergeado** | Ajuste de seeders de demostración (pedidos web pagados y entregados) | **PR `HU-047` mergeado** | Ajuste de `DatabaseSeeder` con un usuario de prueba por cada rol operativo | Apoyo a Carril 6 en pulido visual del tablero y verificación de filtros por canal | `EPIC-22`: Exportación Excel/CSV del tablero respetando filtros y tests |
-| **D9** | Pruebas integrales de los 4 ejes en `master` y `composer run ci:check` | Pruebas integrales de los 4 ejes en `master` | Pruebas integrales de los 4 ejes en `master` | Pruebas integrales de todos los roles de punta a punta | Pruebas integrales del tablero con datos reales de ambos canales | **PR `EPIC-22` mergeado** |
-| **D10** | Ensayo del recorrido completo de la Review y cierre del sprint | Ensayo de la demo de Depósito | Ensayo de la demo de Tienda y Usuarios | Ensayo de la demo de Roles | Ensayo de la demo de Gerencia | Ensayo de la demo de Gerencia |
+| **D1 · Lu 12/10** *(Planning · Esquema)* | **PR Esquema D1** mergeado (`users`, `web_orders`, `sales`, `invoices`, `web_order_delivery`, `WebOrderFactory`) | `EPIC-17` con factories: diseño de `StartWebOrderPreparation` y `DeliverWebOrder` | `HU-003` sin depender de roles: cerrar `/register` en `config/fortify.php` y middleware `EnsureUserIsActive` | Armar contrato de roles (`UserRole`, 10 Gates, states en `UserFactory`, `LoginResponse`) | Armar `DashboardController`, `DashboardFilterRequest`, `DashboardData` y `pages/dashboard/partials/*.tsx` | `EPIC-19` con factories: query `GetDashboardExpenses` sobre comprobantes, OP y `cash_movements` |
+| **D2 · Ma 13/10** *(Contratos D2)* | `EPIC-15`: `ConvertPaidWebOrderToSale` + renglón `"Envío a domicilio"` en `IssueInvoice` | `EPIC-17`: Actions de preparación y entrega con `"Salida por Entrega de Pedido Web"` | `HU-003`: suma Actions de alta, rol, sucursal y blanqueo sobre el contrato de roles | **PR Contrato de Roles D2** mergeado (`UserRole`, Gates, `UserFactory`, inicio por rol) | **PR Base del Tablero D2** mergeado + arranque de `GetDashboardRevenues` (`EPIC-18`) con `Sale::factory()` | Enchufar `GetDashboardExpenses` (`EPIC-19`) en `DashboardExpensesSection.tsx` |
+| **D3 · Mi 14/10** | `EPIC-15`: integración con `MarkWebOrderAsPaid` (idempotente ante doble webhook) y PDF en `orders/show.tsx` | `EPIC-17`: controlador y bandeja en `/ecommerce/orders` con índice `(status, paid_at)` | `HU-003`: validaciones de último admin y caja abierta + pantalla y modal de clave por única vez | `HU-004`: `auth.can` en `HandleInertiaRequests` y filtro de `app-sidebar.tsx` | `EPIC-18`: desglose por canal, sucursal y medio de pago en `DashboardRevenuesSection.tsx` | `EPIC-19`: tarjetas devengado vs. pagado, gráfico por medio de pago y tests |
+| **D4 · Ju 15/10** *(Control D4)* | **PR `EPIC-15` mergeado** · **Control D4** | `EPIC-17`: vista de detalle (*picking*), rebase de `orders/show.tsx` y etiqueta `"Despachado"`/`"Entregado"` | **PR `HU-003` mergeado** · **Control D4** | `HU-004`: aplicar `can:` por grupo de rutas en `routes/web.php` | **PR `EPIC-18` mergeado** · **Control D4** | **PR `EPIC-19` mergeado** · **Control D4** |
+| **D5 · Vi 16/10** | `HU-048`: cálculo de disponibilidad online (saldo `is_ecommerce` − `pagado`/`en_preparacion`) | `EPIC-17`: integración con la `Sale` real de `EPIC-15` y tests de punta a punta | `HU-047`: ampliar `ConsultOnlineCatalogRequest` y `ConsultOnlineCatalog` (`brand_id`, `min_price`, `max_price`, `sort`) | `HU-004`: barrido de tests de todos los módulos y suite `200`/`403` por rol | `EPIC-20`: `GetDashboardEvolution` reutilizando totales de ingresos y egresos (serie con `0.00`) | `EPIC-21`: queries de top vendidos, compras por proveedor y alertas de stock (`<= 0`) |
+| **D6 · Lu 19/10** *(Control D6 · tope `HU-004`)* | `HU-048`: validación en `AddArticleToCart`, `UpdateCartItemQuantity` y con lock en `PlaceWebOrder` | **PR `EPIC-17` mergeado** · **Control D6** | `HU-047`: UI de filtros en componente aparte para `pages/ecommerce/index.tsx` | **PR `HU-004` + Barrido de tests mergeado (Tope D6)** · **Control D6** | `EPIC-20`: gráfico comparativo ingresos vs. egresos y tarjeta de superávit/déficit | `EPIC-21`: KPI de pedidos `pagado`/`en_preparacion` y paneles en `DashboardOperationalSection.tsx` |
+| **D7 · Ma 20/10** | `HU-048`: rebase sobre `HU-047`, badges en `pages/ecommerce/index.tsx` y tests de concurrencia | Pruebas cruzadas del circuito online → depósito → historial de movimientos (`HU-018`) | `HU-047`: tests sobre precio resuelto (`HU-056`) y combinación de filtros | Verificación de redirección inicial por rol y ajustes de `DatabaseSeeder` por rol | **PR `EPIC-20` mergeado** | **PR `EPIC-21` mergeado** |
+| **D8 · Mi 21/10** | **PR `HU-048` mergeado** | Ajuste de seeders de demostración (pedidos web pagados y entregados) | **PR `HU-047` mergeado** | Pruebas de permisos finos en botones de acción por rol | Apoyo en `EPIC-22` (o toma `EPIC-22` si se aplica la propuesta) | `EPIC-22`: barra de filtros sincronizada con URL y `/dashboard/export` |
+| **D9 · Ju 22/10** *(Pruebas integrales)* | Pruebas integrales de los 4 ejes en `master` y `composer run ci:check` | Pruebas integrales de los 4 ejes en `master` | Pruebas integrales de los 4 ejes en `master` | Pruebas integrales de todos los roles de punta a punta | Pruebas integrales del tablero con datos reales de ambos canales | **PR `EPIC-22` mergeado** y pruebas integrales |
+| **D10 · Vi 23/10** *(Ensayo de la Review)* | Ensayo del recorrido completo de la Review | Ensayo de la demo de Depósito | Ensayo de la demo de Tienda y Usuarios | Ensayo de la demo de Roles | Ensayo de la demo de Gerencia | Ensayo de la demo de Gerencia |
 
-### Tabla de dependencias duras / blandas y caminos críticos con holgura
+### Las tres cadenas críticas que definen el sprint
 
-| Origen | Destino | Tipo | Motivo y cómo se destraba | Holgura |
-|---|---|---|---|---|
-| **PR Esquema (D1)** | Todos los carriles | **Dura** | Define columnas de `users`, `web_orders`, `sales`, `invoices` y states `paid()`/`inPreparation()`/`delivered()` | **0 días** (se mergea el D1) |
-| **PR Contrato Roles (D2)** | `HU-003` (C3), `HU-004` (C4), `EPIC-17` (C2) | **Dura** | Provee el enum `UserRole`, los Gates y los states `User::factory()->deposito()`, `->gerente()`, etc. | **0 días** (se mergea el D2) |
-| **PR Base Tablero (D2)** | `EPIC-18` (C5), `EPIC-19` (C6), `EPIC-20` (C5), `EPIC-21` (C6), `EPIC-22` (C6) | **Dura** | Provee `DashboardController`, `DashboardFilterRequest` y `DashboardData` | **0 días** (se mergea el D2) |
-| **`EPIC-15` (C1)** | `EPIC-17` (C2) | **Blanda hasta D4 / Dura en D5** | Entre D1 y D4 el Carril 2 construye `EPIC-17` usando `WebOrder::factory()->paid()` con su `Sale` de factory; el D5 integra con `ConvertPaidWebOrderToSale` | **1 día** (D4 → D5) |
-| **`EPIC-15` (C1)** | `EPIC-18` (C5) | **Blanda** | `GetDashboardRevenues` consulta `sales` confirmadas (`mostrador` y `online`); se prueba con `Sale::factory()` desde el D2 | **2 días** |
-| **`EPIC-18` (C5) + `EPIC-19` (C6)** | `EPIC-20` (C5) | **Dura (en D5)** | `GetDashboardEvolution` reutiliza las sumatorias de ingresos y egresos del período | **1 día** (ambas cierran en D4; `EPIC-20` cierra en D7) |
-| **`EPIC-17` (C2)** | `EPIC-21` (C6) | **Blanda** | El KPI de pedidos pendientes de entrega solo lee `web_orders` en `('pagado', 'en_preparacion')`, disponibles desde el D1 | **3 días** |
-| **Caminos críticos** | — | — | **Camino crítico 1 (Permisos):** Esquema (D1) → Contrato Roles (D2) → `HU-004` + Barrido de tests (D6). **Camino crítico 2 (Tablero):** Base Tablero (D2) → `EPIC-18` + `EPIC-19` (D4) → `EPIC-20` (D7) → `EPIC-22` (D9). | **1 a 2 días de buffer (D9–D10)** |
+| Cadena | Secuencia y responsables | Diagnóstico y holgura |
+|---|---|---|
+| **1. Permisos** | `Esquema` (Chiari, D1) → `Contrato de roles` (Mauri, D2) → `HU-004` (Mauri, D6) | Pasa por 2 personas con **holgura cero hasta el D2**. Corta todos los tests del Sprint 1 al 4: por eso `UserFactory` usa `administrador` por defecto y el barrido tiene **tope obligatorio el D6 (Lu 19/10)**. |
+| **2. Tablero** | `Base tablero` (Clarita, D2) → `EPIC-18` (Clarita, D4) + `EPIC-19` (Pablo, D4) → `EPIC-20` (Clarita, D7) → `EPIC-22` (Pablo/Clarita, D9) | **13 SP en serie**, más `EPIC-19` de Pablo que tiene que cerrar el D4 para que entre `EPIC-20`. Es la cadena más larga: termina el D9 (Ju 22/10). |
+| **3. Circuito online** | `Esquema` (Chiari, D1) → `EPIC-15` (Chiari, D4) → `EPIC-17` (Facu, D6) | **13 SP entre Chiari y Facu**, pero avanzan en paralelo del D1 al D4 gracias a `WebOrder::factory()->paid()`. La dependencia es dura recién el D5 (Vi 16/10), cuando se integra la `Sale` real. **No se recorta bajo ningún concepto.** |
 
 ### Archivos donde van a chocar y protocolo de coordinación
 
-| Archivo caliente | Carriles que lo tocan | Regla para evitar conflictos de merge |
+| Archivo | Quiénes lo tocan | Qué hacer |
 |---|---|---|
-| `routes/web.php` | C2 (`EPIC-17`), C3 (`HU-003`), C4 (`HU-004`), C5/C6 (`Dashboard`) | En el D1/D2 se dejan declarados los grupos por módulo; C4 agrega los `->middleware('can:...')` recién en su PR del D5/D6 sobre los grupos ya existentes. |
-| `resources/js/components/app-sidebar.tsx` | C2 (`EPIC-17`), C3 (`HU-003`), C4 (`HU-004`) | C2 y C3 agregan el ítem de menú en su sección; C4 aplica en un único PR el filtro de visibilidad por `auth.can`. |
-| `app/Providers/FortifyServiceProvider.php` (y `AppServiceProvider.php`) | C3 (`HU-003`), C4 (`HU-004`) | Se concentra en el **PR Contrato de Roles del D2** (Gates, `Gate::before`, `LoginResponse`); C3 solo toca `config/fortify.php` y el middleware `EnsureUserIsActive`. |
-| `database/factories/UserFactory.php` | C3 (`HU-003`), C4 (`HU-004`), y usado por todos | Se edita **una sola vez en el PR del D2** con todos los states (`administrador`, `gerente`, `cajero`, `deposito`, `compras`, `cliente`) e `is_active`. Nadie más lo modifica después. |
-| `resources/js/pages/dashboard.tsx` | C5 (`EPIC-18`, `EPIC-20`), C6 (`EPIC-19`, `EPIC-21`, `EPIC-22`) | En el **PR Base del Tablero (D2)**, `dashboard.tsx` queda como un contenedor de 5 subcomponentes en archivos separados (`resources/js/pages/dashboard/partials/*.tsx`). Cada carril edita únicamente su propio archivo parcial. |
-| `resources/js/types/generated.d.ts` | Todos los carriles (`spatie/laravel-data`) | No resolver conflictos a mano: al actualizar la rama con `master`, correr siempre `npm run types:generate` y commitear el archivo regenerado. |
+| `routes/web.php` | Facu, Aza, Mauri, Clarita, Pablo | Cada uno declara su grupo de rutas el D1/D2. Mauri suma los `->middleware('can:...')` sobre los grupos ya existentes en su PR de `HU-004`. |
+| `resources/js/components/app-sidebar.tsx` | Facu, Aza, Mauri | Facu y Aza agregan su ítem en su sección. Mauri aplica el filtro por `auth.can` en un único PR. |
+| `resources/js/pages/ecommerce/index.tsx` + `ConsultOnlineCatalog` | Aza (`HU-047`), Chiari (`HU-048`) | Aza pone los filtros en un componente aparte y mergea primero. Chiari rebasea y agrega el badge y la columna de disponibilidad. |
+| `resources/js/pages/ecommerce/orders/show.tsx` | Chiari (`EPIC-15`), Facu (`EPIC-17`) | Chiari mergea el PDF de la factura el D4. Facu rebasea y suma la etiqueta `"Despachado"`/`"Entregado"`. |
+| `resources/js/pages/dashboard.tsx` | Clarita, Pablo | Queda como contenedor en la base del D2. Cada uno edita solo su archivo en `resources/js/pages/dashboard/partials/`. |
+| `FortifyServiceProvider` / `AppServiceProvider` | Mauri, Aza | Todo va en el PR de roles del D2 (Mauri). Aza solo toca `config/fortify.php` y `EnsureUserIsActive`. |
+| `database/factories/UserFactory.php` | Mauri (D2), usado por todos | Se edita una sola vez en el PR del contrato de roles del D2. Nadie más lo toca después. |
+| `resources/js/types/generated.d.ts` | Todos | No resolver conflictos a mano: correr `npm run types:generate` después de cada rebase. |
 
-### Mayor riesgo técnico: Barrido de tests de `HU-004` (tope D6)
+### Mayor riesgo técnico: Barrido de tests de `HU-004` (tope D6 · Lu 19/10)
 
 Activar `can:<gate>` en todas las rutas del panel interno es **el mayor riesgo del sprint**, porque atraviesa los tests de todos los módulos construidos entre el Sprint 1 y el Sprint 4.
 - **Mitigación en D2:** `UserFactory::definition()` pasa a crear por defecto usuarios con `role = UserRole::Administrador` (que pasa por `Gate::before`), de modo que los tests existentes de dominio sigan en verde cuando se monten los Gates.
-- **Cierre obligatorio en D6:** el barrido de tests de autorización de `HU-004` (que prueba explícitamente qué puede y qué no puede hacer cada rol con `User::factory()->cajero()`, `->deposito()`, `->compras()`, `->gerente()`) debe mergearse **a más tardar el D6**, dejando D7–D9 libres de roturas transversales.
+- **Cierre obligatorio en D6 (Lu 19/10):** el barrido de tests de autorización de `HU-004` (que prueba explícitamente `200`/`403` por cada rol con `User::factory()->cajero()`, `->deposito()`, `->compras()`, `->gerente()`) debe mergearse **a más tardar el D6**, dejando D7–D9 libres de roturas transversales.
 
 ### Puntos de control D4 / D6 y orden de recorte
 
-- **Punto de control D4 (jueves de la primera semana):** deben estar mergeados el Esquema (D1), el Contrato de Roles (D2), la Base del Tablero (D2), `EPIC-15` (Venta y Factura Online), `HU-003` (Usuarios), `EPIC-18` (Ingresos) y `EPIC-19` (Egresos).
-- **Punto de control D6 (sábado / lunes):** deben estar mergeados `EPIC-17` (Entrega en Depósito con baja de stock) y `HU-004` con el barrido completo de tests.
-- **Orden estricto de recorte si un carril se atrasa en D4 o D6:**
-  1. **`EPIC-22`** (3 SP — exportación del tablero; los filtros básicos del D2 ya quedan funcionando)
+- **Punto de control D4 (Ju 15/10):** deben estar mergeados el Esquema (D1), el Contrato de Roles (D2), la Base del Tablero (D2), `EPIC-15` (Chiari), `HU-003` (Aza), `EPIC-18` (Clarita) y `EPIC-19` (Pablo).
+- **Punto de control D6 (Lu 19/10):** deben estar mergeados `EPIC-17` (Facu) y `HU-004` con el barrido completo de tests (Mauri).
+- **Orden estricto de recorte (`EPIC-22` → `EPIC-21` → `HU-047` → `HU-048`):**
+  1. **`EPIC-22`** (3 SP — barra de filtros y exportación; sin `EPIC-22` quedan los filtros básicos de la base del D2)
   2. **`EPIC-21`** (3 SP — indicadores operativos complementarios del tablero)
-  3. **`HU-047` / `HU-065`** (3 SP — filtros por marca/rango de precio y ordenamiento en la tienda; la búsqueda y categorías de `HU-046` ya existen)
-  4. **`HU-048`** (3 SP — disponibilidad previa en la tienda)
+  3. **`HU-047` / `HU-065`** (3 SP — filtros por marca/rango de precio y ordenamiento en la tienda; sin `HU-047` quedan la búsqueda y las categorías de `HU-046`)
+  4. **`HU-048`** (3 SP — disponibilidad online y bloqueo sin stock)
 - **No se recortan bajo ningún concepto:**
   - El **circuito de entrega online con baja de stock** (`EPIC-15` + `EPIC-17`).
   - Los **usuarios y roles** (`HU-003` + `HU-004`).
@@ -229,22 +229,22 @@ Stack: Laravel + Inertia v3 + React. Tienda y despachos en `Ecommerce` / `Stock`
 - [ ] En el PR de esquema (D1): migración en `sales` (`web_order_id` único nullable, `shipping_amount`, `CHECK (channel = 'online' ⇔ web_order_id IS NOT NULL)`), ajuste de nulabilidad en `invoices` (`cash_session_id` y `user_id` nullable) e `invoice_items` (`article_id` nullable).
 - [ ] Action `ConvertPaidWebOrderToSale`, invocada por `MarkWebOrderAsPaid` dentro de la misma transacción: devuelve la `Sale` existente si ya fue procesado (idempotencia), resuelve el depósito activo con `is_ecommerce = true` y su punto de venta activo, y crea la `Sale` `confirmada` (`channel = 'online'`, `cash_session_id = null`, `user_id = null`, `shipping_amount = $webOrder->shipping_cost`) con sus `sale_items` y desglose de neto e IVA (`HU-063`), sin descontar stock.
 - [ ] Emitir la `Invoice` (`A` o `B` según la condición fiscal del cliente) reutilizando `IssueInvoice`; cuando `shipping_cost > 0`, agregar la línea `"Envío a domicilio"` (`article_id = null`, IVA 21%) para que el total facturado coincida exactamente con el importe pagado en Mercado Pago.
-- [ ] Exponer la factura emitida y el botón de descarga de su PDF (`HU-043`) en el detalle del pedido en "Mis pedidos" del cliente y en la vista interna.
+- [ ] Exponer la factura emitida y el botón de descarga de su PDF (`HU-043`) en `resources/js/pages/ecommerce/orders/show.tsx` ("Mis pedidos" del cliente) y en la vista interna.
 - [ ] Tests: pedido pagado con retiro y con envío genera venta + factura con totales exactos, idempotencia ante doble webhook y existencia de stock intacta tras el pago.
 
 ### HU-048 — Mostrar la disponibilidad online e impedir la compra sin stock (3 SP)
 - [ ] Query/servicio de disponibilidad online que calcula `available_quantity` por artículo como el saldo en `stock_balances` del depósito `is_ecommerce = true` menos la suma de cantidades en `web_order_items` de pedidos en estado `'pagado'` o `'en_preparacion'`.
-- [ ] Exponer el estado de disponibilidad (`disponible`, `ultimas_unidades`, `sin_stock`) y `available_quantity` en el catálogo público (`/tienda`) y en el carrito (`ResolveCartLine`).
-- [ ] Validar en `AddCartItem` / `UpdateCartItem` y dentro de la transacción de `PlaceWebOrder` (`HU-062`, con bloqueo para evitar condiciones de carrera entre dos clientes) que la cantidad solicitada no supere `available_quantity`.
-- [ ] En `resources/js/pages/shop/index.tsx` y `cart.tsx`, mostrar el badge de disponibilidad y deshabilitar `"Agregar al carrito"` / `"Confirmar pedido"` cuando no alcance el stock.
-- [ ] Tests: dos clientes intentando comprar las últimas unidades; el pago/pedido del primero reduce la disponibilidad online del segundo aunque el depósito todavía no haya entregado la mercadería.
+- [ ] Exponer el estado de disponibilidad (`disponible`, `ultimas_unidades`, `sin_stock`) y `available_quantity` en el catálogo público (`ConsultOnlineCatalog`) y en el carrito.
+- [ ] Validar en `AddArticleToCart`, `UpdateCartItemQuantity` y dentro de la transacción de `PlaceWebOrder` (`HU-062`, con lock para evitar condiciones de carrera entre dos clientes) que la cantidad solicitada no supere `available_quantity`.
+- [ ] En `resources/js/pages/ecommerce/index.tsx` y `cart.tsx`, mostrar el badge de disponibilidad y deshabilitar `"Agregar al carrito"` / `"Confirmar pedido"` cuando no alcance el stock.
+- [ ] Tests: dos clientes intentando comprar las últimas unidades (usando `WebOrder::factory()->paid()`); el pago/pedido del primero reduce la disponibilidad online del segundo aunque el depósito todavía no haya entregado la mercadería.
 
 ### EPIC-17 — Despachar y entregar pedidos web desde depósito con baja de stock (8 SP)
-- [ ] En el PR de esquema (D1): agregar en `StockMovementType` y `StockMovementTypeSeeder` el tipo de sistema `"Salida por Entrega de Pedido Web"` (`CODE_WEB_ORDER_DELIVERY = 'web_order_delivery'`, `sign = -1`, `is_system = true`, incluido en `AUTOMATIC_CODES` para no ofrecerlo en ajustes manuales), migración en `web_orders` (`status` con `CHECK IN ('pendiente', 'pagado', 'en_preparacion', 'entregado')`, `preparation_started_at`, `prepared_by`, `delivered_at`, `delivered_by`, `CHECK (delivered_* ⇔ status = 'entregado')`, índice `(status, paid_at)`) y states `paid()`, `inPreparation()` y `delivered()` en `WebOrderFactory`.
+- [ ] En el PR de esquema (D1): agregar en `StockMovementType` y `StockMovementTypeSeeder` el tipo de sistema `"Salida por Entrega de Pedido Web"` (`CODE_WEB_ORDER_DELIVERY = 'web_order_delivery'`, `sign = -1`, `is_system = true`, incluido en `AUTOMATIC_CODES` para no ofrecerlo en ajustes manuales), migración en `web_orders` (`status` con `CHECK IN ('pendiente', 'pagado', 'en_preparacion', 'entregado')`, `preparation_started_at`, `prepared_by`, `delivered_at`, `delivered_by`, `CHECK (delivered_* ⇔ status = 'entregado')`, índice `(status, paid_at)`) y states `paid()`, `inPreparation()` y `delivered()` en `database/factories/Ecommerce/WebOrderFactory.php`.
 - [ ] Action `StartWebOrderPreparation`: transiciona `pagado` → `en_preparacion` registrando `preparation_started_at = now()` y `prepared_by = auth()->id()`.
 - [ ] Action `DeliverWebOrder`: transiciona `en_preparacion` → `entregado` registrando `delivered_at = now()` y `delivered_by = auth()->id()`, y ejecuta en la misma transacción el movimiento `"Salida por Entrega de Pedido Web"` (`web_order_delivery`) sobre el depósito online reutilizando `stock_movements.sale_id = $sale->id` (una única vez por venta, marcando conflicto de `EPIC-06` si alguna línea queda negativa).
-- [ ] Pantalla operativa de pedidos web a preparar (pantalla principal del rol `deposito`) con contadores por estado, filtros por estado, modalidad de entrega, sucursal y fechas, hoja de preparación (*picking list*) y botones de iniciar preparación y confirmar entrega/despacho.
-- [ ] En la vista de depósito y en "Mis pedidos" del cliente, mostrar la etiqueta **"Despachado"** cuando `status = 'entregado'` y `delivery_method = 'envio'` (y **"Entregado"** cuando es `retiro`).
+- [ ] Pantalla operativa de pedidos web a preparar en `/ecommerce/orders` (pantalla principal del rol `deposito`) con contadores por estado, filtros por estado, modalidad de entrega, sucursal y fechas, hoja de preparación (*picking list*) y botones de iniciar preparación y confirmar entrega/despacho.
+- [ ] En la vista de depósito y en `resources/js/pages/ecommerce/orders/show.tsx` ("Mis pedidos" del cliente), mostrar la etiqueta **"Despachado"** cuando `status = 'entregado'` y `delivery_method = 'envio'` (y **"Entregado"** cuando es `retiro`).
 - [ ] Tests: flujo `pagado` → `en_preparacion` → `entregado`, auditoría de `prepared_by` y `delivered_by`, movimiento `"Salida por Entrega de Pedido Web"` no elegible en ajustes manuales, descuento único en el depósito online y rechazo de transiciones inválidas.
 
 ### HU-003 — Administrar los usuarios del sistema (5 SP)
@@ -256,10 +256,10 @@ Stack: Laravel + Inertia v3 + React. Tienda y despachos en `Ecommerce` / `Stock`
 - [ ] Tests: alta con clave inicial, login bloqueado para inactivo, cierre de sesión al desactivar, protección del último Administrador y de usuario con caja abierta.
 
 ### HU-047 — Buscar, filtrar y ordenar artículos en la tienda online (3 SP)
-- [ ] Ampliar la query del catálogo público (`ShopCatalogController@index`) para recibir y validar `brand_id`, `min_price`, `max_price` (`max_price >= min_price`) y `sort` (`relevance`, `price_asc`, `price_desc`, `name_asc`, `name_desc`), combinables con `search` y `category_id` de `HU-046`.
+- [ ] Ampliar `ConsultOnlineCatalogRequest` y `ConsultOnlineCatalog` para recibir y validar `brand_id`, `min_price`, `max_price` (`max_price >= min_price`) y `sort` (`relevance`, `price_asc`, `price_desc`, `name_asc`, `name_desc`), combinables con `search` y `category_id` de `HU-046`.
 - [ ] Aplicar el filtro de rango de precios y el ordenamiento `price_asc` / `price_desc` sobre el precio efectivo resuelto para el visitante actual (`HU-056`: lista particular del cliente si está logueado, o lista del canal `online` / `general`).
 - [ ] Enviar al frontend las marcas activas con artículos publicables en el canal online.
-- [ ] En `resources/js/pages/shop/index.tsx`, agregar selectores de marca, rango de precio mínimo y máximo, selector de ordenamiento, chips de filtros activos removibles, contador de resultados y botón "Limpiar filtros", preservando los parámetros al paginar.
+- [ ] En `resources/js/pages/ecommerce/index.tsx` (en un subcomponente de filtros para no chocar con `HU-048`), agregar selectores de marca, rango de precio mínimo y máximo, selector de ordenamiento, chips de filtros activos removibles, contador de resultados y botón "Limpiar filtros", preservando los parámetros al paginar.
 - [ ] Tests: filtro por marca, rango de precios (visitante anónimo y cliente con lista particular), ordenamiento por precio y por descripción, combinación de filtros.
 
 ### HU-004 — Administrar roles y sus permisos (8 SP)
