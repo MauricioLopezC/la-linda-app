@@ -75,9 +75,10 @@ Decididos en el Sprint Planning 4 a partir de la reunión con el PO del 26/09/20
   billeteras); la diferencia es sobrante si es positiva y faltante si es negativa.
 
 ### Pedido web (`WebOrder`)
-Lo que el cliente confirma desde el carrito de la tienda online (`HU-062`). **No es una venta**:
-se convierte en venta, con su factura y su egreso de stock, cuando está pagado (`EPIC-15`). No
-confundir con la *orden de compra*, que La Linda le emite a un proveedor.
+Lo que el cliente confirma desde el carrito de la tienda online (`HU-062`). Su ciclo de vida tiene cuatro estados: `pendiente` → `pagado` → `en_preparacion` → `entregado` (mostrado en pantalla como `"Despachado"` cuando la modalidad es envío a domicilio). **No es una venta** al nacer: cuando su pago se acredita en Mercado Pago (`pagado`) pasa a convertirse en una **Venta online (`Sale`) con su Factura (`Invoice`)** (`EPIC-15`), y su **egreso de stock físico** se ejecuta recién cuando el encargado de depósito termina la preparación (`en_preparacion`, auditada con `preparation_started_at` y `prepared_by`) y confirma la salida del depósito (`entregado`, auditada con `delivered_at` y `delivered_by`, `EPIC-17`). No confundir con la *orden de compra*, que La Linda le emite a un proveedor.
+
+### Entrega / Despacho de pedido web (`EPIC-17`)
+Operación que realiza el **Encargado de depósito** (`deposito`) cuando junta los artículos de un pedido web ya pagado y registra su salida del depósito (por envío a domicilio o retiro en sucursal). Según la regla establecida por el PO en la Review del Sprint 4 (*"¿hacemos un ajuste? No, cuando se entrega la mercadería... El stock baja cuando entregás, cuando vos lo sacás del depósito, no cuando lo vendés"*), confirmar esta entrega cierra el pedido en estado `entregado` (etiqueta `"Despachado"` si es envío) y genera el movimiento de stock de sistema **"Salida por Entrega de Pedido Web"** (`code = 'web_order_delivery'`, `is_system = true`, no elegible en ajustes manuales), reutilizando `stock_movements.sale_id` para distinguir en el historial la salida de mostrador (`sale_exit`) de la entrega online.
 
 ### Factura de venta (`Invoice`)
 El comprobante que La Linda le emite al cliente al confirmar una venta (`HU-042`): A si el cliente
@@ -86,6 +87,7 @@ tipo. Mientras no se integre ARCA (`SPIKE-01`) no tiene CAE. No confundir con la
 proveedor* (`SupplierVoucher`), que La Linda recibe y registra en compras.
 
 ### Conflicto de stock en una venta
-La falta de existencia en el sistema no bloquea una venta: si el artículo está en la caja, se
-vende. Cuando la salida por venta deja una existencia negativa, esa línea queda marcada como
-conflicto y se regulariza después con un movimiento manual.
+La falta de existencia en el sistema no bloquea una venta de mostrador ni la entrega en depósito de un pedido online cuyo pago ya fue acreditado: si el artículo está en la caja o ya se cobró por Mercado Pago, la operación se registra. Cuando la salida de stock deja una existencia negativa, esa línea queda marcada como conflicto (`stock_conflict = true`) y se regulariza después con un movimiento manual.
+
+
+
