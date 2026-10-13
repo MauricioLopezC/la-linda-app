@@ -90,19 +90,19 @@ Gerencia:        Iniciar sesión como Gerente → aterriza directo en /dashboard
 
 ## Ítems comprometidos (53 SP — escala de Fibonacci)
 
-| # | ID | Título | SP | Depende de | Carril |
+| # | ID | Título | SP | Carril | Depende de |
 |---:|---|---|---:|---|---|
-| 1 | **EPIC-15** | Procesar el pedido pagado como una venta online con su factura (reestimada, antes 8) | 5 | HU-050, HU-042 | Carril 1 |
-| 2 | **HU-048** | Mostrar la disponibilidad online e impedir la compra sin stock | 3 | HU-046, HU-016 | Carril 1 |
-| 3 | **EPIC-17** | Despachar y entregar pedidos web desde depósito con baja de stock | 8 | EPIC-15, EPIC-06 | Carril 2 |
-| 4 | **HU-003** | Administrar los usuarios del sistema | 5 | — | Carril 3 |
-| 5 | **HU-047** | Buscar, filtrar y ordenar artículos en la tienda online (reestimada, antes 5) | 3 | HU-046 | Carril 3 |
-| 6 | **HU-004** | Administrar roles y sus permisos (enum `UserRole` + Gates + inicio por rol) | 8 | HU-003 | Carril 4 |
-| 7 | **EPIC-18** | Visualizar los ingresos del período (reestimada, antes 8) | 5 | EPIC-15, HU-042 | Carril 5 |
-| 8 | **EPIC-20** | Visualizar la relación entre ingresos y egresos y su evolución (reestimada, antes 8) | 5 | EPIC-18, EPIC-19 | Carril 5 |
-| 9 | **EPIC-19** | Visualizar los egresos del período | 5 | HU-027, HU-058 | Carril 6 |
-| 10 | **EPIC-21** | Visualizar indicadores operativos complementarios (reestimada, antes 5) | 3 | EPIC-20, EPIC-17 | Carril 6 |
-| 11 | **EPIC-22** | Filtrar y exportar el tablero gerencial (reestimada, antes 5) | 3 | EPIC-20 | Carril 6 |
+| 1 | **EPIC-15** | Procesar el pedido pagado como una venta online con su factura (reestimada, antes 8) | 5 | Carril 1 | HU-050, HU-042 |
+| 2 | **HU-048** | Mostrar la disponibilidad online e impedir la compra sin stock | 3 | Carril 1 | HU-046, HU-016 |
+| 3 | **EPIC-17** | Despachar y entregar pedidos web desde depósito con baja de stock | 8 | Carril 2 | EPIC-15, EPIC-06 |
+| 4 | **HU-003** | Administrar los usuarios del sistema | 5 | Carril 3 | — |
+| 5 | **HU-047** | Buscar, filtrar y ordenar artículos en la tienda online (reestimada, antes 5) | 3 | Carril 3 | HU-046 |
+| 6 | **HU-004** | Administrar roles y sus permisos (enum `UserRole` + Gates + inicio por rol) | 8 | Carril 4 | HU-003 |
+| 7 | **EPIC-18** | Visualizar los ingresos del período (reestimada, antes 8) | 5 | Carril 5 | EPIC-15, HU-042 |
+| 8 | **EPIC-20** | Visualizar la relación entre ingresos y egresos y su evolución (reestimada, antes 8) | 5 | Carril 5 | EPIC-18, EPIC-19 |
+| 9 | **EPIC-19** | Visualizar los egresos del período | 5 | Carril 6 | HU-027, HU-058 |
+| 10 | **EPIC-21** | Visualizar indicadores operativos complementarios (reestimada, antes 5) | 3 | Carril 6 | EPIC-20, EPIC-17 |
+| 11 | **EPIC-22** | Filtrar y exportar el tablero gerencial (reestimada, antes 5) | 3 | Carril 6 | EPIC-20 |
 | | | **Total comprometido** | **53** | | |
 
 ---
@@ -225,180 +225,75 @@ Stack: Laravel + Inertia v3 + React. Tienda y despachos en `Ecommerce` / `Stock`
 `Security` / `Settings`; tablero en `Dashboard`. Lógica en `app/Actions/{Module}`, respuestas en
 `app/Data/{Module}`, validación en Form Requests.
 
-### EPIC-15 — Procesar el pedido pagado como una venta online con su factura (5 SP · Carril 1)
-- [ ] En el PR de esquema (D1): migración en `sales` (`web_order_id` único nullable, `shipping_amount`,
-      `CHECK (channel = 'online' ⇔ web_order_id IS NOT NULL)`), ajuste de nulabilidad en `invoices`
-      (`cash_session_id` y `user_id` nullable) e `invoice_items` (`article_id` nullable).
-- [ ] Action `ConvertPaidWebOrderToSale`, invocada por `MarkWebOrderAsPaid` dentro de la misma
-      transacción:
-      - Si el pedido ya tiene una `Sale` vinculada por `web_order_id`, devuelve la existente
-        (idempotencia ante notificaciones repetidas del webhook).
-      - Resuelve el depósito activo con `is_ecommerce = true` y su punto de venta activo.
-      - Crea la `Sale` en estado `confirmada` (`channel = 'online'`, `cash_session_id = null`,
-        `user_id = null`, `shipping_amount = $webOrder->shipping_cost`) y sus `sale_items` con los
-        precios congelados del pedido y el desglose de neto e IVA por alícuota (`HU-063`).
-      - Emite la `Invoice` (`A` o `B` según la condición fiscal del cliente) reutilizando
-        `IssueInvoice`; cuando `shipping_cost > 0`, agrega la línea `"Envío a domicilio"`
-        (`article_id = null`, IVA 21%) para que el total facturado coincida exactamente con el
-        importe pagado en Mercado Pago.
-      - **No genera movimiento de stock** (el stock se descuenta al entregar en `EPIC-17`).
-- [ ] Exponer la factura emitida y el botón de descarga de su PDF (`HU-043`) en el detalle del
-      pedido en "Mis pedidos" del cliente y en la vista interna.
-- [ ] Tests: pedido pagado con retiro y con envío genera venta + factura con totales exactos,
-      idempotencia ante doble webhook, existencia de stock intacta tras el pago.
+### EPIC-15 — Procesar el pedido pagado como una venta online con su factura (5 SP)
+- [ ] En el PR de esquema (D1): migración en `sales` (`web_order_id` único nullable, `shipping_amount`, `CHECK (channel = 'online' ⇔ web_order_id IS NOT NULL)`), ajuste de nulabilidad en `invoices` (`cash_session_id` y `user_id` nullable) e `invoice_items` (`article_id` nullable).
+- [ ] Action `ConvertPaidWebOrderToSale`, invocada por `MarkWebOrderAsPaid` dentro de la misma transacción: devuelve la `Sale` existente si ya fue procesado (idempotencia), resuelve el depósito activo con `is_ecommerce = true` y su punto de venta activo, y crea la `Sale` `confirmada` (`channel = 'online'`, `cash_session_id = null`, `user_id = null`, `shipping_amount = $webOrder->shipping_cost`) con sus `sale_items` y desglose de neto e IVA (`HU-063`), sin descontar stock.
+- [ ] Emitir la `Invoice` (`A` o `B` según la condición fiscal del cliente) reutilizando `IssueInvoice`; cuando `shipping_cost > 0`, agregar la línea `"Envío a domicilio"` (`article_id = null`, IVA 21%) para que el total facturado coincida exactamente con el importe pagado en Mercado Pago.
+- [ ] Exponer la factura emitida y el botón de descarga de su PDF (`HU-043`) en el detalle del pedido en "Mis pedidos" del cliente y en la vista interna.
+- [ ] Tests: pedido pagado con retiro y con envío genera venta + factura con totales exactos, idempotencia ante doble webhook y existencia de stock intacta tras el pago.
 
-### HU-048 — Mostrar la disponibilidad online e impedir la compra sin stock (3 SP · Carril 1)
-- [ ] Query/servicio de disponibilidad online que calcula `available_quantity` por artículo como el
-      saldo en `stock_balances` del depósito `is_ecommerce = true` menos la suma de cantidades en
-      `web_order_items` de pedidos en estado `'pagado'` o `'en_preparacion'`.
-- [ ] Exponer el estado de disponibilidad (`disponible`, `ultimas_unidades`, `sin_stock`) y
-      `available_quantity` en el catálogo público (`/tienda`) y en el carrito (`ResolveCartLine`).
-- [ ] Validar en `AddCartItem` / `UpdateCartItem` y dentro de la transacción de `PlaceWebOrder`
-      (`HU-062`, con bloqueo para evitar condiciones de carrera entre dos clientes) que la cantidad
-      solicitada no supere `available_quantity`.
-- [ ] En `resources/js/pages/shop/index.tsx` y `cart.tsx`, mostrar el badge de disponibilidad y
-      deshabilitar `"Agregar al carrito"` / `"Confirmar pedido"` cuando no alcance el stock.
-- [ ] Tests: dos clientes intentando comprar las últimas unidades; el pago/pedido del primero reduce
-      la disponibilidad online del segundo aunque el depósito todavía no haya entregado la
-      mercadería.
+### HU-048 — Mostrar la disponibilidad online e impedir la compra sin stock (3 SP)
+- [ ] Query/servicio de disponibilidad online que calcula `available_quantity` por artículo como el saldo en `stock_balances` del depósito `is_ecommerce = true` menos la suma de cantidades en `web_order_items` de pedidos en estado `'pagado'` o `'en_preparacion'`.
+- [ ] Exponer el estado de disponibilidad (`disponible`, `ultimas_unidades`, `sin_stock`) y `available_quantity` en el catálogo público (`/tienda`) y en el carrito (`ResolveCartLine`).
+- [ ] Validar en `AddCartItem` / `UpdateCartItem` y dentro de la transacción de `PlaceWebOrder` (`HU-062`, con bloqueo para evitar condiciones de carrera entre dos clientes) que la cantidad solicitada no supere `available_quantity`.
+- [ ] En `resources/js/pages/shop/index.tsx` y `cart.tsx`, mostrar el badge de disponibilidad y deshabilitar `"Agregar al carrito"` / `"Confirmar pedido"` cuando no alcance el stock.
+- [ ] Tests: dos clientes intentando comprar las últimas unidades; el pago/pedido del primero reduce la disponibilidad online del segundo aunque el depósito todavía no haya entregado la mercadería.
 
-### EPIC-17 — Despachar y entregar pedidos web desde depósito con baja de stock (8 SP · Carril 2)
-- [ ] En el PR de esquema (D1):
-      - Agregar en `StockMovementType` y `StockMovementTypeSeeder` el tipo de sistema `"Salida por
-        Entrega de Pedido Web"` (`CODE_WEB_ORDER_DELIVERY = 'web_order_delivery'`, `sign = -1`,
-        `is_system = true`, incluido en `AUTOMATIC_CODES` para no ofrecerlo en ajustes manuales).
-      - Migración en `web_orders`: `status` con `CHECK IN ('pendiente', 'pagado', 'en_preparacion',
-        'entregado')`, columnas `preparation_started_at`, `prepared_by` (`FK → users`),
-        `delivered_at`, `delivered_by` (`FK → users`), `CHECK (delivered_* ⇔ status = 'entregado')`
-        e índice `(status, paid_at)`.
-      - States `paid()`, `inPreparation()` y `delivered()` en `WebOrderFactory`.
-- [ ] Action `StartWebOrderPreparation`: transiciona `pagado` → `en_preparacion` registrando
-      `preparation_started_at = now()` y `prepared_by = auth()->id()`.
-- [ ] Action `DeliverWebOrder`:
-      - Transiciona `en_preparacion` → `entregado` registrando `delivered_at = now()` y
-        `delivered_by = auth()->id()`.
-      - Ejecuta en la misma transacción el movimiento de stock con tipo `"Salida por Entrega de
-        Pedido Web"` (`web_order_delivery`) sobre el depósito online, reutilizando
-        `stock_movements.sale_id = $sale->id` y verificando que se ejecute una única vez por venta.
-      - Si una línea deja la existencia negativa en el depósito online, se registra igual con la
-        marca de conflicto de `EPIC-06`.
-- [ ] Pantalla operativa de pedidos web a preparar (pantalla principal del rol `deposito`) con
-      contadores por estado, filtros por estado, modalidad de entrega, sucursal y fechas, hoja de
-      preparación (*picking list*) y botones de iniciar preparación y confirmar entrega/despacho.
-- [ ] En la vista de depósito y en "Mis pedidos" del cliente, mostrar la etiqueta **"Despachado"**
-      cuando `status = 'entregado'` y `delivery_method = 'envio'` (y **"Entregado"** cuando es
-      `retiro`).
-- [ ] Tests: flujo `pagado` → `en_preparacion` → `entregado`, auditoría de `prepared_by` y
-      `delivered_by`, movimiento `"Salida por Entrega de Pedido Web"` no elegible en ajustes
-      manuales, descuento único en el depósito online y rechazo de transiciones inválidas.
+### EPIC-17 — Despachar y entregar pedidos web desde depósito con baja de stock (8 SP)
+- [ ] En el PR de esquema (D1): agregar en `StockMovementType` y `StockMovementTypeSeeder` el tipo de sistema `"Salida por Entrega de Pedido Web"` (`CODE_WEB_ORDER_DELIVERY = 'web_order_delivery'`, `sign = -1`, `is_system = true`, incluido en `AUTOMATIC_CODES` para no ofrecerlo en ajustes manuales), migración en `web_orders` (`status` con `CHECK IN ('pendiente', 'pagado', 'en_preparacion', 'entregado')`, `preparation_started_at`, `prepared_by`, `delivered_at`, `delivered_by`, `CHECK (delivered_* ⇔ status = 'entregado')`, índice `(status, paid_at)`) y states `paid()`, `inPreparation()` y `delivered()` en `WebOrderFactory`.
+- [ ] Action `StartWebOrderPreparation`: transiciona `pagado` → `en_preparacion` registrando `preparation_started_at = now()` y `prepared_by = auth()->id()`.
+- [ ] Action `DeliverWebOrder`: transiciona `en_preparacion` → `entregado` registrando `delivered_at = now()` y `delivered_by = auth()->id()`, y ejecuta en la misma transacción el movimiento `"Salida por Entrega de Pedido Web"` (`web_order_delivery`) sobre el depósito online reutilizando `stock_movements.sale_id = $sale->id` (una única vez por venta, marcando conflicto de `EPIC-06` si alguna línea queda negativa).
+- [ ] Pantalla operativa de pedidos web a preparar (pantalla principal del rol `deposito`) con contadores por estado, filtros por estado, modalidad de entrega, sucursal y fechas, hoja de preparación (*picking list*) y botones de iniciar preparación y confirmar entrega/despacho.
+- [ ] En la vista de depósito y en "Mis pedidos" del cliente, mostrar la etiqueta **"Despachado"** cuando `status = 'entregado'` y `delivery_method = 'envio'` (y **"Entregado"** cuando es `retiro`).
+- [ ] Tests: flujo `pagado` → `en_preparacion` → `entregado`, auditoría de `prepared_by` y `delivered_by`, movimiento `"Salida por Entrega de Pedido Web"` no elegible en ajustes manuales, descuento único en el depósito online y rechazo de transiciones inválidas.
 
-### HU-003 — Administrar los usuarios del sistema (5 SP · Carril 3)
-- [ ] En el PR de esquema (D1): columnas `branch_id` (`FK → branches`, nullable) e `is_active`
-      (`boolean` default `true`) en `users`, y migración de datos `personal_interno` →
-      `administrador`.
-- [ ] Deshabilitar `Features::registration()` en `config/fortify.php` para cerrar `/register` en el
-      panel interno (manteniendo el registro de clientes de `EPIC-11` en `/tienda/registro`).
-- [ ] Middleware `EnsureUserIsActive`: impide iniciar sesión a usuarios inactivos y cierra la sesión
-      en curso si un usuario pasa a `is_active = false`.
-- [ ] Actions y controlador de usuarios (`/settings/users` o `/users`, protegido por
-      `can:manage-users`): alta, edición de rol (`UserRole`) y sucursal, activación/desactivación
-      lógica y blanqueo de contraseña (mostrando la clave generada o definida por única vez en
-      pantalla).
-- [ ] Validaciones: no desactivar al propio usuario en sesión, no dejar al sistema sin al menos un
-      `administrador` activo y no desactivar a un usuario con turno de caja abierto.
-- [ ] Tests: alta con clave inicial, login bloqueado para inactivo, cierre de sesión al desactivar,
-      protección del último Administrador y de usuario con caja abierta.
+### HU-003 — Administrar los usuarios del sistema (5 SP)
+- [ ] En el PR de esquema (D1): columnas `branch_id` (`FK → branches`, nullable) e `is_active` (`boolean` default `true`) en `users`, y migración de datos `personal_interno` → `administrador`.
+- [ ] Deshabilitar `Features::registration()` en `config/fortify.php` para cerrar `/register` en el panel interno (manteniendo el registro de clientes de `EPIC-11` en `/tienda/registro`).
+- [ ] Middleware `EnsureUserIsActive`: impide iniciar sesión a usuarios inactivos y cierra la sesión en curso si un usuario pasa a `is_active = false`.
+- [ ] Actions y controlador de usuarios (`/settings/users` o `/users`, protegido por `can:manage-users`): alta, edición de rol (`UserRole`) y sucursal, activación/desactivación lógica y blanqueo de contraseña (mostrando la clave generada o definida por única vez en pantalla).
+- [ ] Validaciones: no desactivar al propio usuario en sesión, no dejar al sistema sin al menos un `administrador` activo y no desactivar a un usuario con turno de caja abierto.
+- [ ] Tests: alta con clave inicial, login bloqueado para inactivo, cierre de sesión al desactivar, protección del último Administrador y de usuario con caja abierta.
 
-### HU-047 — Buscar, filtrar y ordenar artículos en la tienda online (3 SP · Carril 3)
-- [ ] Ampliar la query del catálogo público (`ShopCatalogController@index`) para recibir y validar
-      `brand_id`, `min_price`, `max_price` (`max_price >= min_price`) y `sort` (`relevance`,
-      `price_asc`, `price_desc`, `name_asc`, `name_desc`), combinables con `search` y `category_id`
-      de `HU-046`.
-- [ ] Aplicar el filtro de rango de precios y el ordenamiento `price_asc` / `price_desc` sobre el
-      precio efectivo resuelto para el visitante actual (`HU-056`: lista particular del cliente si
-      está logueado, o lista del canal `online` / `general`).
+### HU-047 — Buscar, filtrar y ordenar artículos en la tienda online (3 SP)
+- [ ] Ampliar la query del catálogo público (`ShopCatalogController@index`) para recibir y validar `brand_id`, `min_price`, `max_price` (`max_price >= min_price`) y `sort` (`relevance`, `price_asc`, `price_desc`, `name_asc`, `name_desc`), combinables con `search` y `category_id` de `HU-046`.
+- [ ] Aplicar el filtro de rango de precios y el ordenamiento `price_asc` / `price_desc` sobre el precio efectivo resuelto para el visitante actual (`HU-056`: lista particular del cliente si está logueado, o lista del canal `online` / `general`).
 - [ ] Enviar al frontend las marcas activas con artículos publicables en el canal online.
-- [ ] En `resources/js/pages/shop/index.tsx`, agregar selectores de marca, rango de precio mínimo y
-      máximo, selector de ordenamiento, chips de filtros activos removibles, contador de resultados
-      y botón "Limpiar filtros", preservando los parámetros al paginar.
-- [ ] Tests: filtro por marca, rango de precios (visitante anónimo y cliente con lista particular),
-      ordenamiento por precio y por descripción, combinación de filtros.
+- [ ] En `resources/js/pages/shop/index.tsx`, agregar selectores de marca, rango de precio mínimo y máximo, selector de ordenamiento, chips de filtros activos removibles, contador de resultados y botón "Limpiar filtros", preservando los parámetros al paginar.
+- [ ] Tests: filtro por marca, rango de precios (visitante anónimo y cliente con lista particular), ordenamiento por precio y por descripción, combinación de filtros.
 
-### HU-004 — Administrar roles y sus permisos (8 SP · Carril 4)
-- [ ] En el PR Contrato de Roles (D2):
-      - Ampliar `App\Enums\Security\UserRole` con `Administrador = 'administrador'`,
-        `Gerente = 'gerente'`, `Cajero = 'cajero'`, `Deposito = 'deposito'`,
-        `Compras = 'compras'`, `Cliente = 'cliente'`.
-      - Definir `Gate::before` para `Administrador` y los Gates por módulo (`view-dashboard`,
-        `manage-web-orders`, `manage-users`, `operate-cash`, `manage-catalog`, `manage-pricing`,
-        `manage-purchases`, `manage-stock`, `manage-customers`, `manage-organization`).
-      - Agregar states en `UserFactory`: `administrador()`, `gerente()`, `cajero()`, `deposito()`,
-        `compras()`, `cliente()`.
-      - Actualizar `LoginResponse` y la redirección de inicio para que cada rol entre a su pantalla
-        principal (`Gerente`/`Administrador` → `/dashboard`, `Depósito` → pedidos a preparar,
-        `Cajero` → la caja, `Compras` → compras, `Cliente` → `/tienda`).
-- [ ] Compartir `auth.user.role` y `auth.can` en `HandleInertiaRequests` y filtrar los módulos de
-      `resources/js/components/app-sidebar.tsx` según los Gates activos.
-- [ ] Aplicar `middleware('can:<gate>')` por grupo de rutas en `routes/web.php` y sembrar un usuario
-      de demostración por cada rol en `DatabaseSeeder`.
-- [ ] **Barrido de tests (mergeado a más tardar el D6):** actualizar los tests de módulos que
-      requieran un rol específico y agregar la suite de autorización que verifica `200` en módulos
-      permitidos, `403` en módulos no permitidos y redirección inicial para cada uno de los 5 roles.
+### HU-004 — Administrar roles y sus permisos (8 SP)
+- [ ] En el PR Contrato de Roles (D2): ampliar `App\Enums\Security\UserRole` (`administrador`, `gerente`, `cajero`, `deposito`, `compras`, `cliente`), definir `Gate::before` para `Administrador` y los Gates por módulo (`view-dashboard`, `manage-web-orders`, `manage-users`, `operate-cash`, `manage-catalog`, `manage-pricing`, `manage-purchases`, `manage-stock`, `manage-customers`, `manage-organization`), agregar states por rol en `UserFactory` y actualizar `LoginResponse` para que cada rol entre a su pantalla principal (`Gerente` → `/dashboard`, `Depósito` → pedidos a preparar, `Cajero` → la caja, `Compras` → compras, `Cliente` → `/tienda`).
+- [ ] Compartir `auth.user.role` y `auth.can` en `HandleInertiaRequests` y filtrar los módulos de `resources/js/components/app-sidebar.tsx` según los Gates activos.
+- [ ] Aplicar `middleware('can:<gate>')` por grupo de rutas en `routes/web.php` y sembrar un usuario de demostración por cada rol en `DatabaseSeeder`.
+- [ ] **Barrido de tests (mergeado a más tardar el D6):** actualizar los tests de módulos que requieran un rol específico y agregar la suite de autorización que verifica `200` en módulos permitidos, `403` en módulos no permitidos y redirección inicial para cada uno de los 5 roles.
 
-### EPIC-18 — Visualizar los ingresos del período (5 SP · Carril 5)
-- [ ] En el PR Base del Tablero (D2): `DashboardController@index`, `DashboardFilterRequest`,
-      `DashboardData` y layout modular en `resources/js/pages/dashboard.tsx`.
-- [ ] Action/query `GetDashboardRevenues`: sobre las ventas `confirmada` del período (`mostrador` y
-      `online` de `EPIC-15`) calcula Total Facturado con IVA, Ingreso Neto sin IVA, IVA total,
-      Cantidad de ventas confirmadas, Ticket promedio y variación porcentual respecto al período
-      anterior.
-- [ ] Desglose de ingresos por canal (`mostrador` vs. `online`), por sucursal y por medio de pago
-      (movimientos `venta` de caja más cobros acreditados de Mercado Pago).
-- [ ] Tarjetas de KPIs y gráficos de participación en `DashboardRevenuesSection.tsx` (usando
-      `shadcn chart` / `recharts`, pendiente de aprobación).
-- [ ] Tests: suma exacta de ventas confirmadas de mostrador y online, exclusión de ventas abiertas o
-      descartadas y de pedidos `pendiente`, filtrado por canal y sucursal.
+### EPIC-18 — Visualizar los ingresos del período (5 SP)
+- [ ] En el PR Base del Tablero (D2): `DashboardController@index`, `DashboardFilterRequest`, `DashboardData` y layout modular en `resources/js/pages/dashboard.tsx`.
+- [ ] Action/query `GetDashboardRevenues`: sobre las ventas `confirmada` del período (`mostrador` y `online` de `EPIC-15`) calcula Total Facturado con IVA, Ingreso Neto sin IVA, IVA total, Cantidad de ventas confirmadas, Ticket promedio y variación porcentual respecto al período anterior.
+- [ ] Desglose de ingresos por canal (`mostrador` vs. `online`), por sucursal y por medio de pago (movimientos `venta` de caja más cobros acreditados de Mercado Pago).
+- [ ] Tarjetas de KPIs y gráficos de participación en `DashboardRevenuesSection.tsx` (usando `shadcn chart` / `recharts`, pendiente de aprobación).
+- [ ] Tests: suma exacta de ventas confirmadas de mostrador y online, exclusión de ventas abiertas o descartadas y de pedidos `pendiente`, filtrado por canal y sucursal.
 
-### EPIC-20 — Visualizar la relación entre ingresos y egresos y su evolución (5 SP · Carril 5)
-- [ ] Action/query `GetDashboardEvolution`: calcula el Resultado Neto del período (`ingresos −
-      egresos`), el margen porcentual y la serie temporal comparativa `Ingresos vs. Egresos` (día a
-      día en rangos cortos o mes a mes en rangos de varios meses, completando con `0.00` los
-      períodos sin movimientos).
-- [ ] Indicador de Resultado Neto (superávit en verde / déficit en rojo) y gráfico evolutivo de
-      barras/líneas en `DashboardEvolutionSection.tsx`.
+### EPIC-20 — Visualizar la relación entre ingresos y egresos y su evolución (5 SP)
+- [ ] Action/query `GetDashboardEvolution`: calcula el Resultado Neto del período (`ingresos − egresos`), el margen porcentual y la serie temporal comparativa `Ingresos vs. Egresos` (día a día en rangos cortos o mes a mes en rangos de varios meses, completando con `0.00` los períodos sin movimientos).
+- [ ] Indicador de Resultado Neto (superávit en verde / déficit en rojo) y gráfico evolutivo de barras/líneas en `DashboardEvolutionSection.tsx`.
 - [ ] Tests: resultado neto positivo y negativo, serie temporal completa sin huecos.
 
-### EPIC-19 — Visualizar los egresos del período (5 SP · Carril 6)
-- [ ] Action/query `GetDashboardExpenses`: calcula para el período seleccionado:
-      - **Gasto devengado en proveedores:** facturas + notas de débito − notas de crédito de
-        proveedor confirmadas (excluyendo remitos y anulados).
-      - **Desembolso real de dinero:** órdenes de pago confirmadas + egresos operativos de caja
-        (`cash_movements` de tipo `egreso`), desglosado por medio de pago.
-- [ ] Tarjetas comparativas (devengado vs. pagado), gráfico por medio de pago y enlaces a Pagos y
-      Egresos (`HU-055`) y Cuentas Corrientes (`HU-028`) en `DashboardExpensesSection.tsx`.
-- [ ] Tests: cálculo de comprobantes recibidos vs. órdenes de pago y egresos de caja, exclusión de
-      remitos y anulados.
+### EPIC-19 — Visualizar los egresos del período (5 SP)
+- [ ] Action/query `GetDashboardExpenses`: calcula el gasto devengado en proveedores (facturas + notas de débito − notas de crédito confirmadas, excluyendo remitos y anulados) y el desembolso real de dinero (órdenes de pago confirmadas + egresos operativos de caja `cash_movements` de tipo `egreso`, desglosado por medio de pago).
+- [ ] Tarjetas comparativas (devengado vs. pagado), gráfico por medio de pago y enlaces a Pagos y Egresos (`HU-055`) y Cuentas Corrientes (`HU-028`) en `DashboardExpensesSection.tsx`.
+- [ ] Tests: cálculo de comprobantes recibidos vs. órdenes de pago y egresos de caja, exclusión de remitos y anulados.
 
-### EPIC-21 — Visualizar indicadores operativos complementarios (3 SP · Carril 6)
-- [ ] Action/query `GetDashboardOperationalIndicators`:
-      - Top artículos más vendidos del período (por unidades y por importe facturado).
-      - Ranking de compras por proveedor del período y saldo pendiente en cuenta corriente.
-      - Artículos sin stock o en conflicto de stock (`quantity <= 0` en `stock_balances`).
-      - Cantidad de pedidos web en estado `pagado` o `en_preparacion` pendientes de entrega en
-        depósito (`EPIC-17`).
-- [ ] Paneles de rankings y tarjetas de alerta con enlaces directos a Existencias, Pedidos Web por
-      preparar y Cuentas Corrientes en `DashboardOperationalSection.tsx`.
-- [ ] Tests: ranking de artículos más vendidos, ranking de proveedores y conteo de alertas de stock y
-      de pedidos web pendientes.
+### EPIC-21 — Visualizar indicadores operativos complementarios (3 SP)
+- [ ] Action/query `GetDashboardOperationalIndicators`: top artículos más vendidos del período (por unidades e importe facturado), ranking de compras por proveedor y saldo pendiente en cuenta corriente, artículos sin stock o en conflicto (`quantity <= 0` en `stock_balances`) y cantidad de pedidos web en estado `pagado` o `en_preparacion` pendientes de entrega en depósito (`EPIC-17`).
+- [ ] Paneles de rankings y tarjetas de alerta con enlaces directos a Existencias, Pedidos Web por preparar y Cuentas Corrientes en `DashboardOperationalSection.tsx`.
+- [ ] Tests: ranking de artículos más vendidos, ranking de proveedores y conteo de alertas de stock y de pedidos web pendientes.
 
-### EPIC-22 — Filtrar y exportar el tablero gerencial (3 SP · Carril 6)
-- [ ] Barra superior de filtros sincronizada con la URL (`date_from`, `date_to`, atajos *Hoy*, *Este
-      mes*, *Mes anterior*, *Últimos 6 meses*, *Este año*, `branch_id` y `channel`) y endpoint
-      `DashboardController@export` (`/dashboard/export`).
-- [ ] Descarga del resumen del tablero en CSV / Excel respetando los filtros activos (siguiendo el
-      patrón de `HU-028` y `HU-055`).
-- [ ] Tests: filtros por defecto, validación de fechas, filtrado por sucursal y canal y respuesta de
-      exportación.
+### EPIC-22 — Filtrar y exportar el tablero gerencial (3 SP)
+- [ ] Barra superior de filtros sincronizada con la URL (`date_from`, `date_to`, atajos *Hoy*, *Este mes*, *Mes anterior*, *Últimos 6 meses*, *Este año*, `branch_id` y `channel`) y endpoint `DashboardController@export` (`/dashboard/export`).
+- [ ] Descarga del resumen del tablero en CSV / Excel respetando los filtros activos (siguiendo el patrón de `HU-028` y `HU-055`).
+- [ ] Tests: filtros por defecto, validación de fechas, filtrado por sucursal y canal y respuesta de exportación.
 
 ---
 
