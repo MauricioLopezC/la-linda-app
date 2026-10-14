@@ -78,7 +78,7 @@ class User extends Authenticatable
 
     public function isInternal(): bool
     {
-        return $this->role === UserRole::PersonalInterno;
+        return $this->role->isInternal();
     }
 
     /**

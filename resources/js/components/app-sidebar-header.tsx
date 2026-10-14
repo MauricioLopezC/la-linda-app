@@ -13,7 +13,7 @@ export function AppSidebarHeader({
   breadcrumbs?: BreadcrumbItemType[];
 }) {
   const { auth, cartCount } = usePage().props;
-  const isInternalStaff = auth?.user?.role === 'personal_interno';
+  const isInternalStaff = !!auth?.user && auth.user.role !== 'cliente';
   const effectiveCartCount = typeof cartCount === 'number' ? cartCount : 0;
 
   return (
