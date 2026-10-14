@@ -260,9 +260,9 @@ test('guest cannot access account page', function () {
     $response->assertRedirect(route('login'));
 });
 
-test('legacy store auth routes redirect to unified auth routes', function () {
+test('legacy store auth routes redirect to unified auth routes or render store registration', function () {
     $this->get('/tienda/login')->assertRedirect('/login');
-    $this->get('/tienda/registro')->assertRedirect('/register');
+    $this->get('/tienda/registro')->assertOk();
 });
 
 test('registration rejects non-numeric or invalid length dni', function () {

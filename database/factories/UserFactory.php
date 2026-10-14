@@ -31,8 +31,10 @@ class UserFactory extends Factory
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
-            'role' => UserRole::PersonalInterno,
+            'role' => UserRole::Administrador,
             'customer_id' => null,
+            'branch_id' => null,
+            'is_active' => true,
         ];
     }
 
@@ -62,7 +64,56 @@ class UserFactory extends Factory
     public function internal(): static
     {
         return $this->state(fn (array $attributes) => [
-            'role' => UserRole::PersonalInterno,
+            'role' => UserRole::Administrador,
+        ]);
+    }
+
+    public function admin(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => UserRole::Administrador,
+        ]);
+    }
+
+    public function manager(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => UserRole::Gerente,
+        ]);
+    }
+
+    public function cashier(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => UserRole::Cajero,
+        ]);
+    }
+
+    public function warehouse(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => UserRole::Deposito,
+        ]);
+    }
+
+    public function purchases(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => UserRole::Compras,
+        ]);
+    }
+
+    public function inactive(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_active' => false,
+        ]);
+    }
+
+    public function branch(int $branchId): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'branch_id' => $branchId,
         ]);
     }
 

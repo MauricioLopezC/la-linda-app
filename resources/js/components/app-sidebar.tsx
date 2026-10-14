@@ -20,6 +20,7 @@ import {
   Sliders,
   Truck,
   Users,
+  UserCog,
   Vault,
   Wallet,
   Warehouse,
@@ -40,7 +41,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { dashboard, login, register } from '@/routes';
+import { dashboard, login } from '@/routes';
 import { index as articles } from '@/routes/catalog/articles';
 import { index as brands } from '@/routes/catalog/brands';
 import { index as categories } from '@/routes/catalog/categories';
@@ -63,6 +64,7 @@ import { current as currentCashSession } from '@/routes/sales/cash-sessions';
 import { index as paymentMethods } from '@/routes/sales/payment-methods';
 import { index as pointsOfSale } from '@/routes/sales/points-of-sale';
 import { index as sales } from '@/routes/sales/sales';
+import { register as storeRegister } from '@/routes/tienda';
 import type { NavGroup, NavItem } from '@/types';
 
 const navGroups: NavGroup[] = [
@@ -217,6 +219,16 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
+    label: 'Configuración',
+    items: [
+      {
+        title: 'Usuarios',
+        href: '/settings/users',
+        icon: UserCog,
+      },
+    ],
+  },
+  {
     label: 'Tienda Online',
     items: [
       {
@@ -277,7 +289,7 @@ const guestNavGroups: NavGroup[] = [
       },
       {
         title: 'Registrarse',
-        href: register(),
+        href: storeRegister(),
         icon: UserPlus,
       },
     ],
@@ -300,11 +312,16 @@ const footerNavItems: NavItem[] = [
 
 export function AppSidebar() {
   const { auth } = usePage().props;
-  const isInternalStaff = auth?.user?.role === 'personal_interno';
+  const isInternalStaff = Boolean(auth?.user && auth.user.role !== 'cliente');
   const isClient = auth?.user?.role === 'cliente';
+  const isAdmin = auth?.user?.role === 'administrador';
+
+  const userNavGroups = isAdmin
+    ? navGroups
+    : navGroups.filter((group) => group.label !== 'Configuración');
 
   const groups = isInternalStaff
-    ? navGroups
+    ? userNavGroups
     : isClient
       ? clientNavGroups
       : guestNavGroups;
