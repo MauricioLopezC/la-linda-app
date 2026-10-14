@@ -16,9 +16,11 @@ return new class extends Migration
 {
     public function up(): void
     {
-        $orderlessOnlineSales = DB::table('sales')->where('channel', 'online')->select('id');
-        DB::table('sale_items')->whereIn('sale_id', $orderlessOnlineSales)->delete();
-        DB::table('sales')->where('channel', 'online')->delete();
+        if (DB::table('sales')->where('channel', 'online')->exists()) {
+            throw new RuntimeException(
+                'No se puede aplicar la migración de ventas online: existen ventas online sin pedido web que las origine.'
+            );
+        }
 
         $this->dropReferencingForeignKeys();
         Schema::disableForeignKeyConstraints();
@@ -44,6 +46,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index(['cash_session_id', 'status']);
+            $table->index(['status', 'confirmed_at']);
         });
 
         DB::table('sales_epic15')->insertUsing(

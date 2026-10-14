@@ -7,7 +7,9 @@ use App\Models\Ecommerce\CartItem;
 use App\Models\Ecommerce\CustomerAccount;
 use App\Models\Ecommerce\WebOrder;
 use App\Models\Ecommerce\WebOrderItem;
+use App\Models\Inventory\Warehouse;
 use App\Models\Organization\Branch;
+use App\Models\Sales\PointOfSale;
 use App\Models\User;
 use Illuminate\Database\QueryException;
 
@@ -172,7 +174,7 @@ test('a user has an active flag defaulting to true and an optional default branc
     expect($user->fresh()->branch_id)->toBeNull();
 });
 
-test('all five sprint 5 schema migrations roll back and re-run cleanly when data is compatible', function () {
+test('all six sprint 5 schema migrations roll back and re-run cleanly when data is compatible', function () {
     $paidOrder = WebOrder::factory()->paid()->create();
 
     $migrations = [
@@ -181,6 +183,7 @@ test('all five sprint 5 schema migrations roll back and re-run cleanly when data
         require database_path('migrations/2026_10_12_100003_revise_sales_for_online_orders.php'),
         require database_path('migrations/2026_10_12_100004_revise_invoices_for_online_sales.php'),
         require database_path('migrations/2026_10_12_100005_ensure_web_order_delivery_stock_movement_type_exists.php'),
+        require database_path('migrations/2026_10_12_100006_ensure_online_point_of_sale_exists.php'),
     ];
 
     foreach (array_reverse($migrations) as $migration) {
@@ -195,4 +198,24 @@ test('all five sprint 5 schema migrations roll back and re-run cleanly when data
 
     expect($delivered->status)->toBe(WebOrderStatus::Delivered)
         ->and(WebOrder::query()->find($paidOrder->id)?->mp_payment_id)->toBe($paidOrder->mp_payment_id);
+});
+
+test('the online point of sale migration gives each active online warehouse the next free number once', function () {
+    $counterWarehouse = Warehouse::factory()->create();
+    PointOfSale::factory()->create(['number' => 1, 'warehouse_id' => $counterWarehouse->id]);
+    PointOfSale::factory()->create(['number' => 2, 'warehouse_id' => $counterWarehouse->id]);
+    $onlineWarehouse = Warehouse::factory()->online()->create();
+    Warehouse::factory()->online()->create(['is_active' => false]);
+    $migration = require database_path('migrations/2026_10_12_100006_ensure_online_point_of_sale_exists.php');
+
+    $migration->up();
+    $migration->up();
+
+    expect(PointOfSale::query()->where('warehouse_id', $onlineWarehouse->id)->pluck('number')->all())->toBe([3])
+        ->and(PointOfSale::query()->count())->toBe(3);
+
+    $migration->down();
+
+    expect(PointOfSale::query()->where('warehouse_id', $onlineWarehouse->id)->exists())->toBeFalse()
+        ->and(PointOfSale::query()->count())->toBe(2);
 });

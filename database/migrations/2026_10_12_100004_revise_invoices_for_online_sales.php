@@ -37,7 +37,8 @@ return new class extends Migration
             $table->rawColumn('net_amount', 'decimal(12, 2) check (net_amount >= 0)');
             $table->rawColumn('vat_amount', 'decimal(12, 2) check (vat_amount >= 0)');
             $table->rawColumn('total_amount', 'decimal(12, 2) check (total_amount > 0 and abs(net_amount + vat_amount - total_amount) < 0.005)');
-            $table->foreignId('user_id')->nullable()->constrained('users')->restrictOnDelete();
+            $table->rawColumn('user_id', 'bigint check ((cash_session_id is null and user_id is null) or (cash_session_id is not null and user_id is not null))')->nullable();
+            $table->foreign('user_id')->references('id')->on('users')->restrictOnDelete();
             $table->timestamp('created_at')->useCurrent();
 
             $table->unique(['point_of_sale_id', 'type', 'number']);
@@ -95,6 +96,9 @@ return new class extends Migration
         Schema::drop('invoice_items');
         Schema::rename('invoice_items_epic15', 'invoice_items');
         $this->resetPostgreSqlSequence('invoice_items');
+
+        /* At most one concept line without article per invoice: the "Envío a domicilio" line. */
+        DB::statement('create unique index invoice_items_one_concept_line on invoice_items (invoice_id) where article_id is null');
 
         Schema::enableForeignKeyConstraints();
     }

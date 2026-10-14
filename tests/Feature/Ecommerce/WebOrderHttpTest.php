@@ -238,6 +238,31 @@ test('my orders lists only the customer own orders, newest first', function () {
             ->where('orders.data.0.status_label', 'Pendiente de pago'));
 });
 
+test('my orders labels a delivered order as dispatched when shipped and delivered when picked up', function () {
+    $shipped = WebOrder::factory()->shipping('2500.00')->delivered()->create([
+        'customer_id' => $this->customer->id,
+        'placed_at' => now(),
+    ]);
+    $pickedUp = WebOrder::factory()->delivered()->create([
+        'customer_id' => $this->customer->id,
+        'placed_at' => now()->subDay(),
+    ]);
+
+    $this->actingAs($this->clientUser)
+        ->get(route('tienda.orders.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('orders.data.0.id', $shipped->id)
+            ->where('orders.data.0.status_label', 'Despachado')
+            ->where('orders.data.1.id', $pickedUp->id)
+            ->where('orders.data.1.status_label', 'Entregado'));
+
+    $this->actingAs($this->clientUser)
+        ->get(route('tienda.orders.show', $shipped))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->where('order.status_label', 'Despachado'));
+});
+
 test('order detail shows the frozen lines to its owner', function () {
     $order = WebOrder::factory()->create([
         'customer_id' => $this->customer->id,

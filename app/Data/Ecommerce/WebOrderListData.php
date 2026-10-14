@@ -34,7 +34,7 @@ class WebOrderListData extends Data
             formatted_number: $order->formattedNumber(),
             placed_at_formatted: $order->placed_at->format('d/m/Y H:i'),
             status: $order->status->value,
-            status_label: $order->status->label(),
+            status_label: $order->statusLabel(),
             delivery_method_label: $order->delivery_method->label(),
             items_count: (int) $order->getAttribute('items_count'),
             total_amount: $order->total_amount,

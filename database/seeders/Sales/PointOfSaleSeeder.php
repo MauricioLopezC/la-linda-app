@@ -15,6 +15,7 @@ class PointOfSaleSeeder extends Seeder
     {
         $depositoCentral = Warehouse::where('name', 'Depósito Central')->firstOrFail();
         $depositoNorte = Warehouse::where('name', 'Depósito Norte')->firstOrFail();
+        $depositoEcommerce = Warehouse::where('name', 'Depósito E-commerce')->firstOrFail();
 
         $pointsOfSale = [
             [
@@ -30,6 +31,11 @@ class PointOfSaleSeeder extends Seeder
             [
                 'number' => 1,
                 'warehouse_id' => $depositoNorte->id,
+                'is_active' => true,
+            ],
+            [
+                'number' => 3,
+                'warehouse_id' => $depositoEcommerce->id,
                 'is_active' => true,
             ],
         ];

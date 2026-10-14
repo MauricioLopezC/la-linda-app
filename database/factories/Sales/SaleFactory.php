@@ -46,8 +46,8 @@ class SaleFactory extends Factory
                     'user_id' => $attributes['user_id'] ?? User::factory(),
                 ])->id;
             },
-            'web_order_id' => null,
             'customer_id' => Customer::factory(),
+            'web_order_id' => null,
             'user_id' => User::factory(),
             'opened_at' => now(),
             'status' => SaleStatus::Open,
@@ -69,7 +69,8 @@ class SaleFactory extends Factory
         return $this->state(fn (): array => [
             'channel' => SaleChannel::Online,
             'cash_session_id' => null,
-            'web_order_id' => WebOrder::factory()->paid(),
+            'web_order_id' => fn (array $attributes) => WebOrder::factory()->paid()
+                ->create(['customer_id' => $attributes['customer_id']])->id,
             'user_id' => null,
         ]);
     }
