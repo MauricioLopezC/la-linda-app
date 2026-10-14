@@ -15,7 +15,6 @@ import {
   Sparkles,
   Tag,
   UserCheck,
-  X,
 } from 'lucide-react';
 import React, { useState } from 'react';
 import { toast } from 'sonner';
@@ -30,15 +29,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { login } from '@/routes';
 import { home } from '@/routes/tienda';
 import * as cartRoutes from '@/routes/tienda/cart';
 import * as ordersRoutes from '@/routes/tienda/orders';
 import type { BreadcrumbItem } from '@/types';
+import { CatalogFilters } from './components/catalog-filters';
 
 type Article = App.Data.Ecommerce.OnlineCatalogArticleData;
 type Category = App.Data.Catalog.CategoryData;
+type Brand = App.Data.Catalog.BrandData;
 
 type PaginationProps = {
   data: Article[];
@@ -52,9 +52,14 @@ type Props = {
   articles: PaginationProps;
   suggestedArticles?: Article[];
   categories: Category[];
+  brands: Brand[];
   filters: {
     search: string;
     category_id: string;
+    brand_id: string;
+    min_price: string;
+    max_price: string;
+    sort: string;
   };
 };
 
@@ -250,15 +255,13 @@ export default function StoreHome({
   articles,
   suggestedArticles = [],
   categories,
+  brands,
   filters,
 }: Props) {
   const { auth, flash } = usePage().props;
   const user = auth?.user;
   const flashSuccess =
     typeof flash?.success === 'string' ? flash.success : null;
-
-  const [searchQuery, setSearchQuery] = useState(filters.search || '');
-  const selectedCategoryId = filters.category_id || 'all';
 
   // Modal preview state
   const [previewArticle, setPreviewArticle] = useState<Article | null>(null);
@@ -338,48 +341,78 @@ export default function StoreHome({
     );
   };
 
-  const applyFilters = (newCategoryId?: string, newSearch?: string) => {
-    const effectiveCategory =
-      newCategoryId !== undefined ? newCategoryId : selectedCategoryId;
-    const effectiveSearch = newSearch !== undefined ? newSearch : searchQuery;
+  const handleApplyFilters = (newFilters: Partial<Props['filters']>) => {
+    const merged = {
+      ...filters,
+      ...newFilters,
+    };
+
+    const query: Record<string, string | number> = {};
+
+    if (merged.search?.trim()) {
+      query.search = merged.search.trim();
+    }
+
+    if (merged.category_id && merged.category_id !== 'all') {
+      query.category_id = merged.category_id;
+    }
+
+    if (merged.brand_id && merged.brand_id !== 'all') {
+      query.brand_id = merged.brand_id;
+    }
+
+    if (merged.min_price && merged.min_price.trim() !== '') {
+      query.min_price = merged.min_price.trim();
+    }
+
+    if (merged.max_price && merged.max_price.trim() !== '') {
+      query.max_price = merged.max_price.trim();
+    }
+
+    if (merged.sort && merged.sort !== 'relevance') {
+      query.sort = merged.sort;
+    }
 
     router.get(
-      home.url({
-        query: {
-          search: effectiveSearch.trim() || undefined,
-          category_id:
-            effectiveCategory !== 'all' ? effectiveCategory : undefined,
-        },
-      }),
+      home.url({ query }),
       {},
       { preserveState: true, preserveScroll: true },
     );
   };
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    applyFilters(undefined, searchQuery);
-  };
-
-  const handleCategorySelect = (catId: string) => {
-    applyFilters(catId, undefined);
-  };
-
   const resetFilters = () => {
-    setSearchQuery('');
     router.get(home.url(), {}, { preserveState: true, preserveScroll: true });
   };
 
   const changePage = (page: number) => {
+    const query: Record<string, string | number> = { page };
+
+    if (filters.search?.trim()) {
+      query.search = filters.search.trim();
+    }
+
+    if (filters.category_id && filters.category_id !== 'all') {
+      query.category_id = filters.category_id;
+    }
+
+    if (filters.brand_id && filters.brand_id !== 'all') {
+      query.brand_id = filters.brand_id;
+    }
+
+    if (filters.min_price && filters.min_price.trim() !== '') {
+      query.min_price = filters.min_price.trim();
+    }
+
+    if (filters.max_price && filters.max_price.trim() !== '') {
+      query.max_price = filters.max_price.trim();
+    }
+
+    if (filters.sort && filters.sort !== 'relevance') {
+      query.sort = filters.sort;
+    }
+
     router.get(
-      home.url({
-        query: {
-          page,
-          search: filters.search || undefined,
-          category_id:
-            filters.category_id !== 'all' ? filters.category_id : undefined,
-        },
-      }),
+      home.url({ query }),
       {},
       { preserveState: true, preserveScroll: true },
     );
@@ -387,7 +420,11 @@ export default function StoreHome({
 
   const isFiltered =
     Boolean(filters.search) ||
-    (Boolean(filters.category_id) && filters.category_id !== 'all');
+    (Boolean(filters.category_id) && filters.category_id !== 'all') ||
+    (Boolean(filters.brand_id) && filters.brand_id !== 'all') ||
+    Boolean(filters.min_price) ||
+    Boolean(filters.max_price) ||
+    (Boolean(filters.sort) && filters.sort !== 'relevance');
 
   return (
     <>
@@ -467,102 +504,15 @@ export default function StoreHome({
           </div>
         </section>
 
-        {/* Search & Category Filter Section */}
-        <section className="flex flex-col gap-4 rounded-xl border border-border bg-card p-4 shadow-xs">
-          {/* Search Bar Form */}
-          <form
-            onSubmit={handleSearchSubmit}
-            className="flex flex-col gap-2 sm:flex-row sm:items-center"
-          >
-            <div className="relative flex-1">
-              <Search className="absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder="Buscar artículos por descripción (ej. leche, arroz, fideos)..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pr-9 pl-10"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery('')}
-                  aria-label="Limpiar búsqueda"
-                  className="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  <X className="size-4" />
-                </button>
-              )}
-            </div>
-            <div className="flex gap-2">
-              <Button type="submit" className="gap-2">
-                <Search className="size-4" />
-                Buscar
-              </Button>
-              {isFiltered && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={resetFilters}
-                  className="gap-2"
-                >
-                  <FilterX className="size-4" />
-                  Limpiar filtros
-                </Button>
-              )}
-            </div>
-          </form>
-
-          {/* Categories Pill Navigation */}
-          {categories.length > 0 && (
-            <div className="flex flex-col gap-2 border-t border-border/60 pt-2">
-              <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                Categorías:
-              </span>
-              <div className="flex flex-wrap gap-1.5 overflow-x-auto pb-1">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={selectedCategoryId === 'all' ? 'default' : 'outline'}
-                  onClick={() => handleCategorySelect('all')}
-                  className="h-8 rounded-full text-xs font-medium"
-                >
-                  Todas las categorías
-                </Button>
-                {categories.map((category) => (
-                  <Button
-                    key={category.id}
-                    type="button"
-                    size="sm"
-                    variant={
-                      selectedCategoryId === String(category.id)
-                        ? 'default'
-                        : 'outline'
-                    }
-                    onClick={() => handleCategorySelect(String(category.id))}
-                    className="h-8 rounded-full text-xs font-medium"
-                  >
-                    {category.name}
-                  </Button>
-                ))}
-              </div>
-            </div>
-          )}
-        </section>
-
-        {/* Results Info & Count */}
-        <div className="flex items-center justify-between px-1 text-sm text-muted-foreground">
-          <span>
-            {articles.total === 1
-              ? '1 artículo disponible'
-              : `${articles.total} artículos disponibles`}
-          </span>
-          {isFiltered && (
-            <span className="rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-foreground">
-              Resultados filtrados
-            </span>
-          )}
-        </div>
+        {/* Search & Filters Section */}
+        <CatalogFilters
+          categories={categories}
+          brands={brands}
+          filters={filters}
+          totalArticles={articles.total}
+          onApplyFilters={handleApplyFilters}
+          onResetFilters={resetFilters}
+        />
 
         {/* Catalog Grid */}
         {articles.data.length > 0 ? (

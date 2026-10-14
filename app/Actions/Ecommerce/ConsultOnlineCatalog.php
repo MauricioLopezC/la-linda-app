@@ -4,15 +4,18 @@ namespace App\Actions\Ecommerce;
 
 use App\Actions\Pricing\ResolveArticlePrice;
 use App\Data\Ecommerce\OnlineCatalogArticleData;
+use App\Enums\Catalog\ArticleStatus;
 use App\Enums\Pricing\PriceListChannel;
 use App\Enums\Pricing\PriceListScope;
 use App\Enums\Pricing\PriceListValidityStatus;
 use App\Models\Catalog\Article;
+use App\Models\Catalog\Brand;
 use App\Models\Catalog\Category;
 use App\Models\Customers\Customer;
 use App\Models\Pricing\PriceList;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 class ConsultOnlineCatalog
@@ -22,7 +25,7 @@ class ConsultOnlineCatalog
     ) {}
 
     /**
-     * @param  array{search?: ?string, category_id?: ?int}  $filters
+     * @param  array{search?: ?string, category_id?: ?int, brand_id?: ?int, min_price?: float|int|string|null, max_price?: float|int|string|null, sort?: ?string}  $filters
      * @return LengthAwarePaginator<int, OnlineCatalogArticleData>
      */
     public function execute(
@@ -74,7 +77,7 @@ class ConsultOnlineCatalog
      *
      * @return array<int, int>
      */
-    private function resolveApplicablePriceListIds(?Customer $customer): array
+    public function resolveApplicablePriceListIds(?Customer $customer): array
     {
         $ids = [];
 
@@ -119,7 +122,74 @@ class ConsultOnlineCatalog
     }
 
     /**
-     * @param  array{search?: ?string, category_id?: ?int}  $filters
+     * Fetch active brands that have at least one article publishable online with an effective price.
+     *
+     * @param  array<int, int>  $applicableListIds
+     * @return Collection<int, Brand>
+     */
+    public function getAvailableBrands(array $applicableListIds): Collection
+    {
+        if (empty($applicableListIds)) {
+            return collect();
+        }
+
+        return Brand::query()
+            ->active()
+            ->whereHas('articles', function (Builder $q) use ($applicableListIds): void {
+                $q->where('status', ArticleStatus::Active)
+                    ->where('is_online_publishable', true)
+                    ->whereHas('priceListItems', function (Builder $pq) use ($applicableListIds): void {
+                        $pq->whereIn('price_list_id', $applicableListIds);
+                    })
+                    ->whereHas('category', function (Builder $cq): void {
+                        $cq->where('is_active', true);
+                    });
+            })
+            ->orderBy('name')
+            ->get();
+    }
+
+    /**
+     * Correlated scalar subquery computing the effective price of each article
+     * following the HU-056 cascade priority across applicable price lists.
+     *
+     * @param  array<int, int>  $orderedListIds
+     * @return \Closure(mixed): void
+     */
+    private function getEffectivePriceSubqueryCallback(array $orderedListIds): \Closure
+    {
+        return function (mixed $subquery) use ($orderedListIds): void {
+            $subquery->select('price_list_items.price')
+                ->from('price_list_items')
+                ->whereColumn('price_list_items.article_id', 'articles.id')
+                ->whereIn('price_list_items.price_list_id', $orderedListIds);
+
+            match (count($orderedListIds)) {
+                0, 1 => null,
+                2 => $subquery->orderByRaw(
+                    'CASE WHEN price_list_items.price_list_id = ? THEN 1 WHEN price_list_items.price_list_id = ? THEN 2 ELSE 3 END ASC',
+                    $orderedListIds
+                ),
+                3 => $subquery->orderByRaw(
+                    'CASE WHEN price_list_items.price_list_id = ? THEN 1 WHEN price_list_items.price_list_id = ? THEN 2 WHEN price_list_items.price_list_id = ? THEN 3 ELSE 4 END ASC',
+                    $orderedListIds
+                ),
+                4 => $subquery->orderByRaw(
+                    'CASE WHEN price_list_items.price_list_id = ? THEN 1 WHEN price_list_items.price_list_id = ? THEN 2 WHEN price_list_items.price_list_id = ? THEN 3 WHEN price_list_items.price_list_id = ? THEN 4 ELSE 5 END ASC',
+                    $orderedListIds
+                ),
+                default => $subquery->orderByRaw(
+                    'CASE WHEN price_list_items.price_list_id = ? THEN 1 WHEN price_list_items.price_list_id = ? THEN 2 WHEN price_list_items.price_list_id = ? THEN 3 ELSE 4 END ASC',
+                    array_slice($orderedListIds, 0, 3)
+                ),
+            };
+
+            $subquery->limit(1);
+        };
+    }
+
+    /**
+     * @param  array{search?: ?string, category_id?: ?int, brand_id?: ?int, min_price?: float|int|string|null, max_price?: float|int|string|null, sort?: ?string}  $filters
      * @param  array<int, int>  $applicableListIds
      * @return Builder<Article>
      */
@@ -136,19 +206,20 @@ class ConsultOnlineCatalog
             })
             ->with(['category', 'brand', 'unitOfMeasure']);
 
-        return $this->applyFilters($query, $filters)
-            ->orderBy('articles.description')
-            ->orderBy('articles.id');
+        $query = $this->applyFilters($query, $filters, $applicableListIds);
+
+        return $this->applySorting($query, $filters['sort'] ?? null, $applicableListIds);
     }
 
     private const NORMALIZED_DESCRIPTION_SQL = "REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(articles.description), 'á', 'a'), 'é', 'e'), 'í', 'i'), 'ó', 'o'), 'ú', 'u'), 'ü', 'u'), 'Á', 'a'), 'É', 'e'), 'Í', 'i'), 'Ó', 'o'), 'Ú', 'u'), 'Ü', 'u'), 'ñ', 'n'), 'Ñ', 'n')";
 
     /**
      * @param  Builder<Article>  $query
-     * @param  array{search?: ?string, category_id?: ?int}  $filters
+     * @param  array{search?: ?string, category_id?: ?int, brand_id?: ?int, min_price?: float|int|string|null, max_price?: float|int|string|null, sort?: ?string}  $filters
+     * @param  array<int, int>  $applicableListIds
      * @return Builder<Article>
      */
-    private function applyFilters(Builder $query, array $filters): Builder
+    private function applyFilters(Builder $query, array $filters, array $applicableListIds): Builder
     {
         if (! empty($filters['search'])) {
             $search = Str::of((string) $filters['search'])
@@ -173,6 +244,48 @@ class ConsultOnlineCatalog
             $query->whereIn('articles.category_id', $categoryIds);
         }
 
+        if (! empty($filters['brand_id'])) {
+            $query->where('articles.brand_id', (int) $filters['brand_id']);
+        }
+
+        if (isset($filters['min_price']) && $filters['min_price'] !== '') {
+            $minPrice = (float) $filters['min_price'];
+            $query->where($this->getEffectivePriceSubqueryCallback($applicableListIds), '>=', $minPrice);
+        }
+
+        if (isset($filters['max_price']) && $filters['max_price'] !== '') {
+            $maxPrice = (float) $filters['max_price'];
+            $query->where($this->getEffectivePriceSubqueryCallback($applicableListIds), '<=', $maxPrice);
+        }
+
         return $query;
+    }
+
+    /**
+     * @param  Builder<Article>  $query
+     * @param  array<int, int>  $applicableListIds
+     * @return Builder<Article>
+     */
+    private function applySorting(Builder $query, ?string $sort, array $applicableListIds): Builder
+    {
+        return match ($sort) {
+            'price_asc' => $query
+                ->orderBy($this->getEffectivePriceSubqueryCallback($applicableListIds), 'asc')
+                ->orderBy('articles.description')
+                ->orderBy('articles.id'),
+            'price_desc' => $query
+                ->orderBy($this->getEffectivePriceSubqueryCallback($applicableListIds), 'desc')
+                ->orderBy('articles.description')
+                ->orderBy('articles.id'),
+            'name_asc' => $query
+                ->orderBy('articles.description', 'asc')
+                ->orderBy('articles.id'),
+            'name_desc' => $query
+                ->orderBy('articles.description', 'desc')
+                ->orderBy('articles.id'),
+            default => $query
+                ->orderBy('articles.description')
+                ->orderBy('articles.id'),
+        };
     }
 }
