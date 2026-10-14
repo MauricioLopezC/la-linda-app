@@ -5,6 +5,7 @@ namespace Database\Factories\Sales;
 use App\Enums\Sales\SaleChannel;
 use App\Enums\Sales\SaleStatus;
 use App\Models\Customers\Customer;
+use App\Models\Ecommerce\WebOrder;
 use App\Models\Sales\CashSession;
 use App\Models\Sales\PointOfSale;
 use App\Models\Sales\Sale;
@@ -46,9 +47,11 @@ class SaleFactory extends Factory
                 ])->id;
             },
             'customer_id' => Customer::factory(),
+            'web_order_id' => null,
             'user_id' => User::factory(),
             'opened_at' => now(),
             'status' => SaleStatus::Open,
+            'shipping_amount' => '0.00',
             'total_amount' => '0.00',
         ];
     }
@@ -66,6 +69,9 @@ class SaleFactory extends Factory
         return $this->state(fn (): array => [
             'channel' => SaleChannel::Online,
             'cash_session_id' => null,
+            'web_order_id' => fn (array $attributes) => WebOrder::factory()->paid()
+                ->create(['customer_id' => $attributes['customer_id']])->id,
+            'user_id' => null,
         ]);
     }
 

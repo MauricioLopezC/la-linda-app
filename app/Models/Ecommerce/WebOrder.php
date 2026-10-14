@@ -6,6 +6,8 @@ use App\Enums\Ecommerce\DeliveryMethod;
 use App\Enums\Ecommerce\WebOrderStatus;
 use App\Models\Customers\Customer;
 use App\Models\Organization\Branch;
+use App\Models\Sales\Sale;
+use App\Models\User;
 use Database\Factories\Ecommerce\WebOrderFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Collection;
@@ -13,11 +15,13 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 
 /**
- * An order placed from the online store (HU-062), with its delivery (HU-049) and its Mercado
- * Pago payment (HU-050). It is not a sale: EPIC-15 turns a paid order into one.
+ * An order placed from the online store (HU-062), with its delivery (HU-049), its Mercado Pago
+ * payment (HU-050), its confirmed online sale (EPIC-15) and its warehouse preparation/delivery
+ * audit trail (EPIC-17).
  *
  * @property int $id
  * @property int $number
@@ -34,12 +38,19 @@ use Illuminate\Support\Carbon;
  * @property string|null $mp_payment_id
  * @property numeric-string|null $paid_amount
  * @property Carbon|null $paid_at
+ * @property Carbon|null $preparation_started_at
+ * @property int|null $prepared_by
+ * @property Carbon|null $delivered_at
+ * @property int|null $delivered_by
  * @property string|null $notes
  * @property Carbon $placed_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property Customer $customer
  * @property Branch|null $pickupBranch
+ * @property User|null $preparedBy
+ * @property User|null $deliveredBy
+ * @property Sale|null $sale
  * @property Collection<int, WebOrderItem> $items
  */
 #[Fillable([
@@ -57,6 +68,10 @@ use Illuminate\Support\Carbon;
     'mp_payment_id',
     'paid_amount',
     'paid_at',
+    'preparation_started_at',
+    'prepared_by',
+    'delivered_at',
+    'delivered_by',
     'notes',
     'placed_at',
 ])]
@@ -84,6 +99,8 @@ class WebOrder extends Model
             'total_amount' => 'decimal:2',
             'paid_amount' => 'decimal:2',
             'paid_at' => 'datetime',
+            'preparation_started_at' => 'datetime',
+            'delivered_at' => 'datetime',
             'placed_at' => 'datetime',
         ];
     }
@@ -100,6 +117,24 @@ class WebOrder extends Model
         return $this->belongsTo(Branch::class, 'pickup_branch_id');
     }
 
+    /** @return BelongsTo<User, $this> */
+    public function preparedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'prepared_by');
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function deliveredBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'delivered_by');
+    }
+
+    /** @return HasOne<Sale, $this> */
+    public function sale(): HasOne
+    {
+        return $this->hasOne(Sale::class);
+    }
+
     /** @return HasMany<WebOrderItem, $this> */
     public function items(): HasMany
     {
@@ -112,5 +147,13 @@ class WebOrder extends Model
     public function formattedNumber(): string
     {
         return sprintf('%08d', $this->number);
+    }
+
+    /**
+     * Status label adjusted for delivery method ("Despachado" when shipping and delivered).
+     */
+    public function statusLabel(): string
+    {
+        return $this->status->label($this->delivery_method);
     }
 }

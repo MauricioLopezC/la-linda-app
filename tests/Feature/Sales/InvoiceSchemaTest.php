@@ -6,6 +6,7 @@ use App\Models\Inventory\StockMovement;
 use App\Models\Sales\Invoice;
 use App\Models\Sales\InvoiceItem;
 use App\Models\Sales\Sale;
+use App\Models\User;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -100,4 +101,74 @@ test('a sale originates at most one stock movement', function () {
         ->and($movement->sale->id)->toBe($sale->id)
         ->and(inSavepoint(fn () => StockMovement::factory()->create(['sale_id' => $sale->id])))
         ->toThrow(QueryException::class);
+});
+
+test('an online invoice allows null cash session and user and a shipping item without article', function () {
+    $onlineSale = Sale::factory()->online()->confirmed()->create(['total_amount' => '3710.00']);
+
+    $invoice = Invoice::factory()->create([
+        'sale_id' => $onlineSale->id,
+        'cash_session_id' => null,
+        'user_id' => null,
+        'net_amount' => '3066.12',
+        'vat_amount' => '643.88',
+        'total_amount' => '3710.00',
+    ]);
+
+    $shippingItem = InvoiceItem::factory()->create([
+        'invoice_id' => $invoice->id,
+        'article_id' => null,
+        'description' => 'Envío a domicilio',
+        'quantity' => '1.000',
+        'unit_price' => '2500.00',
+        'vat_rate' => '21.00',
+        'net_amount' => '2066.12',
+        'vat_amount' => '433.88',
+        'line_total' => '2500.00',
+    ]);
+
+    expect($invoice->cash_session_id)->toBeNull()
+        ->and($invoice->user_id)->toBeNull()
+        ->and($shippingItem->article_id)->toBeNull()
+        ->and($shippingItem->description)->toBe('Envío a domicilio');
+
+    $migration = require database_path('migrations/2026_10_12_100004_revise_invoices_for_online_sales.php');
+
+    expect(fn () => $migration->down())->toThrow(
+        RuntimeException::class,
+        'existen facturas sin turno/usuario o renglones sin artículo'
+    );
+});
+
+test('an invoice has both cash session and user or neither of them', function () {
+    $counterSale = Sale::factory()->confirmed()->create();
+    $onlineSale = Sale::factory()->online()->confirmed()->create();
+
+    expect(inSavepoint(fn () => Invoice::factory()->create(['sale_id' => $counterSale->id, 'user_id' => null])))
+        ->toThrow(QueryException::class)
+        ->and(inSavepoint(fn () => Invoice::factory()->create(['sale_id' => $onlineSale->id, 'user_id' => User::factory()])))
+        ->toThrow(QueryException::class);
+});
+
+test('an invoice holds at most one line without article', function () {
+    $onlineSale = Sale::factory()->online()->confirmed()->create();
+    $invoice = Invoice::factory()->create(['sale_id' => $onlineSale->id, 'cash_session_id' => null, 'user_id' => null]);
+    $shippingLine = [
+        'invoice_id' => $invoice->id,
+        'article_id' => null,
+        'description' => 'Envío a domicilio',
+        'quantity' => '1.000',
+        'unit_price' => '2500.00',
+        'vat_rate' => '21.00',
+        'net_amount' => '2066.12',
+        'vat_amount' => '433.88',
+        'line_total' => '2500.00',
+    ];
+
+    InvoiceItem::factory()->create($shippingLine);
+    InvoiceItem::factory()->create(['invoice_id' => $invoice->id]);
+
+    expect(inSavepoint(fn () => InvoiceItem::factory()->create($shippingLine)))
+        ->toThrow(QueryException::class)
+        ->and($invoice->items()->count())->toBe(2);
 });

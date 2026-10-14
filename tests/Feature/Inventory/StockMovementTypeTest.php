@@ -4,13 +4,23 @@ use App\Models\Inventory\StockMovement;
 use App\Models\Inventory\StockMovementType;
 use App\Models\User;
 
-test('migrations provision the purchase entry reversal movement type', function () {
+test('migrations provision the purchase entry reversal and web order delivery movement types', function () {
     $this->assertDatabaseHas('stock_movement_types', [
         'code' => StockMovementType::CODE_PURCHASE_ENTRY_REVERSAL,
         'sign' => -1,
         'is_system' => true,
         'is_active' => true,
     ]);
+
+    $webOrderDelivery = StockMovementType::query()
+        ->where('code', StockMovementType::CODE_WEB_ORDER_DELIVERY)
+        ->firstOrFail();
+
+    expect($webOrderDelivery->name)->toBe('Salida por Entrega de Pedido Web')
+        ->and($webOrderDelivery->sign)->toBe(-1)
+        ->and($webOrderDelivery->is_system)->toBeTrue()
+        ->and($webOrderDelivery->is_active)->toBeTrue()
+        ->and($webOrderDelivery->isAutomatic())->toBeTrue();
 });
 
 test('guests are redirected to login when accessing stock parameters', function () {

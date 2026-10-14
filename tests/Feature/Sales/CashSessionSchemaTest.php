@@ -69,13 +69,26 @@ test('a denomination is counted once per session and moment', function () {
     expect($session->openingCounts()->sole()->denomination()->label())->toBe('$1.000');
 });
 
-test('a counter sale cannot exist without a cash session, an online sale can', function () {
+test('a counter sale cannot exist without a cash session and an online sale requires a unique web order', function () {
     expect(inSavepoint(fn () => Sale::factory()->create(['cash_session_id' => null])))
         ->toThrow(QueryException::class);
 
-    $online = Sale::factory()->online()->create();
+    $online = Sale::factory()->online()->create(['shipping_amount' => '2500.00']);
 
-    expect($online->cash_session_id)->toBeNull();
+    expect($online->cash_session_id)->toBeNull()
+        ->and($online->webOrder)->not->toBeNull()
+        ->and($online->webOrder->customer_id)->toBe($online->customer_id)
+        ->and($online->webOrder->sale->id)->toBe($online->id)
+        ->and($online->shipping_amount)->toBe('2500.00');
+
+    expect(inSavepoint(fn () => Sale::factory()->online()->create(['web_order_id' => null])))
+        ->toThrow(QueryException::class)
+        ->and(inSavepoint(fn () => Sale::factory()->create(['web_order_id' => $online->web_order_id])))
+        ->toThrow(QueryException::class)
+        ->and(inSavepoint(fn () => Sale::factory()->online()->create(['web_order_id' => $online->web_order_id])))
+        ->toThrow(QueryException::class)
+        ->and(inSavepoint(fn () => Sale::factory()->online()->create(['shipping_amount' => '-1.00'])))
+        ->toThrow(QueryException::class);
 });
 
 test('a sale is confirmed exactly when it has a confirmation time', function () {
@@ -158,4 +171,27 @@ test('a payment method with cash movements is in use', function () {
     CashMovement::factory()->create(['payment_method_id' => $paymentMethod->id]);
 
     expect($paymentMethod->isInUse())->toBeTrue();
+});
+
+test('the online sales migration refuses to run while online sales without a web order exist', function () {
+    $sale = Sale::factory()->create();
+    $migration = require database_path('migrations/2026_10_12_100003_revise_sales_for_online_orders.php');
+    $migration->down();
+
+    DB::table('sales')->where('id', $sale->id)->update(['channel' => 'online', 'cash_session_id' => null]);
+
+    expect(fn () => $migration->up())->toThrow(RuntimeException::class, 'existen ventas online sin pedido web');
+
+    $this->assertDatabaseHas('sales', ['id' => $sale->id, 'channel' => 'online']);
+
+    DB::table('sales')->where('id', $sale->id)->update(['channel' => 'mostrador', 'cash_session_id' => $sale->cash_session_id]);
+    $migration->up();
+
+    expect(Sale::query()->find($sale->id)?->web_order_id)->toBeNull();
+});
+
+test('sales are indexed by status and confirmation time for the management dashboard', function () {
+    $indexedColumns = collect(Schema::getIndexes('sales'))->pluck('columns')->all();
+
+    expect($indexedColumns)->toContain(['status', 'confirmed_at']);
 });

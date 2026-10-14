@@ -353,12 +353,17 @@ Ninguna tabla nueva en el Sprint 5 (se reutiliza `users.role` con el enum `UserR
 | web_order_id | FK → web_orders | nullable, `UNIQUE`; pedido web que originó la venta online |
 | shipping_amount | decimal(12,2) | default `0`, `CHECK (shipping_amount >= 0)` |
 
-*Restricción en `sales`:*
+*Restricción e índice en `sales`:*
 - `CHECK ((channel = 'online' AND web_order_id IS NOT NULL) OR (channel = 'mostrador' AND web_order_id IS NULL))`
+- `INDEX (status, confirmed_at)` para los totales por período del Tablero Gerencial (`EPIC-18`, `EPIC-20`).
 
 #### `invoices` / `invoice_items` — EPIC-15
 - **`invoices`:** `cash_session_id` y `user_id` pasan a `nullable` (obligatorios en mostrador; nulos cuando la factura la emite automáticamente el pago de Mercado Pago en una venta online).
-- **`invoice_items`:** `article_id` pasa a `nullable` para admitir el renglón de concepto `"Envío a domicilio"` cuando `shipping_cost > 0`.
+- **`invoices`:** `CHECK ((cash_session_id IS NULL AND user_id IS NULL) OR (cash_session_id IS NOT NULL AND user_id IS NOT NULL))`: una factura de mostrador sigue exigiendo turno y usuario.
+- **`invoice_items`:** `article_id` pasa a `nullable` para admitir el renglón de concepto `"Envío a domicilio"` cuando `shipping_cost > 0`, con `UNIQUE INDEX invoice_items_one_concept_line (invoice_id) WHERE article_id IS NULL` (a lo sumo un renglón sin artículo por factura).
+
+#### `points_of_sale` — EPIC-15
+- Sin cambios de estructura. Se crea el punto de venta **número 3** en el depósito online (`is_online_channel = true`), donde se registran las ventas online y se numeran sus facturas. Lo crea la migración `ensure_online_point_of_sale_exists` (producción corre `migrate` pero no `db:seed`) y `PointOfSaleSeeder` en bases nuevas.
 
 #### `stock_movement_types` — EPIC-17
 - Se siembra/inserta en la migración del D1 el tipo de sistema `code = 'web_order_delivery'`, `name = 'Salida por Entrega de Pedido Web'`, `sign = -1`, `is_system = true`, `is_active = true`, incluido en `StockMovementType::AUTOMATIC_CODES`.

@@ -52,7 +52,7 @@ class SaleInvoiceData extends Data
             net_amount: $invoice->net_amount,
             vat_amount: $invoice->vat_amount,
             total_amount: $invoice->total_amount,
-            user_name: $invoice->user->name,
+            user_name: $invoice->user?->name,
         );
     }
 }

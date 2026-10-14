@@ -21,7 +21,7 @@ use Illuminate\Support\Carbon;
  *
  * @property int $id
  * @property int $sale_id
- * @property int $cash_session_id
+ * @property int|null $cash_session_id
  * @property int $point_of_sale_id
  * @property int $point_of_sale_number
  * @property InvoiceType $type
@@ -36,13 +36,13 @@ use Illuminate\Support\Carbon;
  * @property string $net_amount
  * @property string $vat_amount
  * @property string $total_amount
- * @property int $user_id
+ * @property int|null $user_id
  * @property Carbon|null $created_at
  * @property Sale $sale
- * @property CashSession $cashSession
+ * @property CashSession|null $cashSession
  * @property PointOfSale $pointOfSale
  * @property Customer $customer
- * @property User $user
+ * @property User|null $user
  * @property Collection<int, InvoiceItem> $items
  */
 #[Fillable([

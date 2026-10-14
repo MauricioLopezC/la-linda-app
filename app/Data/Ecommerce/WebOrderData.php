@@ -53,7 +53,7 @@ class WebOrderData extends Data
             formatted_number: $order->formattedNumber(),
             placed_at_formatted: $order->placed_at->format('d/m/Y H:i'),
             status: $order->status->value,
-            status_label: $order->status->label(),
+            status_label: $order->statusLabel(),
             delivery_method: $order->delivery_method->value,
             delivery_method_label: $order->delivery_method->label(),
             pickup_branch_name: $order->pickupBranch?->name,
