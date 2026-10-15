@@ -2,6 +2,7 @@
 
 use App\Actions\Ecommerce\DeliverWebOrder;
 use App\Enums\Ecommerce\WebOrderStatus;
+use App\Enums\Sales\SaleStatus;
 use App\Enums\Security\UserRole;
 use App\Models\Catalog\Article;
 use App\Models\Ecommerce\WebOrder;
@@ -42,6 +43,7 @@ beforeEach(function () {
 
 test('transitions an in_preparation order to delivered recording timestamp and operator', function () {
     $order = WebOrder::factory()->inPreparation()->create();
+    confirmedSaleForWarehouseOrder($order, $this->warehouse);
 
     $updated = $this->action->execute($order, $this->operator);
 
@@ -82,6 +84,7 @@ test('creates stock movement of type web_order_delivery and discounts online war
     ]);
 
     $order = WebOrder::factory()->inPreparation()->create();
+    confirmedSaleForWarehouseOrder($order, $this->warehouse);
     WebOrderItem::factory()->create([
         'web_order_id' => $order->id,
         'article_id' => $article->id,
@@ -135,7 +138,7 @@ test('links stock movement to associated sale', function () {
         'warehouse_id' => $this->warehouse->id,
     ]);
 
-    $sale = Sale::factory()->online()->create([
+    $sale = Sale::factory()->online()->confirmed()->create([
         'web_order_id' => $order->id,
         'customer_id' => $order->customer_id,
         'point_of_sale_id' => $pos->id,
@@ -171,7 +174,7 @@ test('is idempotent and does not duplicate stock deduction if already discounted
         'warehouse_id' => $this->warehouse->id,
     ]);
 
-    $sale = Sale::factory()->online()->create([
+    $sale = Sale::factory()->online()->confirmed()->create([
         'web_order_id' => $order->id,
         'customer_id' => $order->customer_id,
         'point_of_sale_id' => $pos->id,
@@ -209,6 +212,7 @@ test('applies EPIC-06 conflict rule without blocking delivery when stock is insu
     ]);
 
     $order = WebOrder::factory()->inPreparation()->create();
+    confirmedSaleForWarehouseOrder($order, $this->warehouse);
     WebOrderItem::factory()->create([
         'web_order_id' => $order->id,
         'article_id' => $article->id,
@@ -239,4 +243,94 @@ test('applies EPIC-06 conflict rule without blocking delivery when stock is insu
 
     // Balance left negative at -4.000
     expect((float) $balance->quantity)->toBe(-4.0);
+});
+
+function confirmedSaleForWarehouseOrder(WebOrder $order, Warehouse $warehouse): Sale
+{
+    return Sale::factory()->online()->confirmed()->create([
+        'web_order_id' => $order->id,
+        'customer_id' => $order->customer_id,
+        'point_of_sale_id' => PointOfSale::factory()->create(['warehouse_id' => $warehouse->id])->id,
+    ]);
+}
+
+test('rejects delivery without a confirmed online sale before writing stock or audit', function (bool $hasSale) {
+    $order = WebOrder::factory()->inPreparation()->create();
+    $article = Article::factory()->create();
+    WebOrderItem::factory()->create(['web_order_id' => $order->id, 'article_id' => $article->id, 'quantity' => '5.000']);
+    $balance = StockBalance::factory()->create(['article_id' => $article->id, 'warehouse_id' => $this->warehouse->id, 'quantity' => '10.000']);
+    if ($hasSale) {
+        $sale = confirmedSaleForWarehouseOrder($order, $this->warehouse);
+        $sale->update(['status' => SaleStatus::Open, 'confirmed_at' => null]);
+    }
+    $snapshot = $order->fresh()->getAttributes();
+    $movements = StockMovement::count();
+
+    expect(fn () => $this->action->execute($order, $this->operator))->toThrow(ValidationException::class);
+    expect($order->fresh()->getAttributes())->toEqual($snapshot)
+        ->and($balance->fresh()->quantity)->toBe('10.000')
+        ->and(StockMovement::count())->toBe($movements);
+})->with(['missing sale' => false, 'unconfirmed sale' => true]);
+
+test('uses the current online warehouse when the sale warehouse is no longer eligible', function (string $changedAttribute) {
+    $order = WebOrder::factory()->inPreparation()->create();
+    $sale = confirmedSaleForWarehouseOrder($order, $this->warehouse);
+    $article = Article::factory()->create();
+    WebOrderItem::factory()->create(['web_order_id' => $order->id, 'article_id' => $article->id, 'quantity' => '3.000']);
+    $originalBalance = StockBalance::factory()->create(['article_id' => $article->id, 'warehouse_id' => $this->warehouse->id, 'quantity' => '10.000']);
+    $this->warehouse->update([$changedAttribute => false]);
+    $replacement = Warehouse::factory()->online()->create(['is_active' => true]);
+    $replacementBalance = StockBalance::factory()->create(['article_id' => $article->id, 'warehouse_id' => $replacement->id, 'quantity' => '20.000']);
+
+    $this->action->execute($order, $this->operator);
+
+    expect($sale->fresh()->stockMovement->warehouse_id)->toBe($replacement->id)
+        ->and($originalBalance->fresh()->quantity)->toBe('10.000')
+        ->and($replacementBalance->fresh()->quantity)->toBe('17.000');
+})->with(['is_active', 'is_online_channel']);
+
+test('rejects delivery when there is no eligible warehouse without partial writes', function () {
+    $order = WebOrder::factory()->inPreparation()->create();
+    confirmedSaleForWarehouseOrder($order, $this->warehouse);
+    $this->warehouse->update(['is_active' => false]);
+    $snapshot = $order->fresh()->getAttributes();
+    $movements = StockMovement::count();
+
+    try {
+        $this->action->execute($order, $this->operator);
+        test()->fail('Expected warehouse validation failure.');
+    } catch (ValidationException $exception) {
+        expect($exception->errors())->toHaveKey('warehouse');
+    }
+    expect($order->fresh()->getAttributes())->toEqual($snapshot)
+        ->and(StockMovement::count())->toBe($movements);
+});
+
+test('rejects an unrelated movement already associated with the sale', function () {
+    $order = WebOrder::factory()->inPreparation()->create();
+    $sale = confirmedSaleForWarehouseOrder($order, $this->warehouse);
+    $otherType = StockMovementType::factory()->create(['code' => 'sale_exit']);
+    StockMovement::factory()->create(['sale_id' => $sale->id, 'warehouse_id' => $this->warehouse->id, 'stock_movement_type_id' => $otherType->id]);
+    $snapshot = $order->fresh()->getAttributes();
+    $movements = StockMovement::count();
+
+    expect(fn () => $this->action->execute($order, $this->operator))->toThrow(ValidationException::class);
+    expect($order->fresh()->getAttributes())->toEqual($snapshot)
+        ->and(StockMovement::count())->toBe($movements);
+});
+
+test('creates a missing balance and rejects a second delivery without another deduction', function () {
+    $order = WebOrder::factory()->inPreparation()->create();
+    $sale = confirmedSaleForWarehouseOrder($order, $this->warehouse);
+    $article = Article::factory()->create();
+    WebOrderItem::factory()->create(['web_order_id' => $order->id, 'article_id' => $article->id, 'quantity' => '1.500']);
+
+    $this->action->execute($order, $this->operator);
+    $balance = StockBalance::where('warehouse_id', $this->warehouse->id)->where('article_id', $article->id)->sole();
+    $snapshot = $order->fresh()->getAttributes();
+    expect($balance->quantity)->toBe('-1.500');
+    expect(fn () => $this->action->execute($order, $this->operator))->toThrow(ValidationException::class);
+    expect($balance->fresh()->quantity)->toBe('-1.500')
+        ->and(StockMovement::where('sale_id', $sale->id)->count())->toBe(1)
+        ->and($order->fresh()->getAttributes())->toEqual($snapshot);
 });

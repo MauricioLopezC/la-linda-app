@@ -1,5 +1,7 @@
 <?php
 
+use App\Actions\Ecommerce\DeliverWebOrder;
+use App\Actions\Ecommerce\StartWebOrderPreparation;
 use App\Enums\Catalog\ArticleStatus;
 use App\Enums\Ecommerce\WebOrderStatus;
 use App\Enums\Pricing\PriceListChannel;
@@ -19,6 +21,7 @@ use App\Models\Sales\Invoice;
 use App\Models\Sales\PointOfSale;
 use App\Models\Sales\Sale;
 use App\Models\Sales\SaleItem;
+use App\Models\User;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -164,6 +167,50 @@ test('stores paid_at in the app timezone when mercado pago reports date_approved
     ])->assertOk();
 
     expect($order->fresh()->getRawOriginal('paid_at'))->toBe('2026-10-09 02:11:56');
+});
+
+test('acknowledges repeated webhooks throughout preparation and delivery without changing stock or documents', function () {
+    $order = pendingWebhookOrderWithShipping($this->onlineWarehouse);
+    $order->items->first()->update(['quantity' => '5.000', 'unit_price' => '48.40']);
+    $balance = StockBalance::query()->where('article_id', $order->items->first()->article_id)->sole();
+    $balance->update(['quantity' => '10.000']);
+    $operator = User::factory()->create();
+    Http::fake([
+        'https://api.mercadopago.test/v1/payments/998877' => Http::response([
+            'id' => 998877,
+            'status' => 'approved',
+            'external_reference' => (string) $order->id,
+            'transaction_amount' => 363.0,
+            'date_approved' => '2026-10-08T18:00:00.000Z',
+        ]),
+    ]);
+    $payload = ['type' => 'payment', 'data' => ['id' => '998877']];
+    $this->postJson(route('webhooks.mercadopago'), $payload)->assertOk();
+    $sale = $order->fresh()->sale;
+    $invoiceId = $sale->invoice->id;
+    expect($balance->fresh()->quantity)->toBe('10.000');
+
+    app(StartWebOrderPreparation::class)->execute($order, $operator);
+    $preparing = $order->fresh()->getAttributes();
+    $this->postJson(route('webhooks.mercadopago'), $payload)
+        ->assertOk()->assertJson(['status' => 'ok', 'order_status' => 'en_preparacion']);
+    expect($order->fresh()->getAttributes())->toEqual($preparing)
+        ->and($balance->fresh()->quantity)->toBe('10.000')
+        ->and(StockMovement::where('sale_id', $sale->id)->count())->toBe(0);
+
+    app(DeliverWebOrder::class)->execute($order, $operator);
+    $delivered = $order->fresh()->getAttributes();
+    $movementId = $sale->fresh()->stockMovement->id;
+    $this->postJson(route('webhooks.mercadopago'), $payload)
+        ->assertOk()->assertJson(['status' => 'ok', 'order_status' => 'entregado']);
+    expect($order->fresh()->getAttributes())->toEqual($delivered)
+        ->and($balance->fresh()->quantity)->toBe('5.000')
+        ->and($order->fresh()->sale->id)->toBe($sale->id)
+        ->and($sale->fresh()->invoice->id)->toBe($invoiceId)
+        ->and($sale->fresh()->stockMovement->id)->toBe($movementId)
+        ->and(StockMovement::where('sale_id', $sale->id)->count())->toBe(1)
+        ->and(Sale::where('web_order_id', $order->id)->count())->toBe(1)
+        ->and(Invoice::where('sale_id', $sale->id)->count())->toBe(1);
 });
 
 test('does not mark order as paid when payment status is rejected or pending', function () {

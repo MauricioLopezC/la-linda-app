@@ -3,13 +3,14 @@
 namespace App\Actions\Ecommerce;
 
 use App\Enums\Ecommerce\WebOrderStatus;
+use App\Enums\Sales\SaleChannel;
+use App\Enums\Sales\SaleStatus;
 use App\Models\Ecommerce\WebOrder;
 use App\Models\Ecommerce\WebOrderItem;
 use App\Models\Inventory\StockBalance;
 use App\Models\Inventory\StockMovement;
 use App\Models\Inventory\StockMovementItem;
 use App\Models\Inventory\StockMovementType;
-use App\Models\Inventory\Warehouse;
 use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -17,6 +18,10 @@ use Illuminate\Validation\ValidationException;
 
 class DeliverWebOrder
 {
+    public function __construct(
+        private readonly ResolveWebOrderWarehouse $resolveWarehouse,
+    ) {}
+
     /**
      * Transition a web order from 'en_preparacion' to 'entregado' and record the
      * stock deduction movement in the online warehouse.
@@ -35,24 +40,30 @@ class DeliverWebOrder
                 ]);
             }
 
-            $lockedOrder->loadMissing(['sale.pointOfSale.warehouse', 'items.article']);
+            $lockedOrder->loadMissing(['sale.pointOfSale.warehouse', 'sale.stockMovement.type', 'sale.stockMovement.warehouse', 'items.article']);
 
-            $warehouse = null;
-            $saleWarehouse = $lockedOrder->sale?->pointOfSale?->warehouse;
-            if ($saleWarehouse !== null && $saleWarehouse->is_active && $saleWarehouse->is_online_channel) {
-                $warehouse = $saleWarehouse;
-            } else {
-                /** @var Warehouse $warehouse */
-                $warehouse = Warehouse::query()
-                    ->where('is_online_channel', true)
-                    ->where('is_active', true)
-                    ->firstOrFail();
+            $sale = $lockedOrder->sale;
+            if ($sale === null || $sale->channel !== SaleChannel::Online || $sale->status !== SaleStatus::Confirmed) {
+                throw ValidationException::withMessages([
+                    'sale' => 'Debe completarse la venta online confirmada del pedido antes de entregar.',
+                ]);
             }
 
-            $alreadyDiscounted = $lockedOrder->sale !== null
-                && StockMovement::query()->where('sale_id', $lockedOrder->sale->id)->exists();
+            $existingMovement = $sale->stockMovement;
+            if ($existingMovement !== null && $existingMovement->type->code !== StockMovementType::CODE_WEB_ORDER_DELIVERY) {
+                throw ValidationException::withMessages([
+                    'sale' => 'La venta tiene asociado un movimiento que no corresponde a una entrega de pedido web.',
+                ]);
+            }
 
-            if (! $alreadyDiscounted && $lockedOrder->items->isNotEmpty()) {
+            $warehouse = $this->resolveWarehouse->execute($lockedOrder);
+            if ($warehouse === null) {
+                throw ValidationException::withMessages([
+                    'warehouse' => 'No se encontró un depósito activo asignado al canal online para entregar el pedido.',
+                ]);
+            }
+
+            if ($existingMovement === null && $lockedOrder->items->isNotEmpty()) {
                 /** @var StockMovementType $movementType */
                 $movementType = StockMovementType::query()
                     ->where('code', StockMovementType::CODE_WEB_ORDER_DELIVERY)
@@ -62,7 +73,7 @@ class DeliverWebOrder
                 $movement = StockMovement::create([
                     'stock_movement_type_id' => $movementType->id,
                     'warehouse_id' => $warehouse->id,
-                    'sale_id' => $lockedOrder->sale?->id,
+                    'sale_id' => $sale->id,
                     'supplier_voucher_id' => null,
                     'reversal_of_movement_id' => null,
                     'notes' => "Salida por entrega de pedido web #{$lockedOrder->formattedNumber()}",
@@ -108,15 +119,7 @@ class DeliverWebOrder
                         'system_quantity' => sprintf('%.3f', $systemQuantity),
                     ]);
 
-                    StockBalance::updateOrCreate(
-                        [
-                            'article_id' => (int) $articleId,
-                            'warehouse_id' => $warehouse->id,
-                        ],
-                        [
-                            'quantity' => sprintf('%.3f', $newQuantity),
-                        ]
-                    );
+                    $balance->update(['quantity' => sprintf('%.3f', $newQuantity)]);
                 }
             }
 

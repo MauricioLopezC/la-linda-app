@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Ecommerce;
 
 use App\Actions\Ecommerce\DeliverWebOrder;
+use App\Actions\Ecommerce\ResolveWebOrderWarehouse;
 use App\Actions\Ecommerce\StartWebOrderPreparation;
 use App\Data\Ecommerce\WarehouseWebOrderDetailData;
 use App\Data\Ecommerce\WarehouseWebOrderListData;
@@ -65,7 +66,8 @@ class WarehouseOrderController extends Controller
 
             $query->where(function (Builder $q) use ($search, $lowerSearch, $numberSearch) {
                 if ($numberSearch !== '' && is_numeric($numberSearch)) {
-                    $q->where('number', (int) $numberSearch);
+                    $q->where('number', (int) $numberSearch)
+                        ->orWhereHas('sale', fn (Builder $saleQuery) => $saleQuery->whereKey((int) $numberSearch));
                 }
 
                 $q->orWhereHas('customer', function (Builder $cq) use ($lowerSearch, $search) {
@@ -104,7 +106,7 @@ class WarehouseOrderController extends Controller
     /**
      * Display the warehouse picking sheet and order details.
      */
-    public function show(WebOrder $webOrder): Response
+    public function show(WebOrder $webOrder, ResolveWebOrderWarehouse $resolveWarehouse): Response
     {
         $webOrder->load([
             'customer',
@@ -112,11 +114,13 @@ class WarehouseOrderController extends Controller
             'preparedBy',
             'deliveredBy',
             'sale.pointOfSale.warehouse',
+            'sale.stockMovement.type',
+            'sale.stockMovement.warehouse',
             'items.article.unitOfMeasure',
         ]);
 
         return Inertia::render('ecommerce/warehouse-orders/show', [
-            'order' => WarehouseWebOrderDetailData::fromModel($webOrder),
+            'order' => WarehouseWebOrderDetailData::fromModel($webOrder, $resolveWarehouse->execute($webOrder)),
         ]);
     }
 

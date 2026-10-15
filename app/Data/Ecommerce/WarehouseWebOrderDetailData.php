@@ -5,6 +5,7 @@ namespace App\Data\Ecommerce;
 use App\Enums\Ecommerce\WebOrderStatus;
 use App\Models\Ecommerce\WebOrder;
 use App\Models\Ecommerce\WebOrderItem;
+use App\Models\Inventory\StockMovementType;
 use App\Models\Inventory\Warehouse;
 use Spatie\LaravelData\Data;
 
@@ -51,25 +52,26 @@ class WarehouseWebOrderDetailData extends Data
         public ?string $delivered_at_formatted,
         public ?string $delivered_by_name,
         public ?int $sale_id,
+        public ?int $warehouse_id,
         public ?string $warehouse_name,
+        public ?WarehouseWebOrderMovementData $stock_movement,
         public bool $can_start_preparation,
         public bool $can_deliver,
         public array $items,
     ) {}
 
     /**
-     * Expects customer, pickupBranch, preparedBy, deliveredBy, sale, and items.article.unitOfMeasure loaded.
+     * Expects customer, pickupBranch, preparedBy, deliveredBy, sale.stockMovement.type,
+     * sale.stockMovement.warehouse, and items.article.unitOfMeasure loaded.
      */
-    public static function fromModel(WebOrder $order, ?string $warehouseName = null): self
+    public static function fromModel(WebOrder $order, ?Warehouse $warehouse): self
     {
         $customerDocument = null;
         if ($order->customer->id_number !== null && $order->customer->id_number !== '') {
             $customerDocument = "{$order->customer->id_type->label()} {$order->customer->id_number}";
         }
 
-        $resolvedWarehouseName = $warehouseName
-            ?? $order->sale?->pointOfSale?->warehouse->name
-            ?? Warehouse::query()->where('is_online_channel', true)->where('is_active', true)->value('name');
+        $movement = $order->sale?->stockMovement;
 
         return new self(
             id: $order->id,
@@ -106,7 +108,11 @@ class WarehouseWebOrderDetailData extends Data
             delivered_at_formatted: $order->delivered_at?->format('d/m/Y H:i'),
             delivered_by_name: $order->deliveredBy?->name,
             sale_id: $order->sale?->id,
-            warehouse_name: $resolvedWarehouseName,
+            warehouse_id: $warehouse?->id,
+            warehouse_name: $warehouse?->name,
+            stock_movement: $movement !== null && $movement->type->code === StockMovementType::CODE_WEB_ORDER_DELIVERY
+                ? WarehouseWebOrderMovementData::fromModel($movement)
+                : null,
             can_start_preparation: $order->status === WebOrderStatus::Paid,
             can_deliver: $order->status === WebOrderStatus::InPreparation,
             items: $order->items

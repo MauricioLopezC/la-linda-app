@@ -14,6 +14,7 @@ import {
   Warehouse,
 } from 'lucide-react';
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -48,12 +49,9 @@ type Props = {
 };
 
 const statusBadgeClasses: Record<string, string> = {
-  pagado:
-    'border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300',
-  en_preparacion:
-    'border-sky-300 bg-sky-50 text-sky-800 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-300',
-  entregado:
-    'border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300',
+  pagado: 'border-warning-fg/25 bg-warning-bg text-warning-fg',
+  en_preparacion: 'border-info-fg/25 bg-info-bg text-info-fg',
+  entregado: 'border-success-fg/25 bg-success-bg text-success-fg',
 };
 
 export default function WarehouseOrderShow({ order }: Props) {
@@ -91,6 +89,13 @@ export default function WarehouseOrderShow({ order }: Props) {
       {},
       {
         preserveScroll: true,
+        onError: (errors) =>
+          toast.error(
+            errors.sale ??
+              errors.warehouse ??
+              errors.status ??
+              'No se pudo confirmar la salida del pedido.',
+          ),
         onFinish: () => {
           setIsSubmitting(false);
           setIsDeliverDialogOpen(false);
@@ -107,9 +112,24 @@ export default function WarehouseOrderShow({ order }: Props) {
     <>
       <Head
         title={`Hoja de Preparación — Pedido #${order.formatted_number} | Depósito`}
-      />
+      >
+        <style>{`
+          @media print {
+            body:has([data-warehouse-order-sheet]) [data-slot='sidebar'],
+            body:has([data-warehouse-order-sheet]) [data-slot='sidebar-inset'] > header {
+              display: none !important;
+            }
+            body:has([data-warehouse-order-sheet]) [data-slot='sidebar-inset'] {
+              margin: 0;
+            }
+          }
+        `}</style>
+      </Head>
 
-      <div className="flex flex-1 flex-col gap-6 p-4 md:p-8">
+      <div
+        data-warehouse-order-sheet
+        className="flex flex-1 flex-col gap-6 p-4 md:p-8 print:p-0"
+      >
         {/* Barra superior de navegación y acciones */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between print:hidden">
           <div className="flex items-center gap-3">
@@ -142,7 +162,7 @@ export default function WarehouseOrderShow({ order }: Props) {
                 size="sm"
                 onClick={handleStartPreparation}
                 disabled={isSubmitting}
-                className="gap-1.5 bg-sky-600 text-white hover:bg-sky-700 dark:bg-sky-700 dark:hover:bg-sky-800"
+                className="gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90"
               >
                 <Package className="size-4" />
                 Iniciar preparación
@@ -154,7 +174,7 @@ export default function WarehouseOrderShow({ order }: Props) {
                 size="sm"
                 onClick={() => setIsDeliverDialogOpen(true)}
                 disabled={isSubmitting}
-                className="gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-800"
+                className="gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90"
               >
                 <CheckCircle2 className="size-4" />
                 {order.delivery_method === 'envio'
@@ -200,9 +220,9 @@ export default function WarehouseOrderShow({ order }: Props) {
           <div className="flex flex-col items-start gap-1 sm:items-end">
             <Badge variant="outline" className="text-sm font-medium">
               {order.delivery_method === 'envio' ? (
-                <Truck className="mr-1.5 size-4 text-sky-600 dark:text-sky-400" />
+                <Truck className="mr-1.5 size-4 text-primary" />
               ) : (
-                <Package className="mr-1.5 size-4 text-amber-600 dark:text-amber-400" />
+                <Package className="mr-1.5 size-4 text-primary" />
               )}
               {order.delivery_method_label}
             </Badge>
@@ -312,7 +332,7 @@ export default function WarehouseOrderShow({ order }: Props) {
             </CardHeader>
             <CardContent className="space-y-4 text-sm">
               <div className="flex items-start gap-3">
-                <div className="mt-0.5 rounded-full bg-amber-500/10 p-1.5 text-amber-600 dark:text-amber-400">
+                <div className="mt-0.5 rounded-full bg-warning-bg p-1.5 text-warning-fg">
                   <CreditCard className="size-4" />
                 </div>
                 <div>
@@ -332,7 +352,7 @@ export default function WarehouseOrderShow({ order }: Props) {
                 <div
                   className={`mt-0.5 rounded-full p-1.5 ${
                     order.preparation_started_at_formatted
-                      ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400'
+                      ? 'bg-info-bg text-info-fg'
                       : 'bg-muted text-muted-foreground'
                   }`}
                 >
@@ -359,7 +379,7 @@ export default function WarehouseOrderShow({ order }: Props) {
                 <div
                   className={`mt-0.5 rounded-full p-1.5 ${
                     order.delivered_at_formatted
-                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                      ? 'bg-success-bg text-success-fg'
                       : 'bg-muted text-muted-foreground'
                   }`}
                 >
@@ -385,7 +405,7 @@ export default function WarehouseOrderShow({ order }: Props) {
               </div>
 
               <div className="flex items-start gap-3">
-                <div className="mt-0.5 rounded-full bg-slate-500/10 p-1.5 text-slate-600 dark:text-slate-400">
+                <div className="mt-0.5 rounded-full bg-muted p-1.5 text-muted-foreground">
                   <Warehouse className="size-4" />
                 </div>
                 <div>
@@ -393,10 +413,21 @@ export default function WarehouseOrderShow({ order }: Props) {
                     Depósito de egreso
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {order.warehouse_name ?? 'Depósito Canal Online'}
-                    {order.sale_id &&
-                      ` · Movimiento imputado a Venta #${order.sale_id}`}
+                    {order.warehouse_name ?? 'Sin depósito identificado'}
                   </p>
+                  {order.stock_movement ? (
+                    <p className="text-xs text-muted-foreground">
+                      Movimiento #{order.stock_movement.id} ·{' '}
+                      {order.stock_movement.type_name} · Venta #
+                      {order.stock_movement.sale_id}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      {order.status === 'entregado'
+                        ? 'Sin movimiento de stock asociado'
+                        : 'Salida de stock todavía no registrada'}
+                    </p>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -449,11 +480,7 @@ export default function WarehouseOrderShow({ order }: Props) {
                   return (
                     <TableRow
                       key={item.id}
-                      className={
-                        isChecked
-                          ? 'bg-emerald-50/40 dark:bg-emerald-950/20'
-                          : undefined
-                      }
+                      className={isChecked ? 'bg-success-bg/15' : undefined}
                     >
                       <TableCell className="text-center print:hidden">
                         <Checkbox
@@ -535,7 +562,7 @@ export default function WarehouseOrderShow({ order }: Props) {
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-foreground">
-                <CheckCircle2 className="size-5 text-emerald-600" />
+                <CheckCircle2 className="size-5 text-primary" />
                 Confirmar{' '}
                 {order.delivery_method === 'envio' ? 'despacho' : 'entrega'} de
                 pedido #{order.formatted_number}
@@ -547,9 +574,9 @@ export default function WarehouseOrderShow({ order }: Props) {
             </DialogHeader>
 
             <div className="space-y-3 py-2 text-sm">
-              <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+              <div className="rounded-md border border-warning-fg/25 bg-warning-bg p-3 text-warning-fg">
                 <div className="flex items-start gap-2">
-                  <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                  <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning-fg" />
                   <div className="text-xs">
                     <p className="font-semibold">Baja de stock automática:</p>
                     <p className="mt-0.5">
@@ -563,7 +590,7 @@ export default function WarehouseOrderShow({ order }: Props) {
               </div>
 
               {!allItemsChecked && (
-                <div className="rounded-md border border-sky-300 bg-sky-50 p-3 text-sky-900 dark:border-sky-800 dark:bg-sky-950/30 dark:text-sky-200">
+                <div className="rounded-md border border-info-fg/25 bg-info-bg p-3 text-info-fg">
                   <p className="text-xs">
                     <strong>Nota:</strong> No todos los artículos tienen el
                     casillero de verificación marcado en la hoja de picking.
@@ -585,7 +612,7 @@ export default function WarehouseOrderShow({ order }: Props) {
               <Button
                 onClick={handleConfirmDeliver}
                 disabled={isSubmitting}
-                className="bg-emerald-600 font-medium text-white hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-800"
+                className="bg-primary font-medium text-primary-foreground hover:bg-primary/90"
               >
                 {isSubmitting
                   ? 'Confirmando...'

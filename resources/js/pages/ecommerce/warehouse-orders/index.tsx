@@ -11,6 +11,7 @@ import {
   Truck,
 } from 'lucide-react';
 import { useState } from 'react';
+import { toast } from 'sonner';
 import Heading from '@/components/heading';
 import TablePagination from '@/components/table-pagination';
 import { Badge } from '@/components/ui/badge';
@@ -77,12 +78,9 @@ type Props = {
 };
 
 const statusBadgeClasses: Record<string, string> = {
-  pagado:
-    'border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300',
-  en_preparacion:
-    'border-sky-300 bg-sky-50 text-sky-800 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-300',
-  entregado:
-    'border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300',
+  pagado: 'border-warning-fg/25 bg-warning-bg text-warning-fg',
+  en_preparacion: 'border-info-fg/25 bg-info-bg text-info-fg',
+  entregado: 'border-success-fg/25 bg-success-bg text-success-fg',
 };
 
 export default function WarehouseOrdersIndex({
@@ -192,6 +190,13 @@ export default function WarehouseOrdersIndex({
       {},
       {
         preserveScroll: true,
+        onError: (errors) =>
+          toast.error(
+            errors.sale ??
+              errors.warehouse ??
+              errors.status ??
+              'No se pudo confirmar la salida del pedido.',
+          ),
         onFinish: () => {
           setIsSubmitting(false);
           setDeliveringOrder(null);
@@ -224,9 +229,9 @@ export default function WarehouseOrdersIndex({
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <Card
             onClick={() => handleStatusCardClick('pagado')}
-            className={`cursor-pointer transition-all hover:border-amber-400 hover:shadow-xs ${
+            className={`cursor-pointer transition-all hover:border-warning-fg/25 hover:shadow-xs ${
               status === 'pagado'
-                ? 'border-amber-500 bg-amber-50/60 ring-2 ring-amber-500/20 dark:bg-amber-950/20'
+                ? 'border-warning-fg/25 bg-warning-bg/10 ring-2 ring-warning-fg/25'
                 : 'bg-card'
             }`}
           >
@@ -235,11 +240,11 @@ export default function WarehouseOrdersIndex({
                 <p className="text-xs font-medium text-muted-foreground">
                   Pagados por preparar
                 </p>
-                <p className="mt-1 text-2xl font-bold tracking-tight text-amber-700 dark:text-amber-400">
+                <p className="mt-1 text-2xl font-bold tracking-tight text-foreground">
                   {counts.paid}
                 </p>
               </div>
-              <div className="rounded-full bg-amber-500/10 p-2.5 text-amber-600 dark:text-amber-400">
+              <div className="rounded-full bg-warning-bg p-2.5 text-warning-fg">
                 <Clock className="size-5" />
               </div>
             </CardContent>
@@ -247,9 +252,9 @@ export default function WarehouseOrdersIndex({
 
           <Card
             onClick={() => handleStatusCardClick('en_preparacion')}
-            className={`cursor-pointer transition-all hover:border-sky-400 hover:shadow-xs ${
+            className={`cursor-pointer transition-all hover:border-info-fg/25 hover:shadow-xs ${
               status === 'en_preparacion'
-                ? 'border-sky-500 bg-sky-50/60 ring-2 ring-sky-500/20 dark:bg-sky-950/20'
+                ? 'border-info-fg/25 bg-info-bg/10 ring-2 ring-info-fg/25'
                 : 'bg-card'
             }`}
           >
@@ -258,11 +263,11 @@ export default function WarehouseOrdersIndex({
                 <p className="text-xs font-medium text-muted-foreground">
                   En preparación
                 </p>
-                <p className="mt-1 text-2xl font-bold tracking-tight text-sky-700 dark:text-sky-400">
+                <p className="mt-1 text-2xl font-bold tracking-tight text-foreground">
                   {counts.in_preparation}
                 </p>
               </div>
-              <div className="rounded-full bg-sky-500/10 p-2.5 text-sky-600 dark:text-sky-400">
+              <div className="rounded-full bg-info-bg p-2.5 text-info-fg">
                 <Package className="size-5" />
               </div>
             </CardContent>
@@ -270,9 +275,9 @@ export default function WarehouseOrdersIndex({
 
           <Card
             onClick={() => handleStatusCardClick('entregado')}
-            className={`cursor-pointer transition-all hover:border-emerald-400 hover:shadow-xs ${
+            className={`cursor-pointer transition-all hover:border-success-fg/25 hover:shadow-xs ${
               status === 'entregado'
-                ? 'border-emerald-500 bg-emerald-50/60 ring-2 ring-emerald-500/20 dark:bg-emerald-950/20'
+                ? 'border-success-fg/25 bg-success-bg/10 ring-2 ring-success-fg/25'
                 : 'bg-card'
             }`}
           >
@@ -281,11 +286,11 @@ export default function WarehouseOrdersIndex({
                 <p className="text-xs font-medium text-muted-foreground">
                   Entregados / Despachados
                 </p>
-                <p className="mt-1 text-2xl font-bold tracking-tight text-emerald-700 dark:text-emerald-400">
+                <p className="mt-1 text-2xl font-bold tracking-tight text-foreground">
                   {counts.delivered}
                 </p>
               </div>
-              <div className="rounded-full bg-emerald-500/10 p-2.5 text-emerald-600 dark:text-emerald-400">
+              <div className="rounded-full bg-success-bg p-2.5 text-success-fg">
                 <CheckCircle2 className="size-5" />
               </div>
             </CardContent>
@@ -302,7 +307,7 @@ export default function WarehouseOrdersIndex({
                   <Search className="absolute top-2.5 left-2.5 size-4 text-muted-foreground" />
                   <Input
                     id="search"
-                    placeholder="N.º pedido, cliente o dirección..."
+                    placeholder="N.º pedido o venta, cliente o dirección..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     onKeyDown={handleKeyDown}
@@ -492,9 +497,9 @@ export default function WarehouseOrdersIndex({
                             className="text-xs font-normal"
                           >
                             {order.delivery_method === 'envio' ? (
-                              <Truck className="mr-1 size-3 text-sky-600 dark:text-sky-400" />
+                              <Truck className="mr-1 size-3 text-primary" />
                             ) : (
-                              <Package className="mr-1 size-3 text-amber-600 dark:text-amber-400" />
+                              <Package className="mr-1 size-3 text-primary" />
                             )}
                             {order.delivery_method_label}
                           </Badge>
@@ -551,7 +556,7 @@ export default function WarehouseOrdersIndex({
                               variant="outline"
                               onClick={() => handleStartPreparation(order)}
                               disabled={isSubmitting}
-                              className="gap-1 border-sky-300 text-xs font-medium text-sky-700 hover:bg-sky-50 dark:border-sky-800 dark:text-sky-300 dark:hover:bg-sky-950/40"
+                              className="gap-1 border-info-fg/25 text-xs font-medium text-foreground hover:bg-info-bg hover:text-info-fg"
                             >
                               <Package className="size-3.5" />
                               Preparar
@@ -563,7 +568,7 @@ export default function WarehouseOrdersIndex({
                               size="sm"
                               onClick={() => setDeliveringOrder(order)}
                               disabled={isSubmitting}
-                              className="gap-1 bg-emerald-600 text-xs font-medium text-white hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-800"
+                              className="gap-1 bg-primary text-xs font-medium text-primary-foreground hover:bg-primary/90"
                             >
                               <CheckCircle2 className="size-3.5" />
                               {order.delivery_method === 'envio'
@@ -603,7 +608,7 @@ export default function WarehouseOrdersIndex({
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-foreground">
-                <CheckCircle2 className="size-5 text-emerald-600" />
+                <CheckCircle2 className="size-5 text-primary" />
                 Confirmar{' '}
                 {deliveringOrder?.delivery_method === 'envio'
                   ? 'despacho'
@@ -617,9 +622,9 @@ export default function WarehouseOrdersIndex({
             </DialogHeader>
 
             <div className="space-y-3 py-2 text-sm">
-              <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+              <div className="rounded-md border border-warning-fg/25 bg-warning-bg p-3 text-warning-fg">
                 <div className="flex items-start gap-2">
-                  <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                  <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning-fg" />
                   <div className="text-xs">
                     <p className="font-semibold">Baja de stock automática:</p>
                     <p className="mt-0.5">
@@ -673,7 +678,7 @@ export default function WarehouseOrdersIndex({
               <Button
                 onClick={handleConfirmDeliver}
                 disabled={isSubmitting}
-                className="bg-emerald-600 font-medium text-white hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-800"
+                className="bg-primary font-medium text-primary-foreground hover:bg-primary/90"
               >
                 {isSubmitting
                   ? 'Confirmando...'

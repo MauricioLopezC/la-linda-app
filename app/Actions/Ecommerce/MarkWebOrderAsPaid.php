@@ -46,10 +46,11 @@ class MarkWebOrderAsPaid
             /** @var WebOrder $lockedOrder */
             $lockedOrder = WebOrder::query()->whereKey($order->id)->lockForUpdate()->firstOrFail();
 
-            if ($lockedOrder->status === WebOrderStatus::Paid) {
+            if (in_array($lockedOrder->status, [WebOrderStatus::Paid, WebOrderStatus::InPreparation, WebOrderStatus::Delivered], true)) {
                 if ($lockedOrder->mp_payment_id === $paymentId) {
-                    // Idempotent replay of the exact same payment notification
-                    $this->convertPaidWebOrderToSale->execute($lockedOrder);
+                    if ($lockedOrder->status === WebOrderStatus::Paid) {
+                        $this->convertPaidWebOrderToSale->execute($lockedOrder);
+                    }
 
                     return $lockedOrder->loadMissing('sale.invoice');
                 }

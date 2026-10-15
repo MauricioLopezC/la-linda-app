@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\Ecommerce\DeliverWebOrder;
 use App\Enums\Ecommerce\DeliveryMethod;
 use App\Enums\Ecommerce\WebOrderStatus;
 use App\Enums\Security\UserRole;
@@ -8,8 +9,12 @@ use App\Models\Customers\Customer;
 use App\Models\Ecommerce\WebOrder;
 use App\Models\Ecommerce\WebOrderItem;
 use App\Models\Inventory\StockBalance;
+use App\Models\Inventory\StockMovement;
 use App\Models\Inventory\StockMovementType;
 use App\Models\Inventory\Warehouse;
+use App\Models\Organization\Branch;
+use App\Models\Sales\PointOfSale;
+use App\Models\Sales\Sale;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -176,6 +181,7 @@ test('deliver endpoint transitions order, discounts stock and redirects with fla
     ]);
 
     $order = WebOrder::factory()->inPreparation()->shipping()->create();
+    warehouseSaleForHttpOrder($order, $this->warehouse);
     WebOrderItem::factory()->create([
         'web_order_id' => $order->id,
         'article_id' => $article->id,
@@ -214,4 +220,123 @@ test('contextual status label renders Despachado for shipping and Entregado for 
     $response->assertInertia(fn (Assert $page) => $page
         ->where('orders.data.0.status_label', fn ($label) => in_array($label, ['Despachado', 'Entregado'], true))
     );
+});
+
+function warehouseSaleForHttpOrder(WebOrder $order, Warehouse $warehouse): Sale
+{
+    return Sale::factory()->online()->confirmed()->create([
+        'id' => 90001,
+        'web_order_id' => $order->id,
+        'customer_id' => $order->customer_id,
+        'point_of_sale_id' => PointOfSale::factory()->create(['warehouse_id' => $warehouse->id])->id,
+    ]);
+}
+
+test('searches the associated sale number independently of the order number', function (string $prefix) {
+    $order = WebOrder::factory()->paid()->create(['number' => 40001]);
+    $sale = warehouseSaleForHttpOrder($order, $this->warehouse);
+    WebOrder::factory()->paid()->create(['number' => 40002]);
+
+    $this->actingAs($this->depositoUser)
+        ->get(route('ecommerce.orders.index', ['search' => $prefix.$sale->id]))
+        ->assertOk()->assertInertia(fn (Assert $page) => $page
+        ->has('orders.data', 1)
+        ->where('orders.data.0.id', $order->id));
+})->with(['', '#000']);
+
+test('combines sale search with every operational filter', function (string $excludedFilter) {
+    $branch = Branch::factory()->create();
+    $otherBranch = Branch::factory()->create();
+    $order = WebOrder::factory()->inPreparation()->create([
+        'number' => 40001,
+        'delivery_method' => DeliveryMethod::Pickup,
+        'pickup_branch_id' => $branch->id,
+        'paid_at' => '2026-10-10 12:00:00',
+    ]);
+    $sale = warehouseSaleForHttpOrder($order, $this->warehouse);
+    WebOrder::factory()->paid()->shipping()->create(['number' => $sale->id]);
+    $filters = [
+        'search' => (string) $sale->id,
+        'status' => 'en_preparacion',
+        'delivery_method' => 'retiro',
+        'pickup_branch_id' => $branch->id,
+        'date_from' => '2026-10-09',
+        'date_to' => '2026-10-11',
+    ];
+    if ($excludedFilter !== 'none') {
+        $filters[$excludedFilter] = match ($excludedFilter) {
+            'status' => 'entregado',
+            'delivery_method' => 'envio',
+            'pickup_branch_id' => $otherBranch->id,
+            'date_from' => '2026-10-11',
+            'date_to' => '2026-10-09',
+        };
+    }
+    $this->actingAs($this->depositoUser)->get(route('ecommerce.orders.index', $filters))
+        ->assertOk()->assertInertia(function (Assert $page) use ($excludedFilter, $order): void {
+            $page->has('orders.data', $excludedFilter === 'none' ? 1 : 0);
+            if ($excludedFilter === 'none') {
+                $page->where('orders.data.0.id', $order->id);
+            }
+        });
+})->with(['none', 'status', 'delivery_method', 'pickup_branch_id', 'date_from', 'date_to']);
+
+test('rejects delivery without a sale through HTTP and preserves stock and audit', function () {
+    $order = WebOrder::factory()->inPreparation()->create();
+    $item = WebOrderItem::factory()->create(['web_order_id' => $order->id]);
+    $balance = StockBalance::factory()->create(['article_id' => $item->article_id, 'warehouse_id' => $this->warehouse->id, 'quantity' => '10.000']);
+    $snapshot = $order->fresh()->getAttributes();
+    $movementCount = StockMovement::count();
+
+    $this->actingAs($this->depositoUser)->post(route('ecommerce.orders.deliver', $order))
+        ->assertSessionHasErrors('sale');
+
+    expect($order->fresh()->getAttributes())->toEqual($snapshot)
+        ->and($balance->fresh()->quantity)->toBe('10.000')
+        ->and(StockMovement::count())->toBe($movementCount);
+});
+
+test('shows the operational warehouse before delivery and the historical movement warehouse afterwards', function (string $changedAttribute) {
+    $order = WebOrder::factory()->inPreparation()->create();
+    $sale = warehouseSaleForHttpOrder($order, $this->warehouse);
+    $item = WebOrderItem::factory()->create(['web_order_id' => $order->id, 'quantity' => '2.000']);
+    $original = StockBalance::factory()->create(['article_id' => $item->article_id, 'warehouse_id' => $this->warehouse->id, 'quantity' => '10.000']);
+    $this->warehouse->update([$changedAttribute => false]);
+    $replacement = Warehouse::factory()->online()->create(['is_active' => true]);
+    $balance = StockBalance::factory()->create(['article_id' => $item->article_id, 'warehouse_id' => $replacement->id, 'quantity' => '10.000']);
+
+    $this->actingAs($this->depositoUser)->get(route('ecommerce.orders.show', $order))
+        ->assertOk()->assertInertia(fn (Assert $page) => $page
+        ->where('order.warehouse_name', $replacement->name)
+        ->where('order.warehouse_id', $replacement->id)
+        ->where('order.stock_movement', null));
+
+    app(DeliverWebOrder::class)->execute($order, $this->depositoUser);
+    $movement = $sale->fresh()->stockMovement;
+    $replacement->update(['is_active' => false]);
+    Warehouse::factory()->online()->create(['is_active' => true]);
+
+    $this->get(route('ecommerce.orders.show', $order))
+        ->assertOk()->assertInertia(fn (Assert $page) => $page
+        ->where('order.warehouse_name', $replacement->name)
+        ->where('order.warehouse_id', $replacement->id)
+        ->where('order.stock_movement.id', $movement->id)
+        ->where('order.stock_movement.type_code', StockMovementType::CODE_WEB_ORDER_DELIVERY)
+        ->where('order.stock_movement.type_name', 'Salida por Entrega de Pedido Web')
+        ->where('order.stock_movement.sale_id', $sale->id)
+        ->where('order.stock_movement.warehouse_id', $replacement->id)
+        ->where('order.stock_movement.warehouse_name', $replacement->name));
+    expect($balance->fresh()->quantity)->toBe('8.000')
+        ->and($original->fresh()->quantity)->toBe('10.000');
+})->with(['is_active', 'is_online_channel']);
+
+test('does not invent warehouse or movement data for a historical delivered order', function () {
+    $order = WebOrder::factory()->delivered()->create();
+    warehouseSaleForHttpOrder($order, $this->warehouse);
+
+    $this->actingAs($this->depositoUser)->get(route('ecommerce.orders.show', $order))
+        ->assertOk()->assertInertia(fn (Assert $page) => $page
+        ->where('order.stock_movement', null)
+        ->where('order.warehouse_id', null)
+        ->where('order.warehouse_name', null));
 });
