@@ -60,6 +60,8 @@ Gerencia:        Iniciar sesión como Gerente → aterriza directo en /dashboard
 
 1. **Roles fijos en `UserRole` + Gates en código en lugar de las tablas `roles`/`permissions`/`permission_role` (`HU-004`).**
    - Se amplía el enum `App\Enums\Security\UserRole` existente (`users.role` ya es `varchar(50)`): `administrador`, `gerente`, `cajero`, `deposito`, `compras`, `cliente`.
+   - La migración del contrato de roles (D2, `migrate_personal_interno_role_to_administrador`) convierte los registros actuales con `role = 'personal_interno'` a `'administrador'` y baja el default de la columna a `'cliente'` (mínimo privilegio).
+   - La matriz rol → Gates vive en `UserRole::permissions()` sobre el enum `App\Enums\Security\Permission`. Los Gates son por módulo completo: la "consulta" de un rol (p. ej. el `gerente` sobre compras y stock, o `compras` sobre existencias) se resuelve otorgando el Gate entero, sin separar lectura de escritura. El `gerente` no tiene `operate-cash`.
    - La migración de datos que convierte los registros actuales con `role = 'personal_interno'` a `'administrador'` va en el PR del Contrato de Roles (D2), junto con el caso `UserRole::Administrador`: si corriera en el esquema del D1, el cast del enum fallaría al leer usuarios con un valor que todavía no existe.
    - Se definen Gates por módulo en código (`view-dashboard`, `manage-web-orders`, `manage-users`, `operate-cash`, `manage-catalog`, `manage-pricing`, `manage-purchases`, `manage-stock`, `manage-customers`, `manage-organization`) y se aplican con middleware `can:<gate>` por grupo de rutas en `routes/web.php`.
    - Se mantiene `Gate::before` para `UserRole::Administrador`.
@@ -68,9 +70,10 @@ Gerencia:        Iniciar sesión como Gerente → aterriza directo en /dashboard
    - La matriz editable de permisos por rol pasa a **"Fuera del sprint / deseable"** y se agrega como pregunta al PO.
 2. **Pantalla principal por rol al iniciar sesión (`LoginResponse` y redirección raíz).**
    - `Gerente` (y `Administrador`) → `/dashboard`
-   - `Depósito` → bandeja de pedidos web a preparar (`/ecommerce/orders`)
-   - `Cajero` → la caja (`/sales/cash-sessions`)
-   - `Compras` → órdenes de compra (`/purchases/orders`)
+   - `Depósito` → bandeja de pedidos web a preparar (`ecommerce.orders.index`, `/ecommerce/orders`); hasta que `EPIC-17` registre esa ruta, cae en existencias (`inventory.stocks.index`)
+   - `Cajero` → la caja (`sales.cash-sessions.current`, que abre el turno en curso o lleva a abrir uno)
+   - `Compras` → órdenes de compra (`purchasing.orders.index`, `/purchasing/orders`)
+   - La pantalla principal de cada rol la resuelve `UserRole::homeRoute()`, compartida por `LoginResponse` y `redirectUsersTo`.
    - `Cliente` → tienda online (`route('tienda.home')`)
 3. **Incorporación de `HU-048` para proteger a dos clientes concurrentes.** Como el stock físico del depósito online recién baja cuando el depósito entrega el pedido (`EPIC-17`), la disponibilidad online (`available_quantity`) se calcula como la existencia física del depósito `is_online_channel = true` **menos** las cantidades comprometidas en pedidos con estado `pagado` o `en_preparacion`. Se valida al agregar al carrito y dentro de la transacción de `PlaceWebOrder` (`HU-062`).
 4. **Tipo de movimiento de stock propio `"Salida por Entrega de Pedido Web"` (`EPIC-17`).** Se agrega a `StockMovementType` el código `CODE_WEB_ORDER_DELIVERY = 'web_order_delivery'` (`name = 'Salida por Entrega de Pedido Web'`, `sign = -1`, `is_system = true`), incluido en `AUTOMATIC_CODES` para que **no sea elegible en ajustes manuales** (`HU-017`). Responde al *"¿hacemos un ajuste? No"* del PO, deja distinguible en el historial (`HU-018`) la `"Salida por Venta"` de mostrador (`sale_exit`) de la entrega online (`web_order_delivery`) y reutiliza `stock_movements.sale_id`.

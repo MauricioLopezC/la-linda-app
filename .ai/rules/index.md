@@ -18,5 +18,6 @@ Before planning or editing, find the row whose globs match the file's path and r
 | app/Models/Pricing/** | .ai/rules/pricing.md |
 | app/Models/Purchasing/** | .ai/rules/purchasing.md |
 | app/Actions/Sales/** | .ai/rules/sales.md |
+| app/Enums/Security/** | .ai/rules/security.md |
 | tests/** | .ai/rules/tests.md |
 | automatizaciones/trello/** | .ai/rules/trello.md |

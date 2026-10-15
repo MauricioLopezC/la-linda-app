@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\Security\UserRole;
 use App\Models\User;
 use Database\Seeders\Catalog\ArticleSeeder;
 use Database\Seeders\Catalog\ArticleSupplierSeeder;
@@ -38,6 +39,7 @@ class DatabaseSeeder extends Seeder
                 'name' => config('demo.admin_name'),
                 'password' => config('demo.admin_password'),
                 'email_verified_at' => now(),
+                'role' => UserRole::Administrador,
             ]
         );
 
