@@ -52,7 +52,7 @@ test('guests are redirected to login from checkout and orders', function () {
 });
 
 test('users without a customer cannot use checkout or orders', function () {
-    $staff = User::factory()->create(['role' => UserRole::PersonalInterno, 'customer_id' => null]);
+    $staff = User::factory()->create(['role' => UserRole::Administrador, 'customer_id' => null]);
 
     $this->actingAs($staff)->get(route('tienda.checkout.show'))->assertForbidden();
     $this->actingAs($staff)->post(route('tienda.checkout.store'), ['pickup_branch_id' => $this->branch->id])->assertForbidden();

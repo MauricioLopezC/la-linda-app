@@ -300,7 +300,7 @@ const footerNavItems: NavItem[] = [
 
 export function AppSidebar() {
   const { auth } = usePage().props;
-  const isInternalStaff = auth?.user?.role === 'personal_interno';
+  const isInternalStaff = !!auth?.user && auth.user.role !== 'cliente';
   const isClient = auth?.user?.role === 'cliente';
 
   const groups = isInternalStaff

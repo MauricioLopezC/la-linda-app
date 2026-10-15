@@ -24,7 +24,7 @@ test('client can log in and is redirected to the online store home', function ()
 });
 
 test('internal staff logs in and is redirected to the dashboard', function () {
-    $staff = User::factory()->internal()->create();
+    $staff = User::factory()->administrador()->create();
 
     $response = $this->post(route('login.store'), [
         'email' => $staff->email,
@@ -166,7 +166,7 @@ test('client json request to internal routes returns 403 forbidden', function ()
 });
 
 test('internal staff can access internal routes without restriction', function () {
-    $staff = User::factory()->internal()->create();
+    $staff = User::factory()->administrador()->create();
 
     $response = $this->actingAs($staff)->get(route('dashboard'));
 
