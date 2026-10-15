@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Ecommerce;
 
 use App\Actions\Ecommerce\ConsultOnlineCatalog;
+use App\Data\Catalog\BrandData;
 use App\Data\Catalog\CategoryData;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Ecommerce\ConsultOnlineCatalogRequest;
+use App\Models\Catalog\Brand;
 use App\Models\Catalog\Category;
 use App\Models\User;
 use Inertia\Inertia;
@@ -27,27 +29,55 @@ class StoreHomeController extends Controller
         $filters = [
             'search' => $request->query('search'),
             'category_id' => $request->filled('category_id') ? (int) $request->query('category_id') : null,
+            'brand_id' => $request->filled('brand_id') ? (int) $request->query('brand_id') : null,
+            'min_price' => $request->filled('min_price') ? $request->query('min_price') : null,
+            'max_price' => $request->filled('max_price') ? $request->query('max_price') : null,
+            'sort' => (string) ($request->query('sort') ?: 'relevance'),
         ];
 
-        $articles = $action->execute($filters, $customer, perPage: 16);
+        $applicableListIds = $action->resolveApplicablePriceListIds($customer);
+        $articles = $action->execute($filters, $customer, perPage: 16, applicableListIds: $applicableListIds);
+        $brands = $action->getAvailableBrands($applicableListIds);
+
         $categories = Category::query()
             ->active()
             ->whereNull('parent_id')
             ->orderBy('name')
             ->get();
 
+        $activeCategory = $filters['category_id']
+            ? ($categories->firstWhere('id', $filters['category_id']) ?? Category::query()->find($filters['category_id']))
+            : null;
+
+        $activeBrand = $filters['brand_id']
+            ? ($brands->firstWhere('id', $filters['brand_id']) ?? Brand::query()->find($filters['brand_id']))
+            : null;
+
+        $hasActiveFilter = ! empty($filters['search'])
+            || ! empty($filters['category_id'])
+            || ! empty($filters['brand_id'])
+            || $filters['min_price'] !== null
+            || $filters['max_price'] !== null;
+
         $suggestedArticles = [];
-        if ($articles->isEmpty() && (! empty($filters['search']) || ! empty($filters['category_id']))) {
-            $suggestedArticles = $action->execute([], $customer, perPage: 8)->items();
+        if ($articles->isEmpty() && $hasActiveFilter) {
+            $suggestedArticles = $action->execute([], $customer, perPage: 8, applicableListIds: $applicableListIds)->items();
         }
 
         return Inertia::render('ecommerce/index', [
             'articles' => $articles,
             'suggestedArticles' => $suggestedArticles,
             'categories' => CategoryData::collect($categories),
+            'brands' => BrandData::collect($brands),
+            'activeCategory' => $activeCategory ? CategoryData::from($activeCategory) : null,
+            'activeBrand' => $activeBrand ? BrandData::from($activeBrand) : null,
             'filters' => [
                 'search' => (string) ($filters['search'] ?? ''),
                 'category_id' => $filters['category_id'] ? (string) $filters['category_id'] : 'all',
+                'brand_id' => $filters['brand_id'] ? (string) $filters['brand_id'] : 'all',
+                'min_price' => $filters['min_price'] !== null ? (string) $filters['min_price'] : '',
+                'max_price' => $filters['max_price'] !== null ? (string) $filters['max_price'] : '',
+                'sort' => $filters['sort'],
             ],
         ]);
     }
