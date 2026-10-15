@@ -13,6 +13,11 @@ declare module 'react' {
 }
 
 declare module '@inertiajs/core' {
+  export interface PageFlashData {
+    generated_password?: string;
+    [key: string]: unknown;
+  }
+
   export interface InertiaConfig {
     sharedPageProps: {
       name: string;

@@ -52,7 +52,6 @@ class HandleInertiaRequests extends Middleware
                 'warning' => $request->session()->get('warning'),
                 'info' => $request->session()->get('info'),
                 'status' => $request->session()->get('status'),
-                'generated_password' => $request->session()->get('generated_password'),
             ],
             'cashSession' => function () use ($request): ?OpenCashSessionData {
                 if (! $request->user()?->isInternal()) {
