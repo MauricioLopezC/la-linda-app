@@ -7,6 +7,7 @@ use App\Data\Catalog\BrandData;
 use App\Data\Catalog\CategoryData;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Ecommerce\ConsultOnlineCatalogRequest;
+use App\Models\Catalog\Brand;
 use App\Models\Catalog\Category;
 use App\Models\User;
 use Inertia\Inertia;
@@ -34,9 +35,8 @@ class StoreHomeController extends Controller
             'sort' => (string) ($request->query('sort') ?: 'relevance'),
         ];
 
-        $articles = $action->execute($filters, $customer, perPage: 16);
-
         $applicableListIds = $action->resolveApplicablePriceListIds($customer);
+        $articles = $action->execute($filters, $customer, perPage: 16, applicableListIds: $applicableListIds);
         $brands = $action->getAvailableBrands($applicableListIds);
 
         $categories = Category::query()
@@ -44,6 +44,14 @@ class StoreHomeController extends Controller
             ->whereNull('parent_id')
             ->orderBy('name')
             ->get();
+
+        $activeCategory = $filters['category_id']
+            ? ($categories->firstWhere('id', $filters['category_id']) ?? Category::query()->find($filters['category_id']))
+            : null;
+
+        $activeBrand = $filters['brand_id']
+            ? ($brands->firstWhere('id', $filters['brand_id']) ?? Brand::query()->find($filters['brand_id']))
+            : null;
 
         $hasActiveFilter = ! empty($filters['search'])
             || ! empty($filters['category_id'])
@@ -53,7 +61,7 @@ class StoreHomeController extends Controller
 
         $suggestedArticles = [];
         if ($articles->isEmpty() && $hasActiveFilter) {
-            $suggestedArticles = $action->execute([], $customer, perPage: 8)->items();
+            $suggestedArticles = $action->execute([], $customer, perPage: 8, applicableListIds: $applicableListIds)->items();
         }
 
         return Inertia::render('ecommerce/index', [
@@ -61,6 +69,8 @@ class StoreHomeController extends Controller
             'suggestedArticles' => $suggestedArticles,
             'categories' => CategoryData::collect($categories),
             'brands' => BrandData::collect($brands),
+            'activeCategory' => $activeCategory ? CategoryData::from($activeCategory) : null,
+            'activeBrand' => $activeBrand ? BrandData::from($activeBrand) : null,
             'filters' => [
                 'search' => (string) ($filters['search'] ?? ''),
                 'category_id' => $filters['category_id'] ? (string) $filters['category_id'] : 'all',

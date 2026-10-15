@@ -53,6 +53,8 @@ type Props = {
   suggestedArticles?: Article[];
   categories: Category[];
   brands: Brand[];
+  activeCategory?: Category | null;
+  activeBrand?: Brand | null;
   filters: {
     search: string;
     category_id: string;
@@ -256,6 +258,8 @@ export default function StoreHome({
   suggestedArticles = [],
   categories,
   brands,
+  activeCategory,
+  activeBrand,
   filters,
 }: Props) {
   const { auth, flash } = usePage().props;
@@ -376,7 +380,15 @@ export default function StoreHome({
     router.get(
       home.url({ query }),
       {},
-      { preserveState: true, preserveScroll: true },
+      {
+        preserveState: true,
+        preserveScroll: true,
+        onError: (errs) => {
+          if (errs.max_price || errs.min_price) {
+            toast.error(errs.max_price || errs.min_price);
+          }
+        },
+      },
     );
   };
 
@@ -508,6 +520,8 @@ export default function StoreHome({
         <CatalogFilters
           categories={categories}
           brands={brands}
+          activeCategory={activeCategory}
+          activeBrand={activeBrand}
           filters={filters}
           totalArticles={articles.total}
           onApplyFilters={handleApplyFilters}

@@ -1277,3 +1277,148 @@ test('when brand filter yields no articles, suggested articles are returned', fu
         ->has('suggestedArticles')
     );
 });
+
+test('active subcategory absent from root categories is resolved and returned in activeCategory prop', function () {
+    $onlineList = PriceList::factory()
+        ->forChannel(PriceListChannel::Online)
+        ->create();
+
+    $parentCategory = Category::factory()->create([
+        'name' => 'Lácteos Raíz',
+        'parent_id' => null,
+        'is_active' => true,
+    ]);
+
+    $subCategory = Category::factory()->create([
+        'name' => 'Yogures Subcategoría',
+        'parent_id' => $parentCategory->id,
+        'is_active' => true,
+    ]);
+
+    $article = Article::factory()->create([
+        'description' => 'Yogur de Fresa',
+        'category_id' => $subCategory->id,
+        'status' => ArticleStatus::Active,
+        'is_online_publishable' => true,
+    ]);
+
+    PriceListItem::factory()->create([
+        'price_list_id' => $onlineList->id,
+        'article_id' => $article->id,
+        'price' => '1200.00',
+    ]);
+
+    $response = $this->get(route('tienda.home', [
+        'category_id' => $subCategory->id,
+        'sort' => 'price_asc',
+    ]));
+
+    $response->assertOk();
+    $response->assertInertia(fn (Assert $page) => $page
+        ->component('ecommerce/index')
+        ->has('articles.data', 1)
+        ->where('articles.data.0.id', $article->id)
+        ->where('activeCategory.id', $subCategory->id)
+        ->where('activeCategory.name', 'Yogures Subcategoría')
+        ->where('filters.category_id', (string) $subCategory->id)
+        ->where('filters.sort', 'price_asc')
+        ->where('categories', fn ($cats) => ! collect($cats)->contains('id', $subCategory->id))
+    );
+});
+
+test('active brand without online articles is absent from brands options but resolved in activeBrand prop', function () {
+    $onlineList = PriceList::factory()
+        ->forChannel(PriceListChannel::Online)
+        ->create();
+
+    $category = Category::factory()->create(['is_active' => true]);
+    $brandWithItems = Brand::factory()->create(['name' => 'Marca Con Stock', 'is_active' => true]);
+    $brandEmpty = Brand::factory()->create(['name' => 'Marca Sin Articulos', 'is_active' => true]);
+
+    $article = Article::factory()->create([
+        'category_id' => $category->id,
+        'brand_id' => $brandWithItems->id,
+        'status' => ArticleStatus::Active,
+        'is_online_publishable' => true,
+    ]);
+    PriceListItem::factory()->create([
+        'price_list_id' => $onlineList->id,
+        'article_id' => $article->id,
+        'price' => '2000.00',
+    ]);
+
+    $response = $this->get(route('tienda.home', [
+        'brand_id' => $brandEmpty->id,
+        'search' => 'producto',
+    ]));
+
+    $response->assertOk();
+    $response->assertInertia(fn (Assert $page) => $page
+        ->component('ecommerce/index')
+        ->where('activeBrand.id', $brandEmpty->id)
+        ->where('activeBrand.name', 'Marca Sin Articulos')
+        ->where('filters.brand_id', (string) $brandEmpty->id)
+        ->where('filters.search', 'producto')
+        ->where('brands', fn ($b) => ! collect($b)->contains('id', $brandEmpty->id))
+    );
+});
+
+test('invalid price range returns validation error for max_price', function () {
+    $response = $this->get(route('tienda.home', [
+        'min_price' => '500',
+        'max_price' => '400',
+    ]));
+
+    $response->assertSessionHasErrors([
+        'max_price' => 'El precio máximo debe ser mayor o igual al precio mínimo.',
+    ]);
+});
+
+test('removing category filter retains remaining filters and query params', function () {
+    $onlineList = PriceList::factory()
+        ->forChannel(PriceListChannel::Online)
+        ->create();
+
+    $category = Category::factory()->create(['is_active' => true]);
+    $brand = Brand::factory()->create(['is_active' => true]);
+
+    $article = Article::factory()->create([
+        'description' => 'Arroz Blanco',
+        'category_id' => $category->id,
+        'brand_id' => $brand->id,
+        'status' => ArticleStatus::Active,
+        'is_online_publishable' => true,
+    ]);
+    PriceListItem::factory()->create([
+        'price_list_id' => $onlineList->id,
+        'article_id' => $article->id,
+        'price' => '800.00',
+    ]);
+
+    // Initial query with category, brand, and sort
+    $initialResponse = $this->get(route('tienda.home', [
+        'category_id' => $category->id,
+        'brand_id' => $brand->id,
+        'sort' => 'name_asc',
+    ]));
+    $initialResponse->assertOk();
+    $initialResponse->assertInertia(fn (Assert $page) => $page
+        ->where('filters.category_id', (string) $category->id)
+        ->where('filters.brand_id', (string) $brand->id)
+        ->where('filters.sort', 'name_asc')
+    );
+
+    // Simulating removing the category chip (setting category_id to 'all' or omitting)
+    $afterRemovalResponse = $this->get(route('tienda.home', [
+        'category_id' => 'all',
+        'brand_id' => $brand->id,
+        'sort' => 'name_asc',
+    ]));
+    $afterRemovalResponse->assertOk();
+    $afterRemovalResponse->assertInertia(fn (Assert $page) => $page
+        ->where('filters.category_id', 'all')
+        ->where('filters.brand_id', (string) $brand->id)
+        ->where('filters.sort', 'name_asc')
+        ->where('articles.total', 1)
+    );
+});

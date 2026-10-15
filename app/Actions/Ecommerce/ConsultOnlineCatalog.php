@@ -26,14 +26,16 @@ class ConsultOnlineCatalog
 
     /**
      * @param  array{search?: ?string, category_id?: ?int, brand_id?: ?int, min_price?: float|int|string|null, max_price?: float|int|string|null, sort?: ?string}  $filters
+     * @param  array<int, int>|null  $applicableListIds
      * @return LengthAwarePaginator<int, OnlineCatalogArticleData>
      */
     public function execute(
         array $filters = [],
         ?Customer $customer = null,
         int $perPage = 16,
+        ?array $applicableListIds = null,
     ): LengthAwarePaginator {
-        $applicableListIds = $this->resolveApplicablePriceListIds($customer);
+        $applicableListIds ??= $this->resolveApplicablePriceListIds($customer);
 
         // If no active, currently-valid price lists exist in the cascade,
         // no articles can have a valid price.

@@ -1,3 +1,4 @@
+import { usePage } from '@inertiajs/react';
 import {
   ArrowUpDown,
   FilterX,
@@ -29,6 +30,8 @@ export type CatalogFiltersState = {
 export type CatalogFiltersProps = {
   categories: App.Data.Catalog.CategoryData[];
   brands: App.Data.Catalog.BrandData[];
+  activeCategory?: App.Data.Catalog.CategoryData | null;
+  activeBrand?: App.Data.Catalog.BrandData | null;
   filters: CatalogFiltersState;
   totalArticles: number;
   onApplyFilters: (newFilters: Partial<CatalogFiltersState>) => void;
@@ -117,63 +120,95 @@ function SearchBarForm({
 function PriceRangeForm({
   minPrice,
   maxPrice,
+  error,
   onApplyPrice,
 }: {
   minPrice: string;
   maxPrice: string;
+  error?: string;
   onApplyPrice: (min: string, max: string) => void;
 }) {
   const [localMin, setLocalMin] = useState(minPrice);
   const [localMax, setLocalMax] = useState(maxPrice);
+  const [clientError, setClientError] = useState<string | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onApplyPrice(localMin.trim(), localMax.trim());
+    const minVal = localMin.trim();
+    const maxVal = localMax.trim();
+
+    if (minVal !== '' && maxVal !== '' && Number(minVal) > Number(maxVal)) {
+      setClientError(
+        'El precio máximo debe ser mayor o igual al precio mínimo.',
+      );
+
+      return;
+    }
+
+    setClientError(null);
+    onApplyPrice(minVal, maxVal);
   };
 
+  const displayedError = clientError || error;
+
   return (
-    <form onSubmit={handleSubmit} className="flex items-center gap-1.5">
-      <span className="text-xs font-medium text-muted-foreground">Precio:</span>
-      <div className="flex items-center gap-1">
-        <div className="relative w-20">
-          <span className="absolute top-1/2 left-2 -translate-y-1/2 text-xs text-muted-foreground">
-            $
-          </span>
-          <Input
-            type="number"
-            min="0"
-            step="any"
-            placeholder="Mín"
-            value={localMin}
-            onChange={(e) => setLocalMin(e.target.value)}
-            className="h-8 pr-1.5 pl-5 text-xs"
-          />
+    <form onSubmit={handleSubmit} className="flex flex-col gap-1">
+      <div className="flex items-center gap-1.5">
+        <span className="text-xs font-medium text-muted-foreground">
+          Precio:
+        </span>
+        <div className="flex items-center gap-1">
+          <div className="relative w-20">
+            <span className="absolute top-1/2 left-2 -translate-y-1/2 text-xs text-muted-foreground">
+              $
+            </span>
+            <Input
+              type="number"
+              min="0"
+              step="any"
+              placeholder="Mín"
+              value={localMin}
+              onChange={(e) => {
+                setLocalMin(e.target.value);
+                setClientError(null);
+              }}
+              className={`h-8 pr-1.5 pl-5 text-xs ${displayedError ? 'border-destructive' : ''}`}
+            />
+          </div>
+          <span className="text-xs text-muted-foreground">–</span>
+          <div className="relative w-20">
+            <span className="absolute top-1/2 left-2 -translate-y-1/2 text-xs text-muted-foreground">
+              $
+            </span>
+            <Input
+              type="number"
+              min="0"
+              step="any"
+              placeholder="Máx"
+              value={localMax}
+              onChange={(e) => {
+                setLocalMax(e.target.value);
+                setClientError(null);
+              }}
+              className={`h-8 pr-1.5 pl-5 text-xs ${displayedError ? 'border-destructive' : ''}`}
+            />
+          </div>
+          <Button
+            type="submit"
+            variant="secondary"
+            size="sm"
+            className="h-8 px-2.5 text-xs"
+            title="Aplicar rango de precio"
+          >
+            Aplicar
+          </Button>
         </div>
-        <span className="text-xs text-muted-foreground">–</span>
-        <div className="relative w-20">
-          <span className="absolute top-1/2 left-2 -translate-y-1/2 text-xs text-muted-foreground">
-            $
-          </span>
-          <Input
-            type="number"
-            min="0"
-            step="any"
-            placeholder="Máx"
-            value={localMax}
-            onChange={(e) => setLocalMax(e.target.value)}
-            className="h-8 pr-1.5 pl-5 text-xs"
-          />
-        </div>
-        <Button
-          type="submit"
-          variant="secondary"
-          size="sm"
-          className="h-8 px-2.5 text-xs"
-          title="Aplicar rango de precio"
-        >
-          Aplicar
-        </Button>
       </div>
+      {displayedError && (
+        <p className="text-[11px] font-medium text-destructive">
+          {displayedError}
+        </p>
+      )}
     </form>
   );
 }
@@ -181,27 +216,24 @@ function PriceRangeForm({
 export function CatalogFilters({
   categories,
   brands,
+  activeCategory: activeCategoryProp,
+  activeBrand: activeBrandProp,
   filters,
   totalArticles,
   onApplyFilters,
   onResetFilters,
 }: CatalogFiltersProps) {
-  // Resolve active filter labels for chips
-  const activeCategory =
-    filters.category_id && filters.category_id !== 'all'
-      ? categories.find((c) => String(c.id) === filters.category_id)
-      : null;
+  const { errors } = usePage<{ errors?: Record<string, string> }>().props;
+  const priceError = errors?.max_price || errors?.min_price;
 
-  const activeBrand =
-    filters.brand_id && filters.brand_id !== 'all'
-      ? brands.find((b) => String(b.id) === filters.brand_id)
-      : null;
-
-  const hasSearch = Boolean(filters.search);
-  const hasCategory = Boolean(activeCategory);
-  const hasBrand = Boolean(activeBrand);
-  const hasMinPrice = Boolean(filters.min_price);
-  const hasMaxPrice = Boolean(filters.max_price);
+  // Active filter checks based on ID/value presence, independent of options list
+  const hasSearch = Boolean(filters.search?.trim());
+  const hasCategory = Boolean(
+    filters.category_id && filters.category_id !== 'all',
+  );
+  const hasBrand = Boolean(filters.brand_id && filters.brand_id !== 'all');
+  const hasMinPrice = Boolean(filters.min_price?.trim());
+  const hasMaxPrice = Boolean(filters.max_price?.trim());
   const hasCustomSort = Boolean(filters.sort && filters.sort !== 'relevance');
 
   const isFiltered =
@@ -211,6 +243,18 @@ export function CatalogFilters({
     hasMinPrice ||
     hasMaxPrice ||
     hasCustomSort;
+
+  // Resolve active category label for chip (from options, activeCategoryProp, or fallback)
+  const activeCategory =
+    categories.find((c) => String(c.id) === filters.category_id) ??
+    activeCategoryProp;
+  const categoryLabel =
+    activeCategory?.name ?? `Categoría #${filters.category_id}`;
+
+  // Resolve active brand label for chip (from options, activeBrandProp, or fallback)
+  const activeBrand =
+    brands.find((b) => String(b.id) === filters.brand_id) ?? activeBrandProp;
+  const brandLabel = activeBrand?.name ?? `Marca #${filters.brand_id}`;
 
   return (
     <section className="flex flex-col gap-4 rounded-xl border border-border bg-card p-4 shadow-xs">
@@ -262,6 +306,22 @@ export function CatalogFilters({
                 {category.name}
               </Button>
             ))}
+            {/* Show active subcategory pill if not in root categories */}
+            {activeCategory &&
+              !categories.some((c) => c.id === activeCategory.id) && (
+                <Button
+                  key={activeCategory.id}
+                  type="button"
+                  size="sm"
+                  variant="default"
+                  onClick={() =>
+                    onApplyFilters({ category_id: String(activeCategory.id) })
+                  }
+                  className="h-8 rounded-full text-xs font-medium"
+                >
+                  {activeCategory.name}
+                </Button>
+              )}
           </div>
         </div>
       )}
@@ -283,6 +343,15 @@ export function CatalogFilters({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas las marcas</SelectItem>
+                {activeBrand &&
+                  !brands.some((b) => b.id === activeBrand.id) && (
+                    <SelectItem
+                      key={activeBrand.id}
+                      value={String(activeBrand.id)}
+                    >
+                      {activeBrand.name}
+                    </SelectItem>
+                  )}
                 {brands.map((brand) => (
                   <SelectItem key={brand.id} value={String(brand.id)}>
                     {brand.name}
@@ -297,6 +366,7 @@ export function CatalogFilters({
             key={`${filters.min_price}_${filters.max_price}`}
             minPrice={filters.min_price || ''}
             maxPrice={filters.max_price || ''}
+            error={priceError}
             onApplyPrice={(min_price, max_price) =>
               onApplyFilters({ min_price, max_price })
             }
@@ -352,12 +422,12 @@ export function CatalogFilters({
             </Badge>
           )}
 
-          {hasCategory && activeCategory && (
+          {hasCategory && (
             <Badge
               variant="secondary"
               className="gap-1.5 rounded-full pr-1.5 pl-2.5 text-xs font-normal"
             >
-              Categoría: {activeCategory.name}
+              Categoría: {categoryLabel}
               <button
                 type="button"
                 onClick={() => onApplyFilters({ category_id: 'all' })}
@@ -369,12 +439,12 @@ export function CatalogFilters({
             </Badge>
           )}
 
-          {hasBrand && activeBrand && (
+          {hasBrand && (
             <Badge
               variant="secondary"
               className="gap-1.5 rounded-full pr-1.5 pl-2.5 text-xs font-normal"
             >
-              Marca: {activeBrand.name}
+              Marca: {brandLabel}
               <button
                 type="button"
                 onClick={() => onApplyFilters({ brand_id: 'all' })}
