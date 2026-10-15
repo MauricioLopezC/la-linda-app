@@ -1,6 +1,10 @@
 <?php
 
 use App\Models\Organization\Branch;
+use App\Models\Sales\CashMovement;
+use App\Models\Sales\Invoice;
+use App\Models\Sales\PaymentMethod;
+use App\Models\Sales\Sale;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -32,10 +36,36 @@ test('dashboard defaults to the current month up to today with every branch and 
             ->where('filters.date_to', '2026-10-14')
             ->where('filters.branch_id', null)
             ->where('filters.channel', null)
-            ->where('revenues', null)
+            ->where('revenues.total_invoiced', '0.00')
             ->where('expenses', null)
             ->where('evolution', null)
             ->where('operational', null)
+        );
+});
+
+test('dashboard shares the revenues of the filtered period', function () {
+    $this->travelTo('2026-10-14 10:00:00');
+
+    $invoice = Invoice::factory()->create([
+        'sale_id' => Sale::factory()->confirmed()->state(['total_amount' => '1210.00']),
+    ]);
+    CashMovement::factory()->forSale($invoice->sale)->create([
+        'payment_method_id' => PaymentMethod::factory()->cash()->create(['name' => 'Efectivo'])->id,
+        'amount' => '1210.00',
+        'user_id' => $invoice->sale->user_id,
+    ]);
+
+    $this->actingAs(User::factory()->create())
+        ->get(route('dashboard', ['channel' => 'mostrador']))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('dashboard')
+            ->where('revenues.total_invoiced', '1210.00')
+            ->where('revenues.net_revenue', '1000.00')
+            ->where('revenues.confirmed_sales_count', 1)
+            ->where('revenues.by_channel.0.label', 'Mostrador')
+            ->where('revenues.by_payment_method.0.label', 'Efectivo')
+            ->where('revenues.by_payment_method.0.amount', '1210.00')
         );
 });
 
