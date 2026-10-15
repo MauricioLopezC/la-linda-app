@@ -42,7 +42,13 @@ test('dashboard defaults to the current month up to today with every branch and 
             ->where('expenses.cash_expenses_total', '0.00')
             ->where('expenses.disbursed_total', '0.00')
             ->where('expenses.by_payment_method', [])
-            ->where('evolution', null)
+            ->where('evolution.net_result', '0.00')
+            ->where('evolution.net_margin_pct', null)
+            ->where('evolution.net_result_variation_pct', null)
+            ->has('evolution.series', 14)
+            ->where('evolution.series.0', [
+                'period' => '2026-10-01', 'net_revenue' => '0.00', 'accrued_expenses' => '0.00', 'net_result' => '0.00',
+            ])
             ->where('operational', null)
         );
 });

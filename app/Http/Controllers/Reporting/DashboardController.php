@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Reporting;
 
+use App\Actions\Reporting\GetDashboardEvolution;
 use App\Actions\Reporting\GetDashboardExpenses;
 use App\Actions\Reporting\GetDashboardRevenues;
 use App\Data\Reporting\DashboardBranchOptionData;
@@ -22,6 +23,7 @@ class DashboardController extends Controller
         DashboardFilterRequest $request,
         GetDashboardRevenues $getDashboardRevenues,
         GetDashboardExpenses $getDashboardExpenses,
+        GetDashboardEvolution $getDashboardEvolution,
     ): Response {
         $filters = $request->filters();
 
@@ -30,11 +32,15 @@ class DashboardController extends Controller
             ->orderBy('name')
             ->get(['id', 'name']);
 
+        $revenues = $getDashboardRevenues->handle($filters);
+        $expenses = $getDashboardExpenses->handle($filters);
+
         $dashboard = new DashboardData(
             filters: new DashboardFiltersData(...$filters),
             branches: $branches->map(fn (Branch $branch): DashboardBranchOptionData => DashboardBranchOptionData::fromModel($branch))->all(),
-            revenues: $getDashboardRevenues->handle($filters),
-            expenses: $getDashboardExpenses->handle($filters),
+            revenues: $revenues,
+            expenses: $expenses,
+            evolution: $getDashboardEvolution->handle($filters, $revenues, $expenses),
         );
 
         return Inertia::render('dashboard', $dashboard->toArray());

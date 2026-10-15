@@ -26,18 +26,7 @@ class GetDashboardExpenses
      */
     public function handle(array $filters): DashboardExpensesData
     {
-        $accruedCents = 0;
-        $vouchers = SupplierVoucher::query()
-            ->select(['id', 'type', 'total_amount'])
-            ->whereIn('type', [SupplierVoucherType::Invoice, SupplierVoucherType::DebitNote, SupplierVoucherType::CreditNote])
-            ->where('status', '!=', SupplierVoucherStatus::Cancelled)
-            ->whereDate('issue_date', '>=', $filters['date_from'])
-            ->whereDate('issue_date', '<=', $filters['date_to']);
-
-        foreach ($vouchers->lazyById(500) as $voucher) {
-            $amountCents = $this->moneyToCents($voucher->total_amount);
-            $accruedCents += $voucher->type === SupplierVoucherType::CreditNote ? -$amountCents : $amountCents;
-        }
+        $accruedCents = array_sum($this->accruedCentsByDay($filters['date_from'], $filters['date_to']));
 
         $paidCents = 0;
         /** @var array<int, array{label: string, cents: int, count: int}> $byMethod */
@@ -95,5 +84,33 @@ class GetDashboardExpenses
             disbursed_total: $this->centsToMoney($paidCents + $cashCents),
             by_payment_method: $breakdown,
         );
+    }
+
+    /**
+     * Accrued expenses (supplier invoices + debit notes − credit notes, not cancelled) between
+     * two dates, in cents and keyed by `Y-m-d` issue date; days without vouchers are left out.
+     * EPIC-20 builds its evolution series and the previous-period net result from it.
+     *
+     * @return array<string, int>
+     */
+    public function accruedCentsByDay(string $dateFrom, string $dateTo): array
+    {
+        /** @var array<string, int> $accruedByDay */
+        $accruedByDay = [];
+        $vouchers = SupplierVoucher::query()
+            ->select(['id', 'type', 'issue_date', 'total_amount'])
+            ->whereIn('type', [SupplierVoucherType::Invoice, SupplierVoucherType::DebitNote, SupplierVoucherType::CreditNote])
+            ->where('status', '!=', SupplierVoucherStatus::Cancelled)
+            ->whereDate('issue_date', '>=', $dateFrom)
+            ->whereDate('issue_date', '<=', $dateTo);
+
+        foreach ($vouchers->lazyById(500) as $voucher) {
+            $amountCents = $this->moneyToCents($voucher->total_amount);
+            $day = $voucher->issue_date->toDateString();
+            $accruedByDay[$day] = ($accruedByDay[$day] ?? 0)
+                + ($voucher->type === SupplierVoucherType::CreditNote ? -$amountCents : $amountCents);
+        }
+
+        return $accruedByDay;
     }
 }
