@@ -14,6 +14,7 @@ use App\Models\Pricing\PriceList;
 use App\Models\Pricing\VatRate;
 use App\Models\Sales\PointOfSale;
 use App\Models\User;
+use Inertia\Testing\AssertableInertia as Assert;
 
 beforeEach(function () {
     $this->vat21 = VatRate::query()->where('percentage', 21.0)->first()
@@ -74,7 +75,27 @@ beforeEach(function () {
     $this->sale = app(ConvertPaidWebOrderToSale::class)->execute($this->paidOrder);
 });
 
-test('authenticated customer can stream invoice pdf for their paid web order', function () {
+test('customer can see and stream the same invoice throughout order fulfillment', function (WebOrderStatus $status) {
+    $operator = User::factory()->create(['role' => UserRole::Deposito]);
+    $this->paidOrder->update([
+        'status' => $status,
+        'preparation_started_at' => $status !== WebOrderStatus::Paid ? now() : null,
+        'prepared_by' => $status !== WebOrderStatus::Paid ? $operator->id : null,
+        'delivered_at' => $status === WebOrderStatus::Delivered ? now() : null,
+        'delivered_by' => $status === WebOrderStatus::Delivered ? $operator->id : null,
+    ]);
+
+    $this->actingAs($this->clientUser)
+        ->get(route('tienda.orders.show', $this->paidOrder))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('ecommerce/orders/show')
+            ->where('order.status', $status->value)
+            ->where('order.status_label', $this->paidOrder->statusLabel())
+            ->where('order.paid_amount', '3630.00')
+            ->where('order.invoice.id', $this->sale->invoice->id)
+            ->where('order.invoice.voucher_label', $this->sale->invoice->voucherLabel()));
+
     $response = $this->actingAs($this->clientUser)
         ->get(route('tienda.orders.invoice.pdf', $this->paidOrder));
 
@@ -84,7 +105,11 @@ test('authenticated customer can stream invoice pdf for their paid web order', f
     // The stream disposition is inline
     $disposition = (string) $response->headers->get('content-disposition');
     expect($disposition)->toContain('inline');
-});
+})->with([
+    'paid' => WebOrderStatus::Paid,
+    'in preparation' => WebOrderStatus::InPreparation,
+    'dispatched' => WebOrderStatus::Delivered,
+]);
 
 test('authenticated customer can download invoice pdf with query parameter download=1', function () {
     $response = $this->actingAs($this->clientUser)
