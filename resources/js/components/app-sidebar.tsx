@@ -46,6 +46,7 @@ import { index as brands } from '@/routes/catalog/brands';
 import { index as categories } from '@/routes/catalog/categories';
 import { index as unitsOfMeasure } from '@/routes/catalog/units-of-measure';
 import { index as customers } from '@/routes/customers';
+import { index as warehouseOrders } from '@/routes/ecommerce/orders';
 import { create as adjustmentsCreate } from '@/routes/inventory/adjustments';
 import { index as movements } from '@/routes/inventory/movements';
 import { index as stockParameters } from '@/routes/inventory/parameters';
@@ -104,6 +105,11 @@ const navGroups: NavGroup[] = [
   {
     label: 'Inventario',
     items: [
+      {
+        title: 'Pedidos a preparar',
+        href: warehouseOrders(),
+        icon: Package,
+      },
       {
         title: 'Existencias',
         href: stocks(),

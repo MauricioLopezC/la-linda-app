@@ -11,6 +11,7 @@ use App\Http\Controllers\Ecommerce\CheckoutController;
 use App\Http\Controllers\Ecommerce\CustomerAccountController;
 use App\Http\Controllers\Ecommerce\MercadoPagoWebhookController;
 use App\Http\Controllers\Ecommerce\StoreHomeController;
+use App\Http\Controllers\Ecommerce\WarehouseOrderController;
 use App\Http\Controllers\Ecommerce\WebOrderController;
 use App\Http\Controllers\Ecommerce\WebOrderPaymentController;
 use App\Http\Controllers\Ecommerce\WebOrderPaymentReturnController;
@@ -227,6 +228,16 @@ Route::middleware(['internal.staff', 'verified'])->group(function () {
         Route::get('export/csv', [SupplierAccountStatementController::class, 'exportCsv'])->name('export.csv');
         Route::get('export/excel', [SupplierAccountStatementController::class, 'exportExcel'])->name('export.excel');
     });
+
+    Route::prefix('ecommerce/orders')
+        ->name('ecommerce.orders.')
+        ->middleware('can:manage-web-orders')
+        ->group(function () {
+            Route::get('/', [WarehouseOrderController::class, 'index'])->name('index');
+            Route::get('{web_order}', [WarehouseOrderController::class, 'show'])->name('show');
+            Route::post('{web_order}/start-preparation', [WarehouseOrderController::class, 'startPreparation'])->name('start-preparation');
+            Route::post('{web_order}/deliver', [WarehouseOrderController::class, 'deliver'])->name('deliver');
+        });
 });
 
 Route::post('webhooks/mercadopago', MercadoPagoWebhookController::class)->name('webhooks.mercadopago');

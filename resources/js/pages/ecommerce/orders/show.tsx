@@ -50,7 +50,8 @@ export default function OrderShow({ order }: Props) {
     );
   };
 
-  const isPaid = order.status === 'pagado';
+  const isPending = order.status === 'pendiente';
+  const isPaid = !isPending;
 
   return (
     <>
@@ -74,7 +75,7 @@ export default function OrderShow({ order }: Props) {
             >
               {order.status_label}
             </Badge>
-            {!isPaid && (
+            {isPending && (
               <Button
                 size="sm"
                 onClick={handlePay}
@@ -88,7 +89,7 @@ export default function OrderShow({ order }: Props) {
           </div>
         </div>
 
-        {!isPaid ? (
+        {isPending ? (
           <Alert className="border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-200">
             <AlertCircle className="size-4 text-amber-600 dark:text-amber-400" />
             <AlertTitle className="font-semibold">
@@ -279,7 +280,7 @@ export default function OrderShow({ order }: Props) {
                   </div>
                 )}
 
-                {!isPaid && (
+                {isPending && (
                   <div className="pt-2">
                     <Button
                       onClick={handlePay}
