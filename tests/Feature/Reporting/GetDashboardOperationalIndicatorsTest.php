@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\Purchasing\AssociateCreditNoteToInvoice;
 use App\Actions\Reporting\GetDashboardOperationalIndicators;
 use App\Enums\Catalog\ArticleStatus;
 use App\Enums\Ecommerce\WebOrderStatus;
@@ -11,11 +12,14 @@ use App\Models\Ecommerce\WebOrder;
 use App\Models\Inventory\StockBalance;
 use App\Models\Inventory\Warehouse;
 use App\Models\Organization\Branch;
+use App\Models\Purchasing\PaymentOrder;
+use App\Models\Purchasing\PaymentOrderItem;
 use App\Models\Purchasing\Supplier;
 use App\Models\Purchasing\SupplierVoucher;
 use App\Models\Sales\PointOfSale;
 use App\Models\Sales\Sale;
 use App\Models\Sales\SaleItem;
+use App\Models\User;
 
 test('top articles ranks confirmed sales by quantity and invoiced total and respects filters', function () {
     $this->travelTo('2026-10-15 12:00:00');
@@ -250,13 +254,40 @@ test('supplier ranking orders by net purchases in period and computes current ou
     ]);
 
     expect($result->supplier_ranking)->toHaveCount(2)
-        // Primer puesto: Supplier A ($8.000 compras netas, $10.000 - $2.000 pendiente = $8.000 de deuda neta)
+        // La NC libre reduce las compras netas, pero no el saldo de la factura.
         ->and($result->supplier_ranking[0]->supplier_id)->toBe($supplierA->id)
         ->and($result->supplier_ranking[0]->purchases_total)->toBe('8000.00')
+        ->and($result->supplier_ranking[0]->outstanding_balance)->toBe('10000.00')
         // Segundo puesto: Supplier B ($5.000 compras en el período, deuda acumulada total = $5.000 + $3.000 = $8.000)
         ->and($result->supplier_ranking[1]->supplier_id)->toBe($supplierB->id)
         ->and($result->supplier_ranking[1]->purchases_total)->toBe('5000.00')
         ->and($result->supplier_ranking[1]->outstanding_balance)->toBe('8000.00');
+});
+
+test('supplier ranking preserves negative net purchases from credit notes for previous purchases', function () {
+    $supplier = Supplier::factory()->create();
+    SupplierVoucher::factory()->invoice()->create([
+        'supplier_id' => $supplier->id,
+        'total_amount' => '10000.00',
+        'issue_date' => '2026-09-01',
+        'due_date' => null,
+    ]);
+    SupplierVoucher::factory()->creditNote()->create([
+        'supplier_id' => $supplier->id,
+        'total_amount' => '2000.00',
+        'issue_date' => '2026-10-08',
+    ]);
+
+    $result = app(GetDashboardOperationalIndicators::class)->handle([
+        'date_from' => '2026-10-01',
+        'date_to' => '2026-10-15',
+        'branch_id' => null,
+        'channel' => null,
+    ]);
+
+    expect($result->supplier_ranking)->toHaveCount(1)
+        ->and($result->supplier_ranking[0]->purchases_total)->toBe('-2000.00')
+        ->and($result->supplier_ranking[0]->outstanding_balance)->toBe('10000.00');
 });
 
 test('pending web orders count correctly identifies orders ready for delivery', function () {
@@ -302,3 +333,221 @@ test('pending web orders count correctly identifies orders ready for delivery', 
     ]);
     expect($online->pending_web_orders_count)->toBe(3);
 });
+
+test('supplier ranking derives debt from applied credit notes and active payments across periods', function () {
+    $supplier = Supplier::factory()->create();
+    $invoice = SupplierVoucher::factory()->invoice()->create([
+        'supplier_id' => $supplier->id,
+        'total_amount' => '10000.00',
+        'issue_date' => '2026-09-01',
+        'due_date' => null,
+    ]);
+    $creditNote = SupplierVoucher::factory()->creditNote()->create([
+        'supplier_id' => $supplier->id,
+        'total_amount' => '2000.00',
+        'issue_date' => '2026-10-08',
+    ]);
+    app(AssociateCreditNoteToInvoice::class)->handle($creditNote, $invoice->id, '2000.00', User::factory()->create()->id);
+
+    PaymentOrderItem::factory()->forInvoice($invoice, '3000.00')->create([
+        'payment_order_id' => PaymentOrder::factory()->create(['supplier_id' => $supplier->id, 'total_amount' => '3000.00'])->id,
+    ]);
+    PaymentOrderItem::factory()->forInvoice($invoice, '1000.00')->create([
+        'payment_order_id' => PaymentOrder::factory()->cancelled()->create(['supplier_id' => $supplier->id, 'total_amount' => '1000.00'])->id,
+    ]);
+
+    $result = app(GetDashboardOperationalIndicators::class)->handle([
+        'date_from' => '2026-10-01',
+        'date_to' => '2026-10-15',
+        'branch_id' => null,
+        'channel' => null,
+    ]);
+
+    expect($result->supplier_ranking)->toHaveCount(1)
+        ->and($result->supplier_ranking[0]->purchases_total)->toBe('-2000.00')
+        ->and($result->supplier_ranking[0]->outstanding_balance)->toBe('5000.00');
+});
+
+test('supplier ranking filters purchases by branch and inclusive dates independently of channel', function (?string $channel) {
+    $branchA = Branch::factory()->create();
+    $branchB = Branch::factory()->create();
+    $warehouseA = Warehouse::factory()->create(['branch_id' => $branchA->id]);
+    $warehouseB = Warehouse::factory()->create(['branch_id' => $branchB->id]);
+    $supplier = Supplier::factory()->create();
+
+    foreach ([
+        [$warehouseA->id, '2026-10-01', '100.00'],
+        [null, '2026-10-15', '200.00'],
+        [$warehouseB->id, '2026-10-10', '400.00'],
+        [$warehouseA->id, '2026-09-30', '800.00'],
+        [$warehouseA->id, '2026-10-16', '1600.00'],
+    ] as [$warehouseId, $date, $amount]) {
+        SupplierVoucher::factory()->invoice()->create([
+            'supplier_id' => $supplier->id,
+            'warehouse_id' => $warehouseId,
+            'issue_date' => $date,
+            'due_date' => null,
+            'total_amount' => $amount,
+        ]);
+    }
+
+    $result = app(GetDashboardOperationalIndicators::class)->handle([
+        'date_from' => '2026-10-01',
+        'date_to' => '2026-10-15',
+        'branch_id' => $branchA->id,
+        'channel' => $channel,
+    ]);
+
+    expect($result->supplier_ranking)->toHaveCount(1)
+        ->and($result->supplier_ranking[0]->purchases_total)->toBe('300.00')
+        ->and($result->supplier_ranking[0]->outstanding_balance)->toBe('3100.00');
+})->with([null, 'mostrador', 'online']);
+
+test('supplier ranking orders positive zero and negative net purchases', function () {
+    $positive = Supplier::factory()->create();
+    $zero = Supplier::factory()->create();
+    $negative = Supplier::factory()->create();
+
+    foreach ([$negative, $zero, $positive] as $supplier) {
+        SupplierVoucher::factory()->invoice()->create([
+            'supplier_id' => $supplier->id,
+            'total_amount' => '100.00',
+            'issue_date' => '2026-10-01',
+            'due_date' => null,
+        ]);
+    }
+    foreach ([[$zero, '100.00'], [$negative, '200.00']] as [$supplier, $amount]) {
+        SupplierVoucher::factory()->creditNote()->create([
+            'supplier_id' => $supplier->id,
+            'total_amount' => $amount,
+            'issue_date' => '2026-10-08',
+        ]);
+    }
+    SupplierVoucher::factory()->creditNote()->create([
+        'supplier_id' => $positive->id,
+        'total_amount' => '1000.00',
+        'issue_date' => '2026-10-08',
+        'status' => SupplierVoucherStatus::Cancelled,
+    ]);
+
+    $result = app(GetDashboardOperationalIndicators::class)->handle([
+        'date_from' => '2026-10-01',
+        'date_to' => '2026-10-15',
+        'branch_id' => null,
+        'channel' => null,
+    ]);
+
+    expect(array_column($result->supplier_ranking, 'supplier_id'))->toBe([$positive->id, $zero->id, $negative->id])
+        ->and(array_column($result->supplier_ranking, 'purchases_total'))->toBe(['100.00', '0.00', '-100.00']);
+});
+
+test('supplier ranking limits results to ten after aggregating every voucher batch', function () {
+    $suppliers = Supplier::factory()->count(11)->create();
+
+    foreach ($suppliers as $index => $supplier) {
+        SupplierVoucher::factory()->invoice()->create([
+            'supplier_id' => $supplier->id,
+            'total_amount' => (string) (($index + 1) * 100),
+            'issue_date' => '2026-10-01',
+            'due_date' => null,
+        ]);
+    }
+
+    $boostedSupplier = $suppliers->first();
+    SupplierVoucher::factory()->invoice()->count(501)->create([
+        'supplier_id' => $boostedSupplier->id,
+        'total_amount' => '2.01',
+        'issue_date' => '2026-10-15',
+        'due_date' => null,
+    ]);
+    SupplierVoucher::factory()->debitNote()->create([
+        'supplier_id' => $boostedSupplier->id,
+        'total_amount' => '0.05',
+        'issue_date' => '2026-10-15',
+        'due_date' => null,
+    ]);
+
+    $result = app(GetDashboardOperationalIndicators::class)->handle([
+        'date_from' => '2026-10-01',
+        'date_to' => '2026-10-15',
+        'branch_id' => null,
+        'channel' => null,
+    ]);
+
+    $expectedIds = [$boostedSupplier->id, ...$suppliers->slice(2)->reverse()->modelKeys()];
+    expect($result->supplier_ranking)->toHaveCount(10)
+        ->and(array_column($result->supplier_ranking, 'supplier_id'))->toBe($expectedIds)
+        ->and($result->supplier_ranking[0]->purchases_total)->toBe('1107.06')
+        ->and($result->supplier_ranking[0]->outstanding_balance)->toBe('1107.06');
+});
+
+test('stock alerts respect branch and channel independently of dates', function (?string $channel, bool $filterBranch) {
+    $branches = Branch::factory()->count(2)->create();
+    $article = Article::factory()->create(['status' => ArticleStatus::Active]);
+    $expectedWarehouseIds = [];
+
+    foreach ($branches as $branchIndex => $branch) {
+        foreach ([false, true] as $online) {
+            $warehouse = Warehouse::factory()->create([
+                'branch_id' => $branch->id,
+                'is_online_channel' => $online,
+                'is_active' => true,
+            ]);
+            StockBalance::factory()->create([
+                'article_id' => $article->id,
+                'warehouse_id' => $warehouse->id,
+                'quantity' => '0.000',
+            ]);
+            if ((! $filterBranch || $branchIndex === 0) && ($channel === null || $online === ($channel === 'online'))) {
+                $expectedWarehouseIds[] = $warehouse->id;
+            }
+        }
+    }
+
+    foreach ([['2026-10-01', '2026-10-15'], ['2026-01-01', '2026-01-02']] as [$from, $to]) {
+        $result = app(GetDashboardOperationalIndicators::class)->handle([
+            'date_from' => $from,
+            'date_to' => $to,
+            'branch_id' => $filterBranch ? $branches->first()->id : null,
+            'channel' => $channel,
+        ]);
+
+        expect(array_column($result->stock_alerts, 'warehouse_id'))->toEqualCanonicalizing($expectedWarehouseIds);
+    }
+})->with([null, 'mostrador', 'online'])->with([false, true]);
+
+test('pending orders use pickup branch before sale warehouse and ignore date filters', function (?string $channel) {
+    $branchA = Branch::factory()->create();
+    $branchB = Branch::factory()->create();
+    $warehouseA = Warehouse::factory()->create(['branch_id' => $branchA->id]);
+    $warehouseB = Warehouse::factory()->create(['branch_id' => $branchB->id]);
+    $posA = PointOfSale::factory()->create(['warehouse_id' => $warehouseA->id]);
+    $posB = PointOfSale::factory()->create(['warehouse_id' => $warehouseB->id]);
+
+    $pickupA = WebOrder::factory()->paid()->create(['pickup_branch_id' => $branchA->id]);
+    Sale::factory()->online()->confirmed()->create(['web_order_id' => $pickupA->id, 'point_of_sale_id' => $posB->id]);
+    $pickupB = WebOrder::factory()->inPreparation()->create(['pickup_branch_id' => $branchB->id]);
+    Sale::factory()->online()->confirmed()->create(['web_order_id' => $pickupB->id, 'point_of_sale_id' => $posA->id]);
+
+    $shippingA = WebOrder::factory()->shipping()->inPreparation()->create();
+    Sale::factory()->online()->confirmed()->create(['web_order_id' => $shippingA->id, 'point_of_sale_id' => $posA->id]);
+    $shippingB = WebOrder::factory()->shipping()->paid()->create();
+    Sale::factory()->online()->confirmed()->create(['web_order_id' => $shippingB->id, 'point_of_sale_id' => $posB->id]);
+
+    WebOrder::factory()->shipping()->paid()->create();
+    WebOrder::factory()->delivered()->create(['pickup_branch_id' => $branchA->id]);
+    WebOrder::factory()->create(['pickup_branch_id' => $branchA->id]);
+
+    foreach ([['2026-10-01', '2026-10-15'], ['2026-01-01', '2026-01-02']] as [$from, $to]) {
+        foreach ([[$branchA->id, 2], [$branchB->id, 2], [null, 5]] as [$branchId, $count]) {
+            $result = app(GetDashboardOperationalIndicators::class)->handle([
+                'date_from' => $from,
+                'date_to' => $to,
+                'branch_id' => $branchId,
+                'channel' => $channel,
+            ]);
+
+            expect($result->pending_web_orders_count)->toBe($channel === 'mostrador' ? 0 : $count);
+        }
+    }
+})->with([null, 'mostrador', 'online']);

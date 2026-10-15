@@ -150,13 +150,12 @@ class GetDashboardOperationalIndicators
             ->when($branchId !== null, fn (Builder $q) => $q->where(function (Builder $sq) use ($branchId): void {
                 $sq->whereNull('warehouse_id')
                     ->orWhereHas('warehouse', fn (Builder $w) => $w->where('branch_id', $branchId));
-            }))
-            ->get();
+            }));
 
         /** @var array<int, int> $supplierPurchasesCents */
         $supplierPurchasesCents = [];
 
-        foreach ($vouchers as $voucher) {
+        foreach ($vouchers->lazyById(500) as $voucher) {
             $amountCents = $this->moneyToCents($voucher->total_amount);
             $supplierPurchasesCents[$voucher->supplier_id] = ($supplierPurchasesCents[$voucher->supplier_id] ?? 0)
                 + ($voucher->type === SupplierVoucherType::CreditNote ? -$amountCents : $amountCents);
@@ -186,12 +185,11 @@ class GetDashboardOperationalIndicators
             ->withBalanceAggregates()
             ->whereIn('supplier_id', $topSupplierIds)
             ->whereIn('type', $payableTypes)
-            ->where('status', '!=', SupplierVoucherStatus::Cancelled->value)
-            ->get();
+            ->where('status', '!=', SupplierVoucherStatus::Cancelled->value);
 
         /** @var array<int, int> $supplierOutstandingCents */
         $supplierOutstandingCents = [];
-        foreach ($pendingVouchers as $voucher) {
+        foreach ($pendingVouchers->lazyById(500) as $voucher) {
             $supplierOutstandingCents[$voucher->supplier_id] = ($supplierOutstandingCents[$voucher->supplier_id] ?? 0)
                 + $this->moneyToCents($voucher->outstandingAmount());
         }
@@ -209,7 +207,7 @@ class GetDashboardOperationalIndicators
             $ranking[] = new DashboardSupplierRankingData(
                 supplier_id: $supplier->id,
                 name: $supplier->business_name,
-                purchases_total: $this->centsToMoney(max(0, $purchasesCents)),
+                purchases_total: $this->centsToMoney($purchasesCents),
                 outstanding_balance: $this->centsToMoney($outstandingCents),
             );
         }
