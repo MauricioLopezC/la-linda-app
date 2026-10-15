@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Reporting;
 
 use App\Actions\Reporting\GetDashboardEvolution;
 use App\Actions\Reporting\GetDashboardExpenses;
+use App\Actions\Reporting\GetDashboardOperationalIndicators;
 use App\Actions\Reporting\GetDashboardRevenues;
 use App\Data\Reporting\DashboardBranchOptionData;
 use App\Data\Reporting\DashboardData;
@@ -24,6 +25,7 @@ class DashboardController extends Controller
         GetDashboardRevenues $getDashboardRevenues,
         GetDashboardExpenses $getDashboardExpenses,
         GetDashboardEvolution $getDashboardEvolution,
+        GetDashboardOperationalIndicators $getDashboardOperationalIndicators,
     ): Response {
         $filters = $request->filters();
 
@@ -41,6 +43,7 @@ class DashboardController extends Controller
             revenues: $revenues,
             expenses: $expenses,
             evolution: $getDashboardEvolution->handle($filters, $revenues, $expenses),
+            operational: $getDashboardOperationalIndicators->handle($filters),
         );
 
         return Inertia::render('dashboard', $dashboard->toArray());

@@ -49,7 +49,10 @@ test('dashboard defaults to the current month up to today with every branch and 
             ->where('evolution.series.0', [
                 'period' => '2026-10-01', 'net_revenue' => '0.00', 'accrued_expenses' => '0.00', 'net_result' => '0.00',
             ])
-            ->where('operational', null)
+            ->where('operational.top_articles', [])
+            ->where('operational.stock_alerts', [])
+            ->where('operational.supplier_ranking', [])
+            ->where('operational.pending_web_orders_count', 0)
         );
 });
 
