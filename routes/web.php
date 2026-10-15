@@ -9,6 +9,7 @@ use App\Http\Controllers\Customers\CustomerController;
 use App\Http\Controllers\Ecommerce\CartController;
 use App\Http\Controllers\Ecommerce\CheckoutController;
 use App\Http\Controllers\Ecommerce\CustomerAccountController;
+use App\Http\Controllers\Ecommerce\CustomerRegistrationController;
 use App\Http\Controllers\Ecommerce\MercadoPagoWebhookController;
 use App\Http\Controllers\Ecommerce\StoreHomeController;
 use App\Http\Controllers\Ecommerce\WarehouseOrderController;
@@ -29,6 +30,7 @@ use App\Http\Controllers\Purchasing\PurchaseOrderController;
 use App\Http\Controllers\Purchasing\SupplierAccountStatementController;
 use App\Http\Controllers\Purchasing\SupplierController;
 use App\Http\Controllers\Purchasing\SupplierVoucherController;
+use App\Http\Controllers\Reporting\DashboardController;
 use App\Http\Controllers\Sales\CashSessionController;
 use App\Http\Controllers\Sales\PaymentMethodController;
 use App\Http\Controllers\Sales\PointOfSaleController;
@@ -38,7 +40,7 @@ use Illuminate\Support\Facades\Route;
 Route::inertia('/', 'welcome')->name('home');
 
 Route::middleware(['internal.staff', 'verified'])->group(function () {
-    Route::inertia('dashboard', 'dashboard')->name('dashboard');
+    Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::prefix('catalog/categories')->name('catalog.categories.')->group(function () {
         Route::get('/', [CategoryController::class, 'index'])->name('index');
@@ -244,7 +246,8 @@ Route::post('webhooks/mercadopago', MercadoPagoWebhookController::class)->name('
 
 Route::prefix('tienda')->name('tienda.')->group(function () {
     Route::get('/', [StoreHomeController::class, 'index'])->name('home');
-    Route::redirect('registro', '/register')->name('register');
+    Route::get('registro', [CustomerRegistrationController::class, 'create'])->name('register');
+    Route::post('registro', [CustomerRegistrationController::class, 'store'])->name('register.store');
     Route::redirect('login', '/login')->name('login');
 
     Route::middleware('auth')->group(function () {
@@ -266,9 +269,12 @@ Route::prefix('tienda')->name('tienda.')->group(function () {
             Route::get('/', [WebOrderController::class, 'index'])->name('index');
             Route::post('{web_order}/pagar', [WebOrderPaymentController::class, 'store'])->name('pay');
             Route::get('{web_order}/retorno', [WebOrderPaymentReturnController::class, 'show'])->name('payment-return');
+            Route::get('{web_order}/factura/pdf', [WebOrderController::class, 'invoicePdf'])->name('invoice.pdf');
             Route::get('{web_order}', [WebOrderController::class, 'show'])->name('show');
         });
     });
 });
+
+Route::post('tienda/registro', [CustomerRegistrationController::class, 'store'])->name('register.store');
 
 require __DIR__.'/settings.php';

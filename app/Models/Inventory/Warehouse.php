@@ -54,6 +54,17 @@ class Warehouse extends Model
     }
 
     /**
+     * Scope a query to only include warehouses assigned to the online store channel.
+     *
+     * @param  Builder<Warehouse>  $query
+     * @return Builder<Warehouse>
+     */
+    public function scopeOnline(Builder $query): Builder
+    {
+        return $query->where('is_online_channel', true);
+    }
+
+    /**
      * Get the branch this warehouse belongs to.
      *
      * @return BelongsTo<Branch, $this>

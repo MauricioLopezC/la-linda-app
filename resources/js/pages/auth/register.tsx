@@ -1,5 +1,6 @@
 import { Head, useForm } from '@inertiajs/react';
 import React from 'react';
+import { store as storeCustomer } from '@/actions/App/Http/Controllers/Ecommerce/CustomerRegistrationController';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
 import TextLink from '@/components/text-link';
@@ -21,7 +22,8 @@ export default function Register() {
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    post('/register', {
+
+    post(storeCustomer().url, {
       onFinish: () => reset('password', 'password_confirmation'),
     });
   };

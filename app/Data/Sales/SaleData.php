@@ -5,6 +5,7 @@ namespace App\Data\Sales;
 use App\Enums\Customers\CustomerIdType;
 use App\Enums\Customers\CustomerTaxCondition;
 use App\Enums\Sales\CashMovementType;
+use App\Enums\Sales\SaleChannel;
 use App\Models\Sales\CashMovement;
 use App\Models\Sales\Sale;
 use App\Models\Sales\SaleItem;
@@ -57,6 +58,10 @@ class SaleData extends Data
         public ?string $total_tendered,
         public ?string $change_amount,
         public ?int $stock_movement_id,
+        public ?int $web_order_id = null,
+        public ?string $web_order_number = null,
+        public string $shipping_amount = '0.00',
+        public string $formatted_shipping_amount = '$ 0,00',
         public ?SaleInvoiceData $invoice = null,
     ) {}
 
@@ -75,6 +80,7 @@ class SaleData extends Data
             'items.vatRate',
             'cashMovements.paymentMethod',
             'stockMovement',
+            'webOrder',
         ]);
 
         $invoice = $sale->invoice;
@@ -93,31 +99,53 @@ class SaleData extends Data
             $customerIdNumber = ValidCuit::format($customerIdNumber);
         }
 
-        $saleMovements = $sale->cashMovements
-            ->where('type', CashMovementType::Sale)
-            ->values();
+        if ($sale->channel === SaleChannel::Online) {
+            $mpId = $sale->webOrder?->mp_payment_id;
+            $methodName = $mpId !== null ? "Mercado Pago (Op. #{$mpId})" : 'Mercado Pago';
 
-        $payments = $saleMovements
-            ->map(fn (CashMovement $movement): SalePaymentData => SalePaymentData::fromModel($movement))
-            ->all();
+            $payments = [
+                new SalePaymentData(
+                    id: 0,
+                    payment_method_id: 0,
+                    payment_method_name: $methodName,
+                    payment_method_kind: 'electronico',
+                    payment_method_kind_label: 'Mercado Pago',
+                    amount: $sale->total_amount,
+                    tendered_amount: null,
+                    change_amount: null,
+                    created_at: ($sale->confirmed_at ?? $sale->opened_at)->toIso8601String(),
+                    created_at_formatted: ($sale->confirmed_at ?? $sale->opened_at)->format('d/m/Y H:i'),
+                ),
+            ];
+            $totalTendered = $sale->total_amount;
+            $changeAmount = null;
+        } else {
+            $saleMovements = $sale->cashMovements
+                ->where('type', CashMovementType::Sale)
+                ->values();
 
-        $totalTenderedCents = $saleMovements->sum(function (CashMovement $m): int {
-            $amountCents = (int) round((float) $m->amount * 100);
-            $tenderedCents = $m->tendered_amount !== null ? (int) round((float) $m->tendered_amount * 100) : $amountCents;
+            $payments = $saleMovements
+                ->map(fn (CashMovement $movement): SalePaymentData => SalePaymentData::fromModel($movement))
+                ->all();
 
-            return $tenderedCents;
-        });
+            $totalTenderedCents = $saleMovements->sum(function (CashMovement $m): int {
+                $amountCents = (int) round((float) $m->amount * 100);
+                $tenderedCents = $m->tendered_amount !== null ? (int) round((float) $m->tendered_amount * 100) : $amountCents;
 
-        $totalChangeCents = $saleMovements->sum(function (CashMovement $m): int {
-            if ($m->tendered_amount === null) {
-                return 0;
-            }
+                return $tenderedCents;
+            });
 
-            return max(0, (int) round(((float) $m->tendered_amount - (float) $m->amount) * 100));
-        });
+            $totalChangeCents = $saleMovements->sum(function (CashMovement $m): int {
+                if ($m->tendered_amount === null) {
+                    return 0;
+                }
 
-        $totalTendered = $saleMovements->isNotEmpty() ? number_format($totalTenderedCents / 100, 2, '.', '') : null;
-        $changeAmount = $saleMovements->isNotEmpty() && $totalChangeCents > 0 ? number_format($totalChangeCents / 100, 2, '.', '') : null;
+                return max(0, (int) round(((float) $m->tendered_amount - (float) $m->amount) * 100));
+            });
+
+            $totalTendered = $saleMovements->isNotEmpty() ? number_format($totalTenderedCents / 100, 2, '.', '') : null;
+            $changeAmount = $saleMovements->isNotEmpty() && $totalChangeCents > 0 ? number_format($totalChangeCents / 100, 2, '.', '') : null;
+        }
 
         return new self(
             id: $sale->id,
@@ -161,6 +189,10 @@ class SaleData extends Data
             total_tendered: $totalTendered,
             change_amount: $changeAmount,
             stock_movement_id: $sale->stockMovement?->id,
+            web_order_id: $sale->web_order_id,
+            web_order_number: $sale->webOrder?->formattedNumber(),
+            shipping_amount: (string) ($sale->shipping_amount ?? '0.00'),
+            formatted_shipping_amount: '$ '.number_format((float) ($sale->shipping_amount ?? 0), 2, ',', '.'),
             invoice: $sale->invoice !== null ? SaleInvoiceData::fromModel($sale->invoice) : null,
         );
     }

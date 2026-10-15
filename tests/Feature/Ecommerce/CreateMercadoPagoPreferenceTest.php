@@ -12,9 +12,11 @@ use App\Models\Customers\Customer;
 use App\Models\Ecommerce\CustomerAccount;
 use App\Models\Ecommerce\WebOrder;
 use App\Models\Ecommerce\WebOrderItem;
+use App\Models\Inventory\Warehouse;
 use App\Models\Organization\Branch;
 use App\Models\Pricing\PriceList;
 use App\Models\Pricing\PriceListItem;
+use App\Models\Sales\PointOfSale;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
@@ -37,6 +39,14 @@ beforeEach(function () {
     ]);
 
     $this->branch = Branch::factory()->create(['is_active' => true]);
+    $this->warehouse = Warehouse::factory()->online()->create([
+        'branch_id' => $this->branch->id,
+        'is_active' => true,
+    ]);
+    $this->pos = PointOfSale::factory()->create([
+        'warehouse_id' => $this->warehouse->id,
+        'is_active' => true,
+    ]);
 
     $this->action = app(CreateMercadoPagoPreference::class);
 });
