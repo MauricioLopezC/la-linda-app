@@ -63,6 +63,26 @@ class GetDashboardRevenues
     }
 
     /**
+     * Net invoiced revenue (without VAT) of the confirmed sales between two dates, in cents and
+     * keyed by `Y-m-d` day; days without sales are left out. EPIC-20 builds its evolution series
+     * and the previous-period net result from it, so it follows the same rules as `net_revenue`.
+     *
+     * @return array<string, int>
+     */
+    public function netRevenueCentsByDay(CarbonImmutable $from, CarbonImmutable $to, ?int $branchId, ?SaleChannel $channel): array
+    {
+        return $this->confirmedSales($from->startOfDay(), $to->endOfDay(), $branchId, $channel)
+            ->join('invoices', 'invoices.sale_id', '=', 'sales.id')
+            ->toBase()
+            ->selectRaw('DATE(sales.confirmed_at) as day')
+            ->selectRaw($this->sumCents('invoices.net_amount').' as net_cents')
+            ->groupByRaw('DATE(sales.confirmed_at)')
+            ->get()
+            ->mapWithKeys(fn (object $row): array => [(string) $row->day => (int) $row->net_cents])
+            ->all();
+    }
+
+    /**
      * Confirmed sales of the period, narrowed to a branch (through point of sale → warehouse)
      * and a channel when they are given.
      *
