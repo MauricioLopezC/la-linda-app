@@ -11,7 +11,7 @@ import { create, show } from '@/routes/sales/cash-sessions';
 export function CashSessionIndicator() {
   const { auth, cashSession } = usePage().props;
 
-  if (auth?.user?.role !== 'personal_interno') {
+  if (!auth?.user || auth.user.role === 'cliente') {
     return null;
   }
 

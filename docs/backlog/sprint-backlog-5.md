@@ -60,7 +60,9 @@ Gerencia:        Iniciar sesión como Gerente → aterriza directo en /dashboard
 
 1. **Roles fijos en `UserRole` + Gates en código en lugar de las tablas `roles`/`permissions`/`permission_role` (`HU-004`).**
    - Se amplía el enum `App\Enums\Security\UserRole` existente (`users.role` ya es `varchar(50)`): `administrador`, `gerente`, `cajero`, `deposito`, `compras`, `cliente`.
-   - La migración del Día 1 convierte los registros actuales con `role = 'personal_interno'` a `'administrador'`.
+   - La migración del contrato de roles (D2, `migrate_personal_interno_role_to_administrador`) convierte los registros actuales con `role = 'personal_interno'` a `'administrador'` y baja el default de la columna a `'cliente'` (mínimo privilegio).
+   - La matriz rol → Gates vive en `UserRole::permissions()` sobre el enum `App\Enums\Security\Permission`. Los Gates son por módulo completo: la "consulta" de un rol (p. ej. el `gerente` sobre compras y stock, o `compras` sobre existencias) se resuelve otorgando el Gate entero, sin separar lectura de escritura. El `gerente` no tiene `operate-cash`.
+   - La migración de datos que convierte los registros actuales con `role = 'personal_interno'` a `'administrador'` va en el PR del Contrato de Roles (D2), junto con el caso `UserRole::Administrador`: si corriera en el esquema del D1, el cast del enum fallaría al leer usuarios con un valor que todavía no existe.
    - Se definen Gates por módulo en código (`view-dashboard`, `manage-web-orders`, `manage-users`, `operate-cash`, `manage-catalog`, `manage-pricing`, `manage-purchases`, `manage-stock`, `manage-customers`, `manage-organization`) y se aplican con middleware `can:<gate>` por grupo de rutas en `routes/web.php`.
    - Se mantiene `Gate::before` para `UserRole::Administrador`.
    - `UserFactory` incorpora un state por rol (`User::factory()->gerente()`, `->cajero()`, `->deposito()`, `->compras()`, `->administrador()`, `->cliente()`).
@@ -68,11 +70,12 @@ Gerencia:        Iniciar sesión como Gerente → aterriza directo en /dashboard
    - La matriz editable de permisos por rol pasa a **"Fuera del sprint / deseable"** y se agrega como pregunta al PO.
 2. **Pantalla principal por rol al iniciar sesión (`LoginResponse` y redirección raíz).**
    - `Gerente` (y `Administrador`) → `/dashboard`
-   - `Depósito` → bandeja de pedidos web a preparar (`/ecommerce/orders`)
-   - `Cajero` → la caja (`/sales/cash-sessions`)
-   - `Compras` → órdenes de compra (`/purchases/orders`)
+   - `Depósito` → bandeja de pedidos web a preparar (`ecommerce.orders.index`, `/ecommerce/orders`); hasta que `EPIC-17` registre esa ruta, cae en existencias (`inventory.stocks.index`)
+   - `Cajero` → la caja (`sales.cash-sessions.current`, que abre el turno en curso o lleva a abrir uno)
+   - `Compras` → órdenes de compra (`purchasing.orders.index`, `/purchasing/orders`)
+   - La pantalla principal de cada rol la resuelve `UserRole::homeRoute()`, compartida por `LoginResponse` y `redirectUsersTo`.
    - `Cliente` → tienda online (`route('tienda.home')`)
-3. **Incorporación de `HU-048` para proteger a dos clientes concurrentes.** Como el stock físico del depósito online recién baja cuando el depósito entrega el pedido (`EPIC-17`), la disponibilidad online (`available_quantity`) se calcula como la existencia física del depósito `is_ecommerce = true` **menos** las cantidades comprometidas en pedidos con estado `pagado` o `en_preparacion`. Se valida al agregar al carrito y dentro de la transacción de `PlaceWebOrder` (`HU-062`).
+3. **Incorporación de `HU-048` para proteger a dos clientes concurrentes.** Como el stock físico del depósito online recién baja cuando el depósito entrega el pedido (`EPIC-17`), la disponibilidad online (`available_quantity`) se calcula como la existencia física del depósito `is_online_channel = true` **menos** las cantidades comprometidas en pedidos con estado `pagado` o `en_preparacion`. Se valida al agregar al carrito y dentro de la transacción de `PlaceWebOrder` (`HU-062`).
 4. **Tipo de movimiento de stock propio `"Salida por Entrega de Pedido Web"` (`EPIC-17`).** Se agrega a `StockMovementType` el código `CODE_WEB_ORDER_DELIVERY = 'web_order_delivery'` (`name = 'Salida por Entrega de Pedido Web'`, `sign = -1`, `is_system = true`), incluido en `AUTOMATIC_CODES` para que **no sea elegible en ajustes manuales** (`HU-017`). Responde al *"¿hacemos un ajuste? No"* del PO, deja distinguible en el historial (`HU-018`) la `"Salida por Venta"` de mostrador (`sale_exit`) de la entrega online (`web_order_delivery`) y reutiliza `stock_movements.sale_id`.
 5. **Máquina de estados simplificada en `web_orders` (`EPIC-17`).**
    - Cuatro estados: `pendiente` → `pagado` → `en_preparacion` → `entregado`, mostrando en la interfaz la etiqueta **"Despachado"** cuando `delivery_method = 'envio'` y **"Entregado"** cuando `delivery_method = 'retiro'`. El pedido se cierra al salir del depósito.
@@ -155,7 +158,7 @@ Cada developer es dueño de sus ítems de punta a punta (backend, frontend y tes
 2. **`ConvertPaidWebOrderToSale(WebOrder): Sale` (Chiari → Facu):**
    - La implementa Chiari en `EPIC-15`, la llama `MarkWebOrderAsPaid`, y Facu lee la `Sale` por `web_order_id` en `DeliverWebOrder`. Mientras tanto (D1–D4), Facu usa `WebOrder::factory()->paid()` con `Sale::factory()` online vinculada al pedido.
 3. **Contrato de roles (Mauri, D2 · Ma 13/10):**
-   - Nombres de los casos de `UserRole`, `Gate::before` y los 10 Gates, un state por rol en `UserFactory` (con `administrador` por defecto para que no se rompa ningún test) y `LoginResponse` por rol. Destraba a Aza y a Facu. **Una vez mergeado, nadie más toca `UserFactory.php`.**
+   - Nombres de los casos de `UserRole`, migración de datos `personal_interno` → `administrador`, `Gate::before` y los 10 Gates, un state por rol en `UserFactory` (con `administrador` por defecto para que no se rompa ningún test) y `LoginResponse` por rol. Destraba a Aza y a Facu. **Una vez mergeado, nadie más toca `UserFactory.php`.**
 4. **Base del tablero + firmas de ingresos/egresos (Clarita y Pablo, D2 · Ma 13/10):**
    - `DashboardController@index`, `DashboardFilterRequest`, `DashboardData` con un bloque anulable por sección y `dashboard.tsx` partido en `pages/dashboard/partials/*.tsx` (no necesita el esquema: puede salir desde el D1). Clarita y Pablo acuerdan las firmas de `GetDashboardRevenues` y `GetDashboardExpenses` y qué total de egresos usa el resultado neto de `EPIC-20` (el devengado, aclarando el pagado).
 5. **Grupos de rutas por módulo en `routes/web.php` (D1/D2):**
@@ -169,7 +172,7 @@ Cada developer es dueño de sus ítems de punta a punta (backend, frontend y tes
 | **D2 · Ma 13/10** *(Contratos D2)* | `EPIC-15`: `ConvertPaidWebOrderToSale` + renglón `"Envío a domicilio"` en `IssueInvoice` | `EPIC-17`: Actions de preparación y entrega con `"Salida por Entrega de Pedido Web"` | `HU-003`: suma Actions de alta, rol, sucursal y blanqueo sobre el contrato de roles | **PR Contrato de Roles D2** mergeado (`UserRole`, Gates, `UserFactory`, inicio por rol) | **PR Base del Tablero D2** mergeado + arranque de `GetDashboardRevenues` (`EPIC-18`) con `Sale::factory()` | Enchufar `GetDashboardExpenses` (`EPIC-19`) en `DashboardExpensesSection.tsx` |
 | **D3 · Mi 14/10** | `EPIC-15`: integración con `MarkWebOrderAsPaid` (idempotente ante doble webhook) y PDF en `orders/show.tsx` | `EPIC-17`: controlador y bandeja en `/ecommerce/orders` con índice `(status, paid_at)` | `HU-003`: validaciones de último admin y caja abierta + pantalla y modal de clave por única vez | `HU-004`: `auth.can` en `HandleInertiaRequests` y filtro de `app-sidebar.tsx` | `EPIC-18`: desglose por canal, sucursal y medio de pago en `DashboardRevenuesSection.tsx` | `EPIC-19`: tarjetas devengado vs. pagado, gráfico por medio de pago y tests |
 | **D4 · Ju 15/10** *(Control D4)* | **PR `EPIC-15` mergeado** · **Control D4** | `EPIC-17`: vista de detalle (*picking*), rebase de `orders/show.tsx` y etiqueta `"Despachado"`/`"Entregado"` | **PR `HU-003` mergeado** · **Control D4** | `HU-004`: aplicar `can:` por grupo de rutas en `routes/web.php` | **PR `EPIC-18` mergeado** · **Control D4** | **PR `EPIC-19` mergeado** · **Control D4** |
-| **D5 · Vi 16/10** | `HU-048`: cálculo de disponibilidad online (saldo `is_ecommerce` − `pagado`/`en_preparacion`) | `EPIC-17`: integración con la `Sale` real de `EPIC-15` y tests de punta a punta | `HU-047`: ampliar `ConsultOnlineCatalogRequest` y `ConsultOnlineCatalog` (`brand_id`, `min_price`, `max_price`, `sort`) | `HU-004`: barrido de tests de todos los módulos y suite `200`/`403` por rol | `EPIC-20`: `GetDashboardEvolution` reutilizando totales de ingresos y egresos (serie con `0.00`) | `EPIC-21`: queries de top vendidos, compras por proveedor y alertas de stock (`<= 0`) |
+| **D5 · Vi 16/10** | `HU-048`: cálculo de disponibilidad online (saldo `is_online_channel` − `pagado`/`en_preparacion`) | `EPIC-17`: integración con la `Sale` real de `EPIC-15` y tests de punta a punta | `HU-047`: ampliar `ConsultOnlineCatalogRequest` y `ConsultOnlineCatalog` (`brand_id`, `min_price`, `max_price`, `sort`) | `HU-004`: barrido de tests de todos los módulos y suite `200`/`403` por rol | `EPIC-20`: `GetDashboardEvolution` reutilizando totales de ingresos y egresos (serie con `0.00`) | `EPIC-21`: queries de top vendidos, compras por proveedor y alertas de stock (`<= 0`) |
 | **D6 · Lu 19/10** *(Control D6 · tope `HU-004`)* | `HU-048`: validación en `AddArticleToCart`, `UpdateCartItemQuantity` y con lock en `PlaceWebOrder` | **PR `EPIC-17` mergeado** · **Control D6** | `HU-047`: UI de filtros en componente aparte para `pages/ecommerce/index.tsx` | **PR `HU-004` + Barrido de tests mergeado (Tope D6)** · **Control D6** | `EPIC-20`: gráfico comparativo ingresos vs. egresos y tarjeta de superávit/déficit | `EPIC-21`: KPI de pedidos `pagado`/`en_preparacion` y paneles en `DashboardOperationalSection.tsx` |
 | **D7 · Ma 20/10** | `HU-048`: rebase sobre `HU-047`, badges en `pages/ecommerce/index.tsx` y tests de concurrencia | Pruebas cruzadas del circuito online → depósito → historial de movimientos (`HU-018`) | `HU-047`: tests sobre precio resuelto (`HU-056`) y combinación de filtros | Verificación de redirección inicial por rol y ajustes de `DatabaseSeeder` por rol | **PR `EPIC-20` mergeado** | **PR `EPIC-21` mergeado** |
 | **D8 · Mi 21/10** | **PR `HU-048` mergeado** | Ajuste de seeders de demostración (pedidos web pagados y entregados) | **PR `HU-047` mergeado** | Pruebas de permisos finos en botones de acción por rol | Apoyo en `EPIC-22` (o toma `EPIC-22` si se aplica la propuesta) | `EPIC-22`: barra de filtros sincronizada con URL y `/dashboard/export` |
@@ -227,13 +230,14 @@ Stack: Laravel + Inertia v3 + React. Tienda y despachos en `Ecommerce` / `Stock`
 
 ### EPIC-15 — Procesar el pedido pagado como una venta online con su factura (5 SP)
 - [ ] En el PR de esquema (D1): migración en `sales` (`web_order_id` único nullable, `shipping_amount`, `CHECK (channel = 'online' ⇔ web_order_id IS NOT NULL)`), ajuste de nulabilidad en `invoices` (`cash_session_id` y `user_id` nullable) e `invoice_items` (`article_id` nullable).
-- [ ] Action `ConvertPaidWebOrderToSale`, invocada por `MarkWebOrderAsPaid` dentro de la misma transacción: devuelve la `Sale` existente si ya fue procesado (idempotencia), resuelve el depósito activo con `is_ecommerce = true` y su punto de venta activo, y crea la `Sale` `confirmada` (`channel = 'online'`, `cash_session_id = null`, `user_id = null`, `shipping_amount = $webOrder->shipping_cost`) con sus `sale_items` y desglose de neto e IVA (`HU-063`), sin descontar stock.
+- [ ] Action `ConvertPaidWebOrderToSale`, invocada por `MarkWebOrderAsPaid` dentro de la misma transacción: devuelve la `Sale` existente si ya fue procesado (idempotencia), resuelve el depósito activo con `is_online_channel = true` y su punto de venta activo, y crea la `Sale` `confirmada` (`channel = 'online'`, `cash_session_id = null`, `user_id = null`, `shipping_amount = $webOrder->shipping_cost`) con sus `sale_items` y desglose de neto e IVA (`HU-063`), sin descontar stock.
 - [ ] Emitir la `Invoice` (`A` o `B` según la condición fiscal del cliente) reutilizando `IssueInvoice`; cuando `shipping_cost > 0`, agregar la línea `"Envío a domicilio"` (`article_id = null`, IVA 21%) para que el total facturado coincida exactamente con el importe pagado en Mercado Pago.
 - [ ] Exponer la factura emitida y el botón de descarga de su PDF (`HU-043`) en `resources/js/pages/ecommerce/orders/show.tsx` ("Mis pedidos" del cliente) y en la vista interna.
 - [ ] Tests: pedido pagado con retiro y con envío genera venta + factura con totales exactos, idempotencia ante doble webhook y existencia de stock intacta tras el pago.
 
 ### HU-048 — Mostrar la disponibilidad online e impedir la compra sin stock (3 SP)
-- [ ] Query/servicio de disponibilidad online que calcula `available_quantity` por artículo como el saldo en `stock_balances` del depósito `is_ecommerce = true` menos la suma de cantidades en `web_order_items` de pedidos en estado `'pagado'` o `'en_preparacion'`.
+- [ ] Query/servicio de disponibilidad online que calcula `available_quantity` por artículo como el saldo en `stock_balances` del depósito `is_online_channel = true` menos la suma de cantidades en `web_order_items` de pedidos en estado `'pagado'` o `'en_preparacion'`.
+- [ ] Garantizar un único depósito online activo: índice único parcial `warehouses_single_active_online_channel` sobre `warehouses (is_online_channel) WHERE is_online_channel AND is_active` y validación en `CreateWarehouse` / `UpdateWarehouse` con mensaje claro, para que la disponibilidad y `ConvertPaidWebOrderToSale` (`EPIC-15`) resuelvan siempre el mismo depósito.
 - [ ] Exponer el estado de disponibilidad (`disponible`, `ultimas_unidades`, `sin_stock`) y `available_quantity` en el catálogo público (`ConsultOnlineCatalog`) y en el carrito.
 - [ ] Validar en `AddArticleToCart`, `UpdateCartItemQuantity` y dentro de la transacción de `PlaceWebOrder` (`HU-062`, con lock para evitar condiciones de carrera entre dos clientes) que la cantidad solicitada no supere `available_quantity`.
 - [ ] En `resources/js/pages/ecommerce/index.tsx` y `cart.tsx`, mostrar el badge de disponibilidad y deshabilitar `"Agregar al carrito"` / `"Confirmar pedido"` cuando no alcance el stock.
@@ -248,7 +252,7 @@ Stack: Laravel + Inertia v3 + React. Tienda y despachos en `Ecommerce` / `Stock`
 - [ ] Tests: flujo `pagado` → `en_preparacion` → `entregado`, auditoría de `prepared_by` y `delivered_by`, movimiento `"Salida por Entrega de Pedido Web"` no elegible en ajustes manuales, descuento único en el depósito online y rechazo de transiciones inválidas.
 
 ### HU-003 — Administrar los usuarios del sistema (5 SP)
-- [ ] En el PR de esquema (D1): columnas `branch_id` (`FK → branches`, nullable) e `is_active` (`boolean` default `true`) en `users`, y migración de datos `personal_interno` → `administrador`.
+- [ ] En el PR de esquema (D1): columnas `branch_id` (`FK → branches`, nullable) e `is_active` (`boolean` default `true`) en `users`. La migración de datos `personal_interno` → `administrador` se hace en el PR del Contrato de Roles (D2, `HU-004`).
 - [ ] Deshabilitar `Features::registration()` en `config/fortify.php` para cerrar `/register` en el panel interno (manteniendo el registro de clientes de `EPIC-11` en `/tienda/registro`).
 - [ ] Middleware `EnsureUserIsActive`: impide iniciar sesión a usuarios inactivos y cierra la sesión en curso si un usuario pasa a `is_active = false`.
 - [ ] Actions y controlador de usuarios (`/settings/users` o `/users`, protegido por `can:manage-users`): alta, edición de rol (`UserRole`) y sucursal, activación/desactivación lógica y blanqueo de contraseña (mostrando la clave generada o definida por única vez en pantalla).
@@ -263,7 +267,7 @@ Stack: Laravel + Inertia v3 + React. Tienda y despachos en `Ecommerce` / `Stock`
 - [ ] Tests: filtro por marca, rango de precios (visitante anónimo y cliente con lista particular), ordenamiento por precio y por descripción, combinación de filtros.
 
 ### HU-004 — Administrar roles y sus permisos (8 SP)
-- [ ] En el PR Contrato de Roles (D2): ampliar `App\Enums\Security\UserRole` (`administrador`, `gerente`, `cajero`, `deposito`, `compras`, `cliente`), definir `Gate::before` para `Administrador` y los Gates por módulo (`view-dashboard`, `manage-web-orders`, `manage-users`, `operate-cash`, `manage-catalog`, `manage-pricing`, `manage-purchases`, `manage-stock`, `manage-customers`, `manage-organization`), agregar states por rol en `UserFactory` y actualizar `LoginResponse` para que cada rol entre a su pantalla principal (`Gerente` → `/dashboard`, `Depósito` → pedidos a preparar, `Cajero` → la caja, `Compras` → compras, `Cliente` → `/tienda`).
+- [ ] En el PR Contrato de Roles (D2): ampliar `App\Enums\Security\UserRole` (`administrador`, `gerente`, `cajero`, `deposito`, `compras`, `cliente`) con la migración de datos `personal_interno` → `administrador` (y su `down()` inverso), definir `Gate::before` para `Administrador` y los Gates por módulo (`view-dashboard`, `manage-web-orders`, `manage-users`, `operate-cash`, `manage-catalog`, `manage-pricing`, `manage-purchases`, `manage-stock`, `manage-customers`, `manage-organization`), agregar states por rol en `UserFactory` y actualizar `LoginResponse` para que cada rol entre a su pantalla principal (`Gerente` → `/dashboard`, `Depósito` → pedidos a preparar, `Cajero` → la caja, `Compras` → compras, `Cliente` → `/tienda`).
 - [ ] Compartir `auth.user.role` y `auth.can` en `HandleInertiaRequests` y filtrar los módulos de `resources/js/components/app-sidebar.tsx` según los Gates activos.
 - [ ] Aplicar `middleware('can:<gate>')` por grupo de rutas en `routes/web.php` y sembrar un usuario de demostración por cada rol en `DatabaseSeeder`.
 - [ ] **Barrido de tests (mergeado a más tardar el D6):** actualizar los tests de módulos que requieran un rol específico y agregar la suite de autorización que verifica `200` en módulos permitidos, `403` en módulos no permitidos y redirección inicial para cada uno de los 5 roles.
@@ -328,7 +332,7 @@ Ninguna tabla nueva en el Sprint 5 (se reutiliza `users.role` con el enum `UserR
 #### `users` — HU-003, HU-004
 | Columna | Tipo | Reglas |
 |---|---|---|
-| role | varchar(50) | ya existe; el enum `UserRole` pasa a `'administrador'`, `'gerente'`, `'cajero'`, `'deposito'`, `'compras'`, `'cliente'`. Migración de datos: `personal_interno` → `administrador` |
+| role | varchar(50) | ya existe; el enum `UserRole` pasa a `'administrador'`, `'gerente'`, `'cajero'`, `'deposito'`, `'compras'`, `'cliente'`. Migración de datos `personal_interno` → `administrador` en el PR del Contrato de Roles (D2), no en el esquema del D1 |
 | branch_id | FK → branches | nullable (`nullOnDelete`); sucursal predeterminada opcional del empleado |
 | is_active | boolean | default `true`; baja lógica e invalidación de sesión |
 
@@ -364,6 +368,10 @@ Ninguna tabla nueva en el Sprint 5 (se reutiliza `users.role` con el enum `UserR
 
 #### `points_of_sale` — EPIC-15
 - Sin cambios de estructura. Se crea el punto de venta **número 3** en el depósito online (`is_online_channel = true`), donde se registran las ventas online y se numeran sus facturas. Lo crea la migración `ensure_online_point_of_sale_exists` (producción corre `migrate` pero no `db:seed`) y `PointOfSaleSeeder` en bases nuevas.
+
+#### `warehouses` — HU-048, EPIC-15
+- El depósito del canal online se identifica con la columna existente `is_online_channel` (no `is_ecommerce`).
+- `UNIQUE INDEX warehouses_single_active_online_channel (is_online_channel) WHERE is_online_channel AND is_active`: a lo sumo un depósito online activo. **No entró en el esquema del D1:** se agrega con `HU-048`.
 
 #### `stock_movement_types` — EPIC-17
 - Se siembra/inserta en la migración del D1 el tipo de sistema `code = 'web_order_delivery'`, `name = 'Salida por Entrega de Pedido Web'`, `sign = -1`, `is_system = true`, `is_active = true`, incluido en `StockMovementType::AUTOMATIC_CODES`.

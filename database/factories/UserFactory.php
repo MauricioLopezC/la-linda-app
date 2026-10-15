@@ -31,7 +31,7 @@ class UserFactory extends Factory
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
-            'role' => UserRole::PersonalInterno,
+            'role' => UserRole::Administrador,
             'customer_id' => null,
         ];
     }
@@ -51,18 +51,56 @@ class UserFactory extends Factory
      */
     public function client(): static
     {
-        return $this->state(fn (array $attributes) => [
-            'role' => UserRole::Cliente,
-        ]);
+        return $this->role(UserRole::Cliente);
     }
 
     /**
-     * Indicate that the user is internal staff.
+     * Indicate that the user is an Administrador, who passes every Gate.
      */
-    public function internal(): static
+    public function administrador(): static
+    {
+        return $this->role(UserRole::Administrador);
+    }
+
+    /**
+     * Indicate that the user is a Gerente (management).
+     */
+    public function gerente(): static
+    {
+        return $this->role(UserRole::Gerente);
+    }
+
+    /**
+     * Indicate that the user is an Encargado de compras.
+     */
+    public function compras(): static
+    {
+        return $this->role(UserRole::Compras);
+    }
+
+    /**
+     * Indicate that the user is an Encargado de depósito.
+     */
+    public function deposito(): static
+    {
+        return $this->role(UserRole::Deposito);
+    }
+
+    /**
+     * Indicate that the user is a Cajero.
+     */
+    public function cajero(): static
+    {
+        return $this->role(UserRole::Cajero);
+    }
+
+    /**
+     * Indicate that the user has the given role.
+     */
+    public function role(UserRole $role): static
     {
         return $this->state(fn (array $attributes) => [
-            'role' => UserRole::PersonalInterno,
+            'role' => $role,
         ]);
     }
 
