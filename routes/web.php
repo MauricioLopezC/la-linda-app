@@ -12,6 +12,7 @@ use App\Http\Controllers\Ecommerce\CustomerAccountController;
 use App\Http\Controllers\Ecommerce\CustomerRegistrationController;
 use App\Http\Controllers\Ecommerce\MercadoPagoWebhookController;
 use App\Http\Controllers\Ecommerce\StoreHomeController;
+use App\Http\Controllers\Ecommerce\WarehouseOrderController;
 use App\Http\Controllers\Ecommerce\WebOrderController;
 use App\Http\Controllers\Ecommerce\WebOrderPaymentController;
 use App\Http\Controllers\Ecommerce\WebOrderPaymentReturnController;
@@ -39,7 +40,7 @@ use Illuminate\Support\Facades\Route;
 Route::inertia('/', 'welcome')->name('home');
 
 Route::middleware(['internal.staff', 'verified'])->group(function () {
-    Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('dashboard', [DashboardController::class, 'index'])->middleware('can:view-dashboard')->name('dashboard');
 
     Route::prefix('catalog/categories')->name('catalog.categories.')->group(function () {
         Route::get('/', [CategoryController::class, 'index'])->name('index');
@@ -229,6 +230,16 @@ Route::middleware(['internal.staff', 'verified'])->group(function () {
         Route::get('export/csv', [SupplierAccountStatementController::class, 'exportCsv'])->name('export.csv');
         Route::get('export/excel', [SupplierAccountStatementController::class, 'exportExcel'])->name('export.excel');
     });
+
+    Route::prefix('ecommerce/orders')
+        ->name('ecommerce.orders.')
+        ->middleware('can:manage-web-orders')
+        ->group(function () {
+            Route::get('/', [WarehouseOrderController::class, 'index'])->name('index');
+            Route::get('{web_order}', [WarehouseOrderController::class, 'show'])->name('show');
+            Route::post('{web_order}/start-preparation', [WarehouseOrderController::class, 'startPreparation'])->name('start-preparation');
+            Route::post('{web_order}/deliver', [WarehouseOrderController::class, 'deliver'])->name('deliver');
+        });
 });
 
 Route::post('webhooks/mercadopago', MercadoPagoWebhookController::class)->name('webhooks.mercadopago');

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Reporting;
 
+use App\Actions\Reporting\GetDashboardExpenses;
 use App\Actions\Reporting\GetDashboardRevenues;
 use App\Data\Reporting\DashboardBranchOptionData;
 use App\Data\Reporting\DashboardData;
@@ -17,8 +18,11 @@ class DashboardController extends Controller
     /**
      * Display the management dashboard for the selected period, branch and channel.
      */
-    public function index(DashboardFilterRequest $request, GetDashboardRevenues $getDashboardRevenues): Response
-    {
+    public function index(
+        DashboardFilterRequest $request,
+        GetDashboardRevenues $getDashboardRevenues,
+        GetDashboardExpenses $getDashboardExpenses,
+    ): Response {
         $filters = $request->filters();
 
         $branches = Branch::query()
@@ -30,6 +34,7 @@ class DashboardController extends Controller
             filters: new DashboardFiltersData(...$filters),
             branches: $branches->map(fn (Branch $branch): DashboardBranchOptionData => DashboardBranchOptionData::fromModel($branch))->all(),
             revenues: $getDashboardRevenues->handle($filters),
+            expenses: $getDashboardExpenses->handle($filters),
         );
 
         return Inertia::render('dashboard', $dashboard->toArray());
