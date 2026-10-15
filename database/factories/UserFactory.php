@@ -33,6 +33,8 @@ class UserFactory extends Factory
             'remember_token' => Str::random(10),
             'role' => UserRole::Administrador,
             'customer_id' => null,
+            'branch_id' => null,
+            'is_active' => true,
         ];
     }
 
@@ -101,6 +103,45 @@ class UserFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'role' => $role,
+        ]);
+    }
+
+    public function admin(): static
+    {
+        return $this->administrador();
+    }
+
+    public function manager(): static
+    {
+        return $this->gerente();
+    }
+
+    public function cashier(): static
+    {
+        return $this->cajero();
+    }
+
+    public function warehouse(): static
+    {
+        return $this->deposito();
+    }
+
+    public function purchases(): static
+    {
+        return $this->compras();
+    }
+
+    public function inactive(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_active' => false,
+        ]);
+    }
+
+    public function branch(int $branchId): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'branch_id' => $branchId,
         ]);
     }
 
