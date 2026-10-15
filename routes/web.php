@@ -258,6 +258,7 @@ Route::prefix('tienda')->name('tienda.')->group(function () {
             Route::get('/', [WebOrderController::class, 'index'])->name('index');
             Route::post('{web_order}/pagar', [WebOrderPaymentController::class, 'store'])->name('pay');
             Route::get('{web_order}/retorno', [WebOrderPaymentReturnController::class, 'show'])->name('payment-return');
+            Route::get('{web_order}/factura/pdf', [WebOrderController::class, 'invoicePdf'])->name('invoice.pdf');
             Route::get('{web_order}', [WebOrderController::class, 'show'])->name('show');
         });
     });

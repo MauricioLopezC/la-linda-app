@@ -11,12 +11,17 @@ use InvalidArgumentException;
 use RuntimeException;
 
 /**
- * Atomically marks an online order as paid upon confirmed Mercado Pago payment.
- * Ensures strict idempotency when the same payment notification is delivered repeatedly.
+ * Atomically marks an online order as paid upon confirmed Mercado Pago payment,
+ * converts it into a confirmed online sale with an issued invoice (EPIC-15),
+ * and ensures strict idempotency when the same payment notification is delivered repeatedly.
  */
 class MarkWebOrderAsPaid
 {
     use ConvertsMoneyToCents;
+
+    public function __construct(
+        protected ConvertPaidWebOrderToSale $convertPaidWebOrderToSale,
+    ) {}
 
     /**
      * @throws InvalidArgumentException
@@ -44,7 +49,9 @@ class MarkWebOrderAsPaid
             if ($lockedOrder->status === WebOrderStatus::Paid) {
                 if ($lockedOrder->mp_payment_id === $paymentId) {
                     // Idempotent replay of the exact same payment notification
-                    return $lockedOrder;
+                    $this->convertPaidWebOrderToSale->execute($lockedOrder);
+
+                    return $lockedOrder->loadMissing('sale.invoice');
                 }
 
                 throw new RuntimeException(
@@ -61,7 +68,9 @@ class MarkWebOrderAsPaid
                 'paid_at' => $paidAt,
             ]);
 
-            return $lockedOrder;
+            $this->convertPaidWebOrderToSale->execute($lockedOrder);
+
+            return $lockedOrder->loadMissing('sale.invoice');
         });
     }
 }

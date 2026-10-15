@@ -1,31 +1,87 @@
 <?php
 
+use App\Enums\Catalog\ArticleStatus;
 use App\Enums\Ecommerce\WebOrderStatus;
+use App\Enums\Pricing\PriceListChannel;
+use App\Enums\Sales\SaleChannel;
+use App\Enums\Sales\SaleStatus;
+use App\Models\Catalog\Article;
 use App\Models\Ecommerce\WebOrder;
+use App\Models\Ecommerce\WebOrderItem;
+use App\Models\Inventory\StockBalance;
+use App\Models\Inventory\StockMovement;
+use App\Models\Inventory\Warehouse;
+use App\Models\Organization\Branch;
+use App\Models\Pricing\PriceList;
+use App\Models\Pricing\VatRate;
+use App\Models\Sales\CashMovement;
+use App\Models\Sales\Invoice;
+use App\Models\Sales\PointOfSale;
+use App\Models\Sales\Sale;
+use App\Models\Sales\SaleItem;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 beforeEach(function () {
     config([
         'services.mercadopago.access_token' => 'TEST-ACCESS-TOKEN-WEBHOOK',
         'services.mercadopago.base_url' => 'https://api.mercadopago.test',
     ]);
+
+    $branch = Branch::factory()->create(['is_active' => true]);
+    $warehouse = Warehouse::factory()->online()->create([
+        'branch_id' => $branch->id,
+        'is_active' => true,
+    ]);
+    $this->onlineWarehouse = $warehouse;
+    PointOfSale::factory()->create([
+        'warehouse_id' => $warehouse->id,
+        'is_active' => true,
+    ]);
 });
 
-test('approves payment when webhook notification arrives and api confirms approved payment', function () {
-    $order = WebOrder::factory()->create([
-        'items_amount' => '4000.00',
-        'shipping_cost' => '0.00',
-        'total_amount' => '4000.00',
-        'status' => WebOrderStatus::Pending,
+/**
+ * Create a pending order with real lines so an approved webhook also exercises invoicing.
+ */
+function pendingWebhookOrderWithShipping(Warehouse $warehouse): WebOrder
+{
+    $rate = VatRate::factory()->create(['percentage' => 21]);
+    $article = Article::factory()->create(['vat_rate_id' => $rate->id]);
+    $list = PriceList::factory()->forChannel(PriceListChannel::Online)->create();
+    $order = WebOrder::factory()->shipping('121.00')->create([
+        'items_amount' => '242.00',
+        'total_amount' => '363.00',
     ]);
+    WebOrderItem::factory()->create([
+        'web_order_id' => $order->id,
+        'article_id' => $article->id,
+        'price_list_id' => $list->id,
+        'quantity' => '2.000',
+        'unit_price' => '121.00',
+        'line_total' => '242.00',
+    ]);
+    StockBalance::factory()->create([
+        'article_id' => $article->id,
+        'warehouse_id' => $warehouse->id,
+        'quantity' => '50.000',
+    ]);
+
+    return $order->load('items.article');
+}
+
+test('approves payment when webhook notification arrives and api confirms approved payment', function () {
+    $order = pendingWebhookOrderWithShipping($this->onlineWarehouse);
+    $balance = StockBalance::query()->where('article_id', $order->items->first()->article_id)->sole();
+    $stockMovements = StockMovement::count();
+    $cashMovements = CashMovement::count();
 
     Http::fake([
         'https://api.mercadopago.test/v1/payments/998877' => Http::response([
             'id' => 998877,
             'status' => 'approved',
             'external_reference' => (string) $order->id,
-            'transaction_amount' => 4000.0,
+            'transaction_amount' => 363.0,
             'date_approved' => '2026-10-08T18:00:00.000Z',
         ], 200),
     ]);
@@ -46,8 +102,40 @@ test('approves payment when webhook notification arrives and api confirms approv
     $freshOrder = $order->fresh();
     expect($freshOrder->status)->toBe(WebOrderStatus::Paid)
         ->and($freshOrder->mp_payment_id)->toBe('998877')
-        ->and($freshOrder->paid_amount)->toBe('4000.00')
+        ->and($freshOrder->paid_amount)->toBe('363.00')
         ->and($freshOrder->paid_at)->not->toBeNull();
+
+    $sale = $order->fresh()->sale;
+    expect($sale)->not->toBeNull()
+        ->and($sale->channel)->toBe(SaleChannel::Online)
+        ->and($sale->status)->toBe(SaleStatus::Confirmed)
+        ->and($sale->point_of_sale_id)->toBe(PointOfSale::query()->where('warehouse_id', $this->onlineWarehouse->id)->sole()->id)
+        ->and($sale->cash_session_id)->toBeNull()
+        ->and($sale->user_id)->toBeNull()
+        ->and($sale->total_amount)->toBe('363.00')
+        ->and($sale->shipping_amount)->toBe('121.00')
+        ->and($sale->items)->toHaveCount(1)
+        ->and($sale->items->first()->quantity)->toBe('2.000')
+        ->and($sale->items->first()->unit_price)->toBe('121.00')
+        ->and($sale->invoice)->not->toBeNull()
+        ->and($sale->invoice->cash_session_id)->toBeNull()
+        ->and($sale->invoice->user_id)->toBeNull()
+        ->and($sale->invoice->net_amount)->toBe('300.00')
+        ->and($sale->invoice->vat_amount)->toBe('63.00')
+        ->and($sale->invoice->total_amount)->toBe($order->fresh()->paid_amount)
+        ->and($sale->invoice->items)->toHaveCount(2)
+        ->and(Sale::query()->where('web_order_id', $order->id)->count())->toBe(1)
+        ->and(Invoice::query()->where('sale_id', $sale->id)->count())->toBe(1)
+        ->and($balance->fresh()->quantity)->toBe('50.000')
+        ->and(StockMovement::count())->toBe($stockMovements)
+        ->and(CashMovement::count())->toBe($cashMovements);
+
+    $shipping = $sale->invoice->items->whereNull('article_id')->sole();
+    expect($shipping->description)->toBe('Envío a domicilio')
+        ->and($shipping->vat_rate)->toBe('21.00')
+        ->and($shipping->net_amount)->toBe('100.00')
+        ->and($shipping->vat_amount)->toBe('21.00')
+        ->and($shipping->line_total)->toBe('121.00');
 });
 
 test('stores paid_at in the app timezone when mercado pago reports date_approved with another offset', function () {
@@ -112,19 +200,17 @@ test('does not mark order as paid when payment status is rejected or pending', f
 });
 
 test('handles duplicate notification idempotently without errors', function () {
-    $order = WebOrder::factory()->create([
-        'items_amount' => '4000.00',
-        'shipping_cost' => '0.00',
-        'total_amount' => '4000.00',
-        'status' => WebOrderStatus::Pending,
-    ]);
+    $order = pendingWebhookOrderWithShipping($this->onlineWarehouse);
+    $balance = StockBalance::query()->where('article_id', $order->items->first()->article_id)->sole();
+    $stockMovements = StockMovement::count();
+    $cashMovements = CashMovement::count();
 
     Http::fake([
         'https://api.mercadopago.test/v1/payments/555444' => Http::response([
             'id' => 555444,
             'status' => 'approved',
             'external_reference' => (string) $order->id,
-            'transaction_amount' => 4000.0,
+            'transaction_amount' => 363.0,
             'date_approved' => '2026-10-08T18:00:00.000Z',
         ], 200),
     ]);
@@ -134,6 +220,9 @@ test('handles duplicate notification idempotently without errors', function () {
         'type' => 'payment',
         'data' => ['id' => '555444'],
     ])->assertOk();
+
+    $firstSale = $order->fresh()->sale;
+    $firstInvoiceId = $firstSale->invoice->id;
 
     // Second duplicate arrival
     $response = $this->postJson(route('webhooks.mercadopago'), [
@@ -149,6 +238,41 @@ test('handles duplicate notification idempotently without errors', function () {
 
     expect($order->fresh()->status)->toBe(WebOrderStatus::Paid)
         ->and($order->fresh()->mp_payment_id)->toBe('555444');
+
+    $sale = $order->fresh()->sale;
+    expect($sale)->not->toBeNull()
+        ->and($sale->channel)->toBe(SaleChannel::Online)
+        ->and($sale->status)->toBe(SaleStatus::Confirmed)
+        ->and($sale->point_of_sale_id)->toBe(PointOfSale::query()->where('warehouse_id', $this->onlineWarehouse->id)->sole()->id)
+        ->and($sale->cash_session_id)->toBeNull()
+        ->and($sale->user_id)->toBeNull()
+        ->and($sale->total_amount)->toBe('363.00')
+        ->and($sale->shipping_amount)->toBe('121.00')
+        ->and($sale->items)->toHaveCount(1)
+        ->and($sale->items->first()->quantity)->toBe('2.000')
+        ->and($sale->items->first()->unit_price)->toBe('121.00')
+        ->and($sale->invoice)->not->toBeNull()
+        ->and($sale->invoice->cash_session_id)->toBeNull()
+        ->and($sale->invoice->user_id)->toBeNull()
+        ->and($sale->invoice->net_amount)->toBe('300.00')
+        ->and($sale->invoice->vat_amount)->toBe('63.00')
+        ->and($sale->invoice->total_amount)->toBe($order->fresh()->paid_amount)
+        ->and($sale->invoice->items)->toHaveCount(2)
+        ->and(Sale::query()->where('web_order_id', $order->id)->count())->toBe(1)
+        ->and(Invoice::query()->where('sale_id', $sale->id)->count())->toBe(1)
+        ->and($balance->fresh()->quantity)->toBe('50.000')
+        ->and(StockMovement::count())->toBe($stockMovements)
+        ->and(CashMovement::count())->toBe($cashMovements);
+
+    $shipping = $sale->invoice->items->whereNull('article_id')->sole();
+    expect($shipping->description)->toBe('Envío a domicilio')
+        ->and($shipping->vat_rate)->toBe('21.00')
+        ->and($shipping->net_amount)->toBe('100.00')
+        ->and($shipping->vat_amount)->toBe('21.00')
+        ->and($shipping->line_total)->toBe('121.00');
+
+    expect($sale->id)->toBe($firstSale->id)
+        ->and($sale->invoice->id)->toBe($firstInvoiceId);
 });
 
 test('rejects payment when transaction amount does not match order total', function () {
@@ -268,4 +392,49 @@ test('handles connection failure to mercado pago api returning 500 without crash
         ->assertJson(['error' => 'mercadopago_api_error']);
 
     expect($order->fresh()->status)->toBe(WebOrderStatus::Pending);
+});
+
+test('rolls back an approved webhook when an article has lost its VAT rate', function () {
+    $order = pendingWebhookOrderWithShipping($this->onlineWarehouse);
+    $article = $order->items->first()->article;
+    $article->update(['status' => ArticleStatus::Inactive, 'vat_rate_id' => null]);
+    $balance = StockBalance::query()->where('article_id', $article->id)->sole();
+    $stockMovements = StockMovement::count();
+    $cashMovements = CashMovement::count();
+    Log::spy();
+    Http::fake([
+        'https://api.mercadopago.test/v1/payments/998879' => Http::response([
+            'id' => 998879,
+            'status' => 'approved',
+            'external_reference' => (string) $order->id,
+            'transaction_amount' => 363.0,
+            'date_approved' => '2026-10-08T18:00:00.000Z',
+        ]),
+    ]);
+
+    $payload = ['type' => 'payment', 'data' => ['id' => '998879']];
+    $this->postJson(route('webhooks.mercadopago'), $payload)
+        ->assertInternalServerError()
+        ->assertJson(['error' => 'mercadopago_api_error']);
+
+    expect($order->fresh()->status)->toBe(WebOrderStatus::Pending)
+        ->and($order->fresh()->mp_payment_id)->toBeNull()
+        ->and($order->fresh()->paid_at)->toBeNull()
+        ->and($order->fresh()->paid_amount)->toBeNull()
+        ->and(Sale::query()->where('web_order_id', $order->id)->exists())->toBeFalse()
+        ->and(SaleItem::count())->toBe(0)
+        ->and(Invoice::count())->toBe(0)
+        ->and($balance->fresh()->quantity)->toBe('50.000')
+        ->and(StockMovement::count())->toBe($stockMovements)
+        ->and(CashMovement::count())->toBe($cashMovements);
+    Log::shouldHaveReceived('error')->withArgs(fn (string $message): bool => str_contains($message, $article->description))->once();
+
+    $article->update(['vat_rate_id' => VatRate::query()->where('percentage', 21)->sole()->id]);
+    $this->postJson(route('webhooks.mercadopago'), $payload)->assertOk();
+    $this->postJson(route('webhooks.mercadopago'), $payload)->assertOk();
+
+    expect($order->fresh()->status)->toBe(WebOrderStatus::Paid)
+        ->and(Sale::query()->where('web_order_id', $order->id)->count())->toBe(1)
+        ->and(Invoice::count())->toBe(1)
+        ->and($order->fresh()->sale->invoice->total_amount)->toBe('363.00');
 });

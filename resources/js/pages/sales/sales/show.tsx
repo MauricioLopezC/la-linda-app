@@ -318,7 +318,26 @@ export default function SaleShow({
         )}
 
         <div className="grid gap-4 rounded-xl border border-sidebar-border bg-card p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-4">
-          <InfoField label="Canal" value={sale.channel_label} />
+          <div className="space-y-1.5">
+            <p className="text-sm font-medium text-muted-foreground">Canal</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge
+                variant="outline"
+                className={
+                  sale.channel === 'online'
+                    ? 'border-sky-500/30 bg-sky-500/10 font-semibold text-sky-700 dark:text-sky-400'
+                    : 'border-slate-300 bg-slate-100 text-slate-800 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200'
+                }
+              >
+                {sale.channel_label}
+              </Badge>
+              {sale.web_order_number && (
+                <span className="font-mono text-xs text-muted-foreground">
+                  (Pedido N.° {sale.web_order_number})
+                </span>
+              )}
+            </div>
+          </div>
           <InfoField label="Depósito" value={sale.warehouse_name} />
           <InfoField label="Vendedor" value={sale.user_name ?? '—'} />
           <div className="space-y-1.5">
@@ -528,6 +547,26 @@ export default function SaleShow({
               )}
             </TableBody>
             <TableFooter>
+              {Number(sale.shipping_amount) > 0 && (
+                <TableRow className="bg-muted/30">
+                  <TableCell
+                    colSpan={5}
+                    className="text-right font-medium text-muted-foreground"
+                  >
+                    Envío a domicilio (IVA 21% inc.)
+                  </TableCell>
+                  <TableCell className="text-right font-mono text-muted-foreground">
+                    —
+                  </TableCell>
+                  <TableCell className="text-right font-mono text-muted-foreground">
+                    —
+                  </TableCell>
+                  <TableCell className="text-right font-mono font-semibold text-foreground">
+                    {formatCurrency(sale.shipping_amount)}
+                  </TableCell>
+                  {sale.accepts_changes && <TableCell />}
+                </TableRow>
+              )}
               <TableRow>
                 <TableCell colSpan={5} className="text-right font-semibold">
                   Subtotales
@@ -565,7 +604,9 @@ export default function SaleShow({
                   </TableHeader>
                   <TableBody>
                     {sale.vat_breakdown.map((row) => (
-                      <TableRow key={row.vat_rate_id}>
+                      <TableRow
+                        key={`${row.vat_rate_id ?? 'shipping'}:${row.vat_rate}`}
+                      >
                         <TableCell className="font-medium">
                           {row.vat_rate_description} (
                           {Number(row.vat_rate).toLocaleString('es-AR')}%)

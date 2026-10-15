@@ -10,6 +10,8 @@ class SaleListData extends Data
     public function __construct(
         public int $id,
         public ?int $cash_session_id,
+        public string $channel,
+        public string $channel_label,
         public string $opened_at_formatted,
         public int $point_of_sale_number,
         public string $branch_name,
@@ -21,6 +23,7 @@ class SaleListData extends Data
         public string $invoice_type_label,
         public int $items_count,
         public string $total_amount,
+        public ?int $web_order_id = null,
         public ?string $invoice_formatted_number = null,
     ) {}
 
@@ -35,6 +38,8 @@ class SaleListData extends Data
         return new self(
             id: $sale->id,
             cash_session_id: $sale->cash_session_id,
+            channel: $sale->channel->value,
+            channel_label: $sale->channel->label(),
             opened_at_formatted: $sale->opened_at->format('d/m/Y H:i'),
             point_of_sale_number: $invoice !== null ? $invoice->point_of_sale_number : $sale->pointOfSale->number,
             branch_name: $sale->pointOfSale->warehouse->branch->name,
@@ -46,6 +51,7 @@ class SaleListData extends Data
             invoice_type_label: $invoiceType->label(),
             items_count: (int) $sale->getAttribute('items_count'),
             total_amount: $sale->total_amount,
+            web_order_id: $sale->web_order_id,
             invoice_formatted_number: $invoice?->formattedNumber(),
         );
     }
