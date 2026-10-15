@@ -108,7 +108,7 @@ test('net result matches the difference between the revenues and expenses blocks
     confirmedSaleForEvolution($this->centralCounter, '10000.00', '2026-09-10 12:00:00');
     confirmedSaleForEvolution($this->northCounter, '5000.55', '2026-10-05 12:00:00');
     SupplierVoucher::factory()->invoice()->create(['issue_date' => '2026-09-12', 'due_date' => null, 'total_amount' => '4000.10']);
-    SupplierVoucher::factory()->debitNote()->create(['issue_date' => '2026-10-03', 'total_amount' => '250.00']);
+    SupplierVoucher::factory()->debitNote()->create(['issue_date' => '2026-10-03', 'due_date' => null, 'total_amount' => '250.00']);
     SupplierVoucher::factory()->invoice()->create([
         'issue_date' => '2026-10-04', 'due_date' => null, 'total_amount' => '999.00', 'status' => SupplierVoucherStatus::Cancelled,
     ]);
