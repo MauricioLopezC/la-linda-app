@@ -37,6 +37,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { panel } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 
 type Warehouse = App.Data.Inventory.WarehouseData;
@@ -443,8 +444,8 @@ export default function WarehousesIndex({
 WarehousesIndex.layout = {
   breadcrumbs: [
     {
-      title: 'Dashboard',
-      href: '/dashboard',
+      title: 'Inicio',
+      href: panel(),
     },
     {
       title: 'Depósitos',

@@ -24,7 +24,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { formatCurrency } from '@/lib/utils';
-import { dashboard } from '@/routes';
+import { panel } from '@/routes';
 import {
   create as createCashSession,
   show as showCashSession,
@@ -226,6 +226,7 @@ export default function SalesIndex({
             <TableHeader>
               <TableRow>
                 <TableHead>N°</TableHead>
+                <TableHead>Canal</TableHead>
                 <TableHead>Turno</TableHead>
                 <TableHead>Fecha y hora</TableHead>
                 <TableHead>Caja</TableHead>
@@ -241,7 +242,7 @@ export default function SalesIndex({
               {sales.data.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={10}
+                    colSpan={11}
                     className="py-10 text-center text-muted-foreground"
                   >
                     No hay ventas para los filtros seleccionados.
@@ -252,6 +253,18 @@ export default function SalesIndex({
                   <TableRow key={sale.id}>
                     <TableCell className="font-mono">{sale.id}</TableCell>
                     <TableCell>
+                      <Badge
+                        variant="outline"
+                        className={
+                          sale.channel === 'online'
+                            ? 'border-sky-500/30 bg-sky-500/10 font-semibold text-sky-700 dark:text-sky-400'
+                            : 'border-slate-300 bg-slate-100 text-slate-800 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200'
+                        }
+                      >
+                        {sale.channel_label}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
                       {sale.cash_session_id ? (
                         <Link
                           href={showCashSession.url(sale.cash_session_id)}
@@ -259,6 +272,10 @@ export default function SalesIndex({
                         >
                           Turno #{sale.cash_session_id}
                         </Link>
+                      ) : sale.channel === 'online' ? (
+                        <span className="text-xs text-muted-foreground">
+                          Online
+                        </span>
                       ) : (
                         '—'
                       )}
@@ -320,7 +337,7 @@ export default function SalesIndex({
 
 SalesIndex.layout = {
   breadcrumbs: [
-    { title: 'Dashboard', href: dashboard() },
+    { title: 'Inicio', href: panel() },
     { title: 'Ventas', href: index() },
   ] satisfies BreadcrumbItem[],
 };

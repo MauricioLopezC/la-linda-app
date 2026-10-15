@@ -57,8 +57,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { useCan } from '@/hooks/use-can';
 import { formatCurrency } from '@/lib/utils';
-import { dashboard } from '@/routes';
+import { panel } from '@/routes';
 import { show as showAdjustment } from '@/routes/inventory/adjustments';
 import {
   confirmPayment,
@@ -129,6 +130,7 @@ export default function SaleShow({
   activePaymentMethods = [],
   priceLists = [],
 }: Props) {
+  const can = useCan();
   const [code, setCode] = useState('');
   const [codeError, setCodeError] = useState<string | undefined>();
   const [isAdding, setIsAdding] = useState(false);
@@ -276,7 +278,7 @@ export default function SaleShow({
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {sale.invoice && <InvoicePdfButtons saleId={sale.id} />}
-              {sale.stock_movement_id && (
+              {sale.stock_movement_id && can('manage-stock') && (
                 <Button variant="outline" size="sm" asChild>
                   <Link
                     href={showAdjustment({
@@ -318,7 +320,26 @@ export default function SaleShow({
         )}
 
         <div className="grid gap-4 rounded-xl border border-sidebar-border bg-card p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-4">
-          <InfoField label="Canal" value={sale.channel_label} />
+          <div className="space-y-1.5">
+            <p className="text-sm font-medium text-muted-foreground">Canal</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge
+                variant="outline"
+                className={
+                  sale.channel === 'online'
+                    ? 'border-sky-500/30 bg-sky-500/10 font-semibold text-sky-700 dark:text-sky-400'
+                    : 'border-slate-300 bg-slate-100 text-slate-800 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200'
+                }
+              >
+                {sale.channel_label}
+              </Badge>
+              {sale.web_order_number && (
+                <span className="font-mono text-xs text-muted-foreground">
+                  (Pedido N.° {sale.web_order_number})
+                </span>
+              )}
+            </div>
+          </div>
           <InfoField label="Depósito" value={sale.warehouse_name} />
           <InfoField label="Vendedor" value={sale.user_name ?? '—'} />
           <div className="space-y-1.5">
@@ -346,7 +367,7 @@ export default function SaleShow({
               </span>
             </div>
           </div>
-          {sale.stock_movement_id && (
+          {sale.stock_movement_id && can('manage-stock') && (
             <div className="space-y-1.5">
               <p className="text-sm font-medium text-muted-foreground">
                 Stock descontado
@@ -528,6 +549,26 @@ export default function SaleShow({
               )}
             </TableBody>
             <TableFooter>
+              {Number(sale.shipping_amount) > 0 && (
+                <TableRow className="bg-muted/30">
+                  <TableCell
+                    colSpan={5}
+                    className="text-right font-medium text-muted-foreground"
+                  >
+                    Envío a domicilio (IVA 21% inc.)
+                  </TableCell>
+                  <TableCell className="text-right font-mono text-muted-foreground">
+                    —
+                  </TableCell>
+                  <TableCell className="text-right font-mono text-muted-foreground">
+                    —
+                  </TableCell>
+                  <TableCell className="text-right font-mono font-semibold text-foreground">
+                    {formatCurrency(sale.shipping_amount)}
+                  </TableCell>
+                  {sale.accepts_changes && <TableCell />}
+                </TableRow>
+              )}
               <TableRow>
                 <TableCell colSpan={5} className="text-right font-semibold">
                   Subtotales
@@ -565,7 +606,9 @@ export default function SaleShow({
                   </TableHeader>
                   <TableBody>
                     {sale.vat_breakdown.map((row) => (
-                      <TableRow key={row.vat_rate_id}>
+                      <TableRow
+                        key={`${row.vat_rate_id ?? 'shipping'}:${row.vat_rate}`}
+                      >
                         <TableCell className="font-medium">
                           {row.vat_rate_description} (
                           {Number(row.vat_rate).toLocaleString('es-AR')}%)
@@ -1704,7 +1747,7 @@ function PriceListSelect({
 
 SaleShow.layout = {
   breadcrumbs: [
-    { title: 'Dashboard', href: dashboard() },
+    { title: 'Inicio', href: panel() },
     { title: 'Ventas', href: index() },
     { title: 'Detalle', href: '#' },
   ] satisfies BreadcrumbItem[],

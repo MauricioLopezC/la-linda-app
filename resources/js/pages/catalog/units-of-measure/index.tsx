@@ -30,7 +30,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { dashboard } from '@/routes';
+import { panel } from '@/routes';
 import { index } from '@/routes/catalog/units-of-measure';
 import type { BreadcrumbItem } from '@/types';
 
@@ -350,7 +350,7 @@ export default function UnitsOfMeasureIndex({ unitsOfMeasure = [] }: Props) {
 
 UnitsOfMeasureIndex.layout = {
   breadcrumbs: [
-    { title: 'Dashboard', href: dashboard() },
+    { title: 'Inicio', href: panel() },
     { title: 'Unidades de medida', href: index() },
   ] satisfies BreadcrumbItem[],
 };

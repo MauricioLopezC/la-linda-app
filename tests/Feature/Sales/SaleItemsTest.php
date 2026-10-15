@@ -278,6 +278,80 @@ test('a sale with articles of different VAT rates discriminates net and VAT per 
         ->and($breakdown[1]['total_amount'])->toBe('110.50');
 });
 
+test('keeps shipping at 21 percent when that VAT rate is absent from the catalog', function () {
+    $exemptRate = VatRate::factory()->create(['id' => 1, 'percentage' => 0, 'description' => 'Exento']);
+    $article = Article::factory()->create(['vat_rate_id' => $exemptRate->id]);
+    $sale = Sale::factory()->online()->confirmed()->create([
+        'shipping_amount' => '121.00',
+        'total_amount' => '221.00',
+    ]);
+    SaleItem::factory()->create([
+        'sale_id' => $sale->id,
+        'article_id' => $article->id,
+        'vat_rate_id' => $exemptRate->id,
+        'vat_rate' => '0.00',
+        'quantity' => '1.000',
+        'unit_price' => '100.00',
+        'line_total' => '100.00',
+    ]);
+    expect(VatRate::query()->where('percentage', 21)->exists())->toBeFalse();
+    $ratesBefore = VatRate::all()->toArray();
+
+    $breakdown = $sale->getVatBreakdown();
+
+    expect($breakdown)->toBe([
+        [
+            'vat_rate_id' => null,
+            'vat_rate' => '21.00',
+            'vat_rate_description' => 'IVA 21%',
+            'net_amount' => '100.00',
+            'vat_amount' => '21.00',
+            'total_amount' => '121.00',
+        ],
+        [
+            'vat_rate_id' => $exemptRate->id,
+            'vat_rate' => '0.00',
+            'vat_rate_description' => 'Exento',
+            'net_amount' => '100.00',
+            'vat_amount' => '0.00',
+            'total_amount' => '100.00',
+        ],
+    ])
+        ->and($sale->netAmount())->toBe('200.00')
+        ->and($sale->vatAmount())->toBe('21.00')
+        ->and($sale->total_amount)->toBe('221.00')
+        ->and(VatRate::all()->toArray())->toBe($ratesBefore);
+});
+
+test('adds shipping to the frozen 21 percent group even if the catalog rate changed', function () {
+    $rate = VatRate::factory()->create(['percentage' => 21]);
+    $article = Article::factory()->create(['vat_rate_id' => $rate->id]);
+    $sale = Sale::factory()->online()->confirmed()->create([
+        'shipping_amount' => '121.00',
+        'total_amount' => '242.00',
+    ]);
+    SaleItem::factory()->create([
+        'sale_id' => $sale->id,
+        'article_id' => $article->id,
+        'vat_rate_id' => $rate->id,
+        'vat_rate' => '21.00',
+        'quantity' => '1.000',
+        'unit_price' => '121.00',
+        'line_total' => '121.00',
+    ]);
+    $rate->update(['percentage' => 10.5]);
+    VatRate::factory()->create(['percentage' => 21]);
+
+    $breakdown = $sale->getVatBreakdown();
+
+    expect($breakdown)->toHaveCount(1)
+        ->and($breakdown[0]['vat_rate_id'])->toBe($rate->id)
+        ->and($breakdown[0]['vat_rate'])->toBe('21.00')
+        ->and($breakdown[0]['net_amount'])->toBe('200.00')
+        ->and($breakdown[0]['vat_amount'])->toBe('42.00')
+        ->and($breakdown[0]['total_amount'])->toBe('242.00');
+});
+
 test('changing the quantity recalculates the line and the sale total', function () {
     $article = articlePricedIn($this->mostradorList, '80.00');
     $this->post(route('sales.sales.items.store', $this->sale), ['article_id' => $article->id]);

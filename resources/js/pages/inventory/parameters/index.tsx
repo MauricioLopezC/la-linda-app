@@ -45,7 +45,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { dashboard } from '@/routes';
+import { panel } from '@/routes';
 import { index } from '@/routes/inventory/parameters';
 import type { BreadcrumbItem } from '@/types';
 
@@ -545,8 +545,8 @@ export default function StockParametersIndex({ movementTypes = [] }: Props) {
 StockParametersIndex.layout = {
   breadcrumbs: [
     {
-      title: 'Dashboard',
-      href: dashboard(),
+      title: 'Inicio',
+      href: panel(),
     },
     {
       title: 'Parámetros de Stock',

@@ -11,6 +11,8 @@ export type NavItem = {
   href: NonNullable<InertiaLinkProps['href']>;
   icon?: LucideIcon | null;
   isActive?: boolean;
+  /** Module Gate required to show the item (HU-004); items without one are always shown. */
+  permission?: App.Enums.Security.Permission;
 };
 
 export type NavGroup = {

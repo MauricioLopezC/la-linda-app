@@ -22,6 +22,7 @@ use Database\Seeders\Purchasing\SupplierSeeder;
 use Database\Seeders\Purchasing\SupplierVoucherSeeder;
 use Database\Seeders\Sales\PaymentMethodSeeder;
 use Database\Seeders\Sales\PointOfSaleSeeder;
+use Database\Seeders\Security\StaffUserSeeder;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
@@ -40,6 +41,7 @@ class DatabaseSeeder extends Seeder
                 'password' => config('demo.admin_password'),
                 'email_verified_at' => now(),
                 'role' => UserRole::Administrador,
+                'is_active' => true,
             ]
         );
 
@@ -48,6 +50,7 @@ class DatabaseSeeder extends Seeder
             BrandSeeder::class,
             UnitOfMeasureSeeder::class,
             BranchSeeder::class,
+            StaffUserSeeder::class,
             WarehouseSeeder::class,
             PointOfSaleSeeder::class,
             StockMovementTypeSeeder::class,

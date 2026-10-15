@@ -36,7 +36,7 @@ import {
 } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { formatCurrency } from '@/lib/utils';
-import { dashboard } from '@/routes';
+import { panel } from '@/routes';
 import { index, show, store, update } from '@/routes/purchasing/orders';
 import type { BreadcrumbItem } from '@/types';
 
@@ -882,7 +882,7 @@ export default function PurchaseOrderForm({
 
 PurchaseOrderForm.layout = {
   breadcrumbs: [
-    { title: 'Dashboard', href: dashboard() },
+    { title: 'Inicio', href: panel() },
     { title: 'Compras', href: '#' },
     { title: 'Órdenes de compra', href: index() },
     { title: 'Formulario', href: '#' },

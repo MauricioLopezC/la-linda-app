@@ -41,7 +41,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { dashboard } from '@/routes';
+import { panel } from '@/routes';
 import { index } from '@/routes/catalog/categories';
 import type { BreadcrumbItem } from '@/types';
 
@@ -418,7 +418,7 @@ export default function CategoriesIndex({ categories = [] }: Props) {
 
 CategoriesIndex.layout = {
   breadcrumbs: [
-    { title: 'Dashboard', href: dashboard() },
+    { title: 'Inicio', href: panel() },
     { title: 'Categorías', href: index() },
   ] satisfies BreadcrumbItem[],
 };

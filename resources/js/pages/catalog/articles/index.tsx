@@ -38,7 +38,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { dashboard } from '@/routes';
+import { panel } from '@/routes';
 import { index } from '@/routes/catalog/articles';
 import type { BreadcrumbItem } from '@/types';
 import ManageArticleSuppliersDialog from './components/manage-article-suppliers-dialog';
@@ -733,7 +733,7 @@ export default function ArticlesIndex({
 
 ArticlesIndex.layout = {
   breadcrumbs: [
-    { title: 'Dashboard', href: dashboard() },
+    { title: 'Inicio', href: panel() },
     { title: 'Artículos', href: index() },
   ] satisfies BreadcrumbItem[],
 };

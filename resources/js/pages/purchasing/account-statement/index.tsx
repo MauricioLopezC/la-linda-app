@@ -40,7 +40,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { formatCurrency } from '@/lib/utils';
-import { dashboard } from '@/routes';
+import { panel } from '@/routes';
 import accountStatement from '@/routes/purchasing/account-statement';
 import { csv, excel } from '@/routes/purchasing/account-statement/export';
 import { show } from '@/routes/purchasing/vouchers';
@@ -335,7 +335,7 @@ export default function SupplierAccountStatementIndex({
 
 SupplierAccountStatementIndex.layout = {
   breadcrumbs: [
-    { title: 'Dashboard', href: dashboard() },
+    { title: 'Inicio', href: panel() },
     {
       title: 'Cuenta corriente de proveedores',
       href: accountStatement.index(),

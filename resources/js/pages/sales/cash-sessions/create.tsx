@@ -23,7 +23,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { formatCurrency } from '@/lib/utils';
-import { dashboard } from '@/routes';
+import { panel } from '@/routes';
 import { create } from '@/routes/sales/cash-sessions';
 import type { BreadcrumbItem } from '@/types';
 
@@ -210,7 +210,7 @@ export default function OpenCashSession({
 
 OpenCashSession.layout = {
   breadcrumbs: [
-    { title: 'Dashboard', href: dashboard() },
+    { title: 'Inicio', href: panel() },
     { title: 'Abrir caja', href: create() },
   ] satisfies BreadcrumbItem[],
 };

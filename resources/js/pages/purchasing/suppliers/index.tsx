@@ -50,7 +50,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
-import { dashboard } from '@/routes';
+import { panel } from '@/routes';
 import { index } from '@/routes/purchasing/suppliers';
 import type { BreadcrumbItem } from '@/types';
 import ManageSupplierArticlesDialog from './components/manage-supplier-articles-dialog';
@@ -898,8 +898,8 @@ export default function SuppliersIndex({
 SuppliersIndex.layout = {
   breadcrumbs: [
     {
-      title: 'Dashboard',
-      href: dashboard(),
+      title: 'Inicio',
+      href: panel(),
     },
     {
       title: 'Proveedores',

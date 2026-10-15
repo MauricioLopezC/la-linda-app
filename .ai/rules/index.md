@@ -14,9 +14,11 @@ Before planning or editing, find the row whose globs match the file's path and r
 | app/Models/Inventory/** | .ai/rules/inventory.md |
 | resources/js/** | .ai/rules/js.md |
 | database/migrations/** | .ai/rules/migrations.md |
+| app/Models/Sales/** | .ai/rules/models-sales.md |
 | app/Models/** | .ai/rules/models.md |
 | app/Models/Pricing/** | .ai/rules/pricing.md |
 | app/Models/Purchasing/** | .ai/rules/purchasing.md |
+| routes/** | .ai/rules/routes.md |
 | app/Actions/Sales/** | .ai/rules/sales.md |
 | app/Enums/Security/** | .ai/rules/security.md |
 | tests/** | .ai/rules/tests.md |
