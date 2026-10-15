@@ -1,6 +1,8 @@
 <?php
 
+use App\Actions\Ecommerce\DeliverWebOrder;
 use App\Actions\Ecommerce\MarkWebOrderAsPaid;
+use App\Actions\Ecommerce\StartWebOrderPreparation;
 use App\Actions\Sales\IssueInvoice;
 use App\Enums\Catalog\ArticleStatus;
 use App\Enums\Ecommerce\WebOrderStatus;
@@ -21,6 +23,7 @@ use App\Models\Sales\InvoiceItem;
 use App\Models\Sales\PointOfSale;
 use App\Models\Sales\Sale;
 use App\Models\Sales\SaleItem;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
@@ -134,6 +137,54 @@ test('rejects payment when paid amount does not match order total', function () 
 
     expect($order->fresh()->status)->toBe(WebOrderStatus::Pending);
 });
+
+test('preserves fulfillment and documents when an accredited payment is replayed', function (WebOrderStatus $status) {
+    $order = WebOrder::factory()->create(['items_amount' => '121.00', 'total_amount' => '121.00']);
+    WebOrderItem::factory()->create([
+        'web_order_id' => $order->id,
+        'article_id' => $this->article->id,
+        'price_list_id' => $this->onlinePriceList->id,
+        'quantity' => '5.000',
+        'unit_price' => '24.20',
+        'line_total' => '121.00',
+    ]);
+    $balance = StockBalance::factory()->create([
+        'article_id' => $this->article->id,
+        'warehouse_id' => $this->onlineWarehouse->id,
+        'quantity' => '10.000',
+    ]);
+    $operator = User::factory()->create();
+    $this->action->execute($order, 'payment-replay', '121.00', now()->subHour());
+    if ($status !== WebOrderStatus::Paid) {
+        app(StartWebOrderPreparation::class)->execute($order, $operator);
+    }
+    if ($status === WebOrderStatus::Delivered) {
+        app(DeliverWebOrder::class)->execute($order, $operator);
+    }
+
+    $snapshot = $order->fresh()->getAttributes();
+    $sale = $order->fresh()->sale;
+    $invoiceId = $sale->invoice->id;
+    $movementId = $sale->stockMovement?->id;
+    $quantity = $balance->fresh()->quantity;
+    $counts = [Sale::count(), Invoice::count(), InvoiceItem::count(), StockMovement::count(), CashMovement::count()];
+
+    $result = $this->action->execute($order, 'payment-replay', '121.00', now());
+
+    expect($result->status)->toBe($status)
+        ->and($result->sale->id)->toBe($sale->id)
+        ->and($result->sale->invoice->id)->toBe($invoiceId)
+        ->and($result->sale->stockMovement?->id)->toBe($movementId)
+        ->and($order->fresh()->getAttributes())->toEqual($snapshot)
+        ->and($balance->fresh()->quantity)->toBe($quantity)
+        ->and([Sale::count(), Invoice::count(), InvoiceItem::count(), StockMovement::count(), CashMovement::count()])->toBe($counts);
+
+    expect(fn () => $this->action->execute($order, 'another-payment', '121.00', now()))
+        ->toThrow(RuntimeException::class, 'ya se encuentra pagado con otro pago');
+    expect($order->fresh()->getAttributes())->toEqual($snapshot)
+        ->and($balance->fresh()->quantity)->toBe($quantity)
+        ->and([Sale::count(), Invoice::count(), InvoiceItem::count(), StockMovement::count(), CashMovement::count()])->toBe($counts);
+})->with([WebOrderStatus::Paid, WebOrderStatus::InPreparation, WebOrderStatus::Delivered]);
 
 test('rejects paying order with a different payment id if already paid', function () {
     $order = WebOrder::factory()->paid()->create([

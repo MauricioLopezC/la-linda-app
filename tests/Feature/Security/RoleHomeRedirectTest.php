@@ -7,7 +7,7 @@ dataset('role homes', [
     'administrador' => [UserRole::Administrador, 'dashboard'],
     'gerente' => [UserRole::Gerente, 'dashboard'],
     'compras' => [UserRole::Compras, 'purchasing.orders.index'],
-    'deposito' => [UserRole::Deposito, 'inventory.stocks.index'],
+    'deposito' => [UserRole::Deposito, 'ecommerce.orders.index'],
     'cajero' => [UserRole::Cajero, 'sales.cash-sessions.current'],
     'cliente' => [UserRole::Cliente, 'tienda.home'],
 ]);

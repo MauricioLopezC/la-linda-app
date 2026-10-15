@@ -2,7 +2,6 @@
 
 namespace App\Actions\Ecommerce;
 
-use App\Enums\Ecommerce\WebOrderStatus;
 use App\Models\Ecommerce\WebOrder;
 use Carbon\Carbon;
 use Illuminate\Http\Client\ConnectionException;
@@ -125,7 +124,7 @@ class ProcessMercadoPagoPaymentNotification
         $formattedAmount = number_format($transactionAmount, 2, '.', '');
         $paidAt = filled($dateApproved) ? Carbon::parse((string) $dateApproved)->setTimezone(config('app.timezone')) : now();
 
-        $this->markWebOrderAsPaid->execute(
+        $paidOrder = $this->markWebOrderAsPaid->execute(
             order: $order,
             paymentId: $paymentId,
             paidAmount: $formattedAmount,
@@ -136,7 +135,7 @@ class ProcessMercadoPagoPaymentNotification
             'status_code' => 200,
             'data' => [
                 'status' => 'ok',
-                'order_status' => WebOrderStatus::Paid->value,
+                'order_status' => $paidOrder->status->value,
             ],
         ];
     }
