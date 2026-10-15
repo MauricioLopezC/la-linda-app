@@ -29,6 +29,7 @@ use App\Http\Controllers\Purchasing\PurchaseOrderController;
 use App\Http\Controllers\Purchasing\SupplierAccountStatementController;
 use App\Http\Controllers\Purchasing\SupplierController;
 use App\Http\Controllers\Purchasing\SupplierVoucherController;
+use App\Http\Controllers\Reporting\DashboardController;
 use App\Http\Controllers\Sales\CashSessionController;
 use App\Http\Controllers\Sales\PaymentMethodController;
 use App\Http\Controllers\Sales\PointOfSaleController;
@@ -38,7 +39,7 @@ use Illuminate\Support\Facades\Route;
 Route::inertia('/', 'welcome')->name('home');
 
 Route::middleware(['internal.staff', 'verified'])->group(function () {
-    Route::inertia('dashboard', 'dashboard')->name('dashboard');
+    Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::prefix('catalog/categories')->name('catalog.categories.')->group(function () {
         Route::get('/', [CategoryController::class, 'index'])->name('index');
