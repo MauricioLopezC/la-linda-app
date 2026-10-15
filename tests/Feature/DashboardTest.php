@@ -33,7 +33,11 @@ test('dashboard defaults to the current month up to today with every branch and 
             ->where('filters.branch_id', null)
             ->where('filters.channel', null)
             ->where('revenues', null)
-            ->where('expenses', null)
+            ->where('expenses.accrued_total', '0.00')
+            ->where('expenses.paid_to_suppliers_total', '0.00')
+            ->where('expenses.cash_expenses_total', '0.00')
+            ->where('expenses.disbursed_total', '0.00')
+            ->where('expenses.by_payment_method', [])
             ->where('evolution', null)
             ->where('operational', null)
         );
