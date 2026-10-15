@@ -7,6 +7,7 @@ namespace App\Http\Requests\Security;
 use App\Enums\Security\UserRole;
 use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class UpdateUserRequest extends FormRequest
@@ -17,6 +18,18 @@ class UpdateUserRequest extends FormRequest
     public function authorize(): bool
     {
         return true;
+    }
+
+    /**
+     * Prepare inputs before validation rules run.
+     */
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('email') && is_string($this->email)) {
+            $this->merge([
+                'email' => Str::lower(trim($this->email)),
+            ]);
+        }
     }
 
     /**

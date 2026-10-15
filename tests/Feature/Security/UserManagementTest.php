@@ -297,3 +297,126 @@ test('fortify registration is disabled for internal panel', function () {
     $response = $this->get('/register');
     $response->assertNotFound();
 });
+
+test('cannot change role of the last active administrator', function () {
+    $response = $this->actingAs($this->admin)->put(route('settings.users.update', $this->admin), [
+        'name' => $this->admin->name,
+        'email' => $this->admin->email,
+        'role' => 'cajero',
+    ]);
+
+    $response->assertSessionHasErrors('role');
+    expect($this->admin->fresh()->role)->toBe(UserRole::Administrador);
+});
+
+test('creating user with uppercase of existing email returns 422 validation error not 500', function () {
+    $admin = User::factory()->administrador()->create(['is_active' => true]);
+    User::factory()->create(['email' => 'existente@lalinda.com']);
+
+    $response = $this->actingAs($admin)->post(route('settings.users.store'), [
+        'name' => 'Duplicado Mayúsculas',
+        'email' => 'EXISTENTE@LALINDA.COM',
+        'role' => 'cajero',
+    ]);
+
+    $response->assertStatus(302);
+    $response->assertSessionHasErrors('email');
+    expect(User::where('name', 'Duplicado Mayúsculas')->count())->toBe(0);
+});
+
+test('updating user with uppercase of another user email returns 422 validation error not 500', function () {
+    $admin = User::factory()->administrador()->create(['is_active' => true]);
+    $user1 = User::factory()->cashier()->create(['email' => 'primero@lalinda.com']);
+    User::factory()->cashier()->create(['email' => 'segundo@lalinda.com']);
+
+    $response = $this->actingAs($admin)->put(route('settings.users.update', $user1), [
+        'name' => $user1->name,
+        'email' => 'SEGUNDO@LALINDA.COM',
+        'role' => 'cajero',
+    ]);
+
+    $response->assertStatus(302);
+    $response->assertSessionHasErrors('email');
+    expect($user1->fresh()->email)->toBe('primero@lalinda.com');
+});
+
+test('creating user with empty password generates and flashes password', function () {
+    $admin = User::factory()->administrador()->create(['is_active' => true]);
+
+    $response = $this->actingAs($admin)->post(route('settings.users.store'), [
+        'name' => 'Auto Password User',
+        'email' => 'autopass@lalinda.com',
+        'role' => 'cajero',
+        'password' => '',
+    ]);
+
+    $response->assertRedirect();
+    $response->assertSessionHas('success');
+    $response->assertSessionHas('generated_password');
+    $generatedPassword = session('generated_password');
+    expect($generatedPassword)->not->toBeEmpty();
+    expect(strlen((string) $generatedPassword))->toBeGreaterThanOrEqual(12);
+});
+
+test('creating user with manual password flashes plain password', function () {
+    $admin = User::factory()->administrador()->create(['is_active' => true]);
+
+    $response = $this->actingAs($admin)->post(route('settings.users.store'), [
+        'name' => 'Manual Password User',
+        'email' => 'manualpass@lalinda.com',
+        'role' => 'cajero',
+        'password' => 'secret12345',
+    ]);
+
+    $response->assertRedirect();
+    $response->assertSessionHas('success');
+    $response->assertSessionHas('generated_password', 'secret12345');
+});
+
+test('resetting password with empty field generates and flashes new password', function () {
+    $admin = User::factory()->administrador()->create(['is_active' => true]);
+    $user = User::factory()->cashier()->create();
+
+    $response = $this->actingAs($admin)->post(route('settings.users.reset-password', $user), [
+        'password' => '',
+    ]);
+
+    $response->assertRedirect();
+    $response->assertSessionHas('success');
+    $response->assertSessionHas('generated_password');
+    expect(session('generated_password'))->not->toBeEmpty();
+});
+
+test('resetting password with manual password flashes plain password', function () {
+    $admin = User::factory()->administrador()->create(['is_active' => true]);
+    $user = User::factory()->cashier()->create();
+
+    $response = $this->actingAs($admin)->post(route('settings.users.reset-password', $user), [
+        'password' => 'manualNewPass123',
+    ]);
+
+    $response->assertRedirect();
+    $response->assertSessionHas('success');
+    $response->assertSessionHas('generated_password', 'manualNewPass123');
+});
+
+test('customer registration via tienda registro endpoint creates client and logs in', function () {
+    $response = $this->post(route('register.store'), [
+        'name' => 'Cliente Nuevo',
+        'email' => 'CLIENTE.NUEVO@EXAMPLE.COM',
+        'password' => 'password123',
+        'password_confirmation' => 'password123',
+        'phone' => '+54 9 387 1234567',
+        'address' => 'Calle Falsa 123',
+        'id_number' => '35123456',
+    ]);
+
+    $response->assertRedirect(route('tienda.home'));
+    $this->assertAuthenticated();
+
+    $createdUser = User::where('email', 'cliente.nuevo@example.com')->first();
+    expect($createdUser)->not->toBeNull();
+    expect($createdUser->role)->toBe(UserRole::Cliente);
+    expect($createdUser->customer)->not->toBeNull();
+    expect($createdUser->customer->id_number)->toBe('35123456');
+});

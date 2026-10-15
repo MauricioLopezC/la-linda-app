@@ -26,6 +26,10 @@ class CreateNewUser implements CreatesNewUsers
      */
     public function create(array $input): User
     {
+        if (isset($input['email']) && is_string($input['email'])) {
+            $input['email'] = Str::lower(trim($input['email']));
+        }
+
         if (isset($input['id_number'])) {
             $rawId = trim((string) $input['id_number']);
             $input['id_number'] = $rawId !== '' ? str_replace(['.', '-', ' '], '', $rawId) : null;
