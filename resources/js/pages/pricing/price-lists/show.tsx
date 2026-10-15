@@ -38,7 +38,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { dashboard } from '@/routes';
+import { panel } from '@/routes';
 import { index, show } from '@/routes/pricing/price-lists';
 import { destroy, store } from '@/routes/pricing/price-lists/items';
 import type { BreadcrumbItem } from '@/types';
@@ -639,7 +639,7 @@ export default function PriceListShow({
 
 PriceListShow.layout = {
   breadcrumbs: [
-    { title: 'Dashboard', href: dashboard() },
+    { title: 'Inicio', href: panel() },
     { title: 'Precios', href: '#' },
     { title: 'Listas de Precios', href: index() },
     { title: 'Precios de la lista', href: '#' },

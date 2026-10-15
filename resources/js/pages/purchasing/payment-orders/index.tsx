@@ -43,7 +43,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { formatCurrency } from '@/lib/utils';
-import { dashboard } from '@/routes';
+import { panel } from '@/routes';
 import { create, index } from '@/routes/purchasing/payment-orders';
 import { csv, excel } from '@/routes/purchasing/payment-orders/export';
 import type { BreadcrumbItem } from '@/types';
@@ -541,7 +541,7 @@ function FilterSelect({
 
 PaymentOrdersIndex.layout = {
   breadcrumbs: [
-    { title: 'Dashboard', href: dashboard() },
+    { title: 'Inicio', href: panel() },
     { title: 'Pagos y egresos', href: index() },
   ] satisfies BreadcrumbItem[],
 };

@@ -52,7 +52,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { useCan } from '@/hooks/use-can';
 import { formatStockQuantity } from '@/lib/utils';
+import { panel } from '@/routes';
 import { show as showAdjustment } from '@/routes/inventory/adjustments';
 import {
   articles as searchArticles,
@@ -108,6 +110,7 @@ export default function StockMovementHistoryIndex({
   users = [],
   filters,
 }: Props) {
+  const can = useCan();
   const [articleId, setArticleId] = useState<string>(
     filters.article_id ? String(filters.article_id) : '',
   );
@@ -492,20 +495,21 @@ export default function StockMovementHistoryIndex({
                               <FileText className="size-3" />
                               Comprobante #{entry.stock_movement_id}
                             </Link>
-                            {entry.supplier_voucher_id && (
-                              <Link
-                                href={showSupplierVoucher({
-                                  supplier_voucher: entry.supplier_voucher_id,
-                                })}
-                                className="flex items-center gap-1 text-xs text-blue-600 hover:underline dark:text-blue-400"
-                              >
-                                <ArrowUpRight className="size-3" />
-                                Remito{' '}
-                                {entry.supplier_voucher_formatted_number ??
-                                  `#${entry.supplier_voucher_id}`}
-                              </Link>
-                            )}
-                            {entry.sale_id && (
+                            {entry.supplier_voucher_id &&
+                              can('manage-purchases') && (
+                                <Link
+                                  href={showSupplierVoucher({
+                                    supplier_voucher: entry.supplier_voucher_id,
+                                  })}
+                                  className="flex items-center gap-1 text-xs text-blue-600 hover:underline dark:text-blue-400"
+                                >
+                                  <ArrowUpRight className="size-3" />
+                                  Remito{' '}
+                                  {entry.supplier_voucher_formatted_number ??
+                                    `#${entry.supplier_voucher_id}`}
+                                </Link>
+                              )}
+                            {entry.sale_id && can('operate-cash') && (
                               <Link
                                 href={showSale(entry.sale_id)}
                                 className="flex items-center gap-1 text-xs text-emerald-600 hover:underline dark:text-emerald-400"
@@ -633,21 +637,22 @@ export default function StockMovementHistoryIndex({
                               <FileText className="size-3" />
                               Ver comprobante #{movement.id}
                             </Link>
-                            {movement.supplier_voucher_id && (
-                              <Link
-                                href={showSupplierVoucher({
-                                  supplier_voucher:
-                                    movement.supplier_voucher_id,
-                                })}
-                                className="flex items-center gap-1 text-xs text-blue-600 hover:underline dark:text-blue-400"
-                              >
-                                <ArrowUpRight className="size-3" />
-                                Remito{' '}
-                                {movement.supplier_voucher_formatted_number ??
-                                  `#${movement.supplier_voucher_id}`}
-                              </Link>
-                            )}
-                            {movement.sale_id && (
+                            {movement.supplier_voucher_id &&
+                              can('manage-purchases') && (
+                                <Link
+                                  href={showSupplierVoucher({
+                                    supplier_voucher:
+                                      movement.supplier_voucher_id,
+                                  })}
+                                  className="flex items-center gap-1 text-xs text-blue-600 hover:underline dark:text-blue-400"
+                                >
+                                  <ArrowUpRight className="size-3" />
+                                  Remito{' '}
+                                  {movement.supplier_voucher_formatted_number ??
+                                    `#${movement.supplier_voucher_id}`}
+                                </Link>
+                              )}
+                            {movement.sale_id && can('operate-cash') && (
                               <Link
                                 href={showSale(movement.sale_id)}
                                 className="flex items-center gap-1 text-xs text-emerald-600 hover:underline dark:text-emerald-400"
@@ -887,8 +892,8 @@ function ArticleFilter({
 StockMovementHistoryIndex.layout = {
   breadcrumbs: [
     {
-      title: 'Dashboard',
-      href: '/dashboard',
+      title: 'Inicio',
+      href: panel(),
     },
     {
       title: 'Historial de Movimientos',

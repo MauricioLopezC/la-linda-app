@@ -13,4 +13,5 @@ export type User = {
 
 export type Auth = {
   user: User;
+  can: Record<App.Enums.Security.Permission, boolean>;
 };

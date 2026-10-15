@@ -30,6 +30,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { useCan } from '@/hooks/use-can';
 import { formatStockQuantity } from '@/lib/utils';
 import {
   create as adjustmentsCreate,
@@ -88,6 +89,7 @@ const MANUAL_HEADING = {
 };
 
 export default function ShowStockAdjustment({ movement }: Props) {
+  const can = useCan();
   setLayoutProps({
     breadcrumbs: [
       {
@@ -248,7 +250,7 @@ export default function ShowStockAdjustment({ movement }: Props) {
               movement.reversal_of_movement_id ||
               movement.reversal_movement_id) && (
               <div className="flex flex-wrap items-center gap-4 rounded-lg border border-blue-200 bg-blue-50/50 p-4 text-sm dark:border-blue-900/60 dark:bg-blue-950/30">
-                {movement.supplier_voucher_id && (
+                {movement.supplier_voucher_id && can('manage-purchases') && (
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-foreground">
                       Comprobante de origen:
@@ -272,7 +274,7 @@ export default function ShowStockAdjustment({ movement }: Props) {
                     </Button>
                   </div>
                 )}
-                {movement.sale_id && (
+                {movement.sale_id && can('operate-cash') && (
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-foreground">
                       Venta de origen:

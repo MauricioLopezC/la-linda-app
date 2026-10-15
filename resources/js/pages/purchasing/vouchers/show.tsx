@@ -37,7 +37,7 @@ import {
 } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { formatCurrency, formatStockQuantity } from '@/lib/utils';
-import { dashboard } from '@/routes';
+import { panel } from '@/routes';
 import { show as showStockMovement } from '@/routes/inventory/adjustments';
 import { annul, index, show } from '@/routes/purchasing/vouchers';
 import type { BreadcrumbItem } from '@/types';
@@ -457,7 +457,7 @@ function ReadOnlyField({
 
 SupplierVoucherShow.layout = {
   breadcrumbs: [
-    { title: 'Dashboard', href: dashboard() },
+    { title: 'Inicio', href: panel() },
     { title: 'Comprobantes de proveedores', href: index() },
     { title: 'Detalle', href: '#' },
   ] satisfies BreadcrumbItem[],

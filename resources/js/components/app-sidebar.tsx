@@ -41,7 +41,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { dashboard, login } from '@/routes';
+import { dashboard, login, panel } from '@/routes';
 import { index as articles } from '@/routes/catalog/articles';
 import { index as brands } from '@/routes/catalog/brands';
 import { index as categories } from '@/routes/catalog/categories';
@@ -76,6 +76,7 @@ const navGroups: NavGroup[] = [
         title: 'Dashboard',
         href: dashboard(),
         icon: LayoutGrid,
+        permission: 'view-dashboard',
       },
     ],
   },
@@ -86,21 +87,25 @@ const navGroups: NavGroup[] = [
         title: 'Artículos',
         href: articles(),
         icon: Package,
+        permission: 'manage-catalog',
       },
       {
         title: 'Categorías',
         href: categories(),
         icon: FolderTree,
+        permission: 'manage-catalog',
       },
       {
         title: 'Marcas',
         href: brands(),
         icon: Tags,
+        permission: 'manage-catalog',
       },
       {
         title: 'Unidades de medida',
         href: unitsOfMeasure(),
         icon: Ruler,
+        permission: 'manage-catalog',
       },
     ],
   },
@@ -111,31 +116,37 @@ const navGroups: NavGroup[] = [
         title: 'Pedidos a preparar',
         href: warehouseOrders(),
         icon: Package,
+        permission: 'manage-web-orders',
       },
       {
         title: 'Existencias',
         href: stocks(),
         icon: Boxes,
+        permission: 'manage-stock',
       },
       {
         title: 'Ajuste de Stock',
         href: adjustmentsCreate(),
         icon: FileEdit,
+        permission: 'manage-stock',
       },
       {
         title: 'Historial de Movimientos',
         href: movements(),
         icon: History,
+        permission: 'manage-stock',
       },
       {
         title: 'Depósitos',
         href: warehouses(),
         icon: Warehouse,
+        permission: 'manage-organization',
       },
       {
         title: 'Parámetros de Stock',
         href: stockParameters(),
         icon: Sliders,
+        permission: 'manage-organization',
       },
     ],
   },
@@ -146,26 +157,31 @@ const navGroups: NavGroup[] = [
         title: 'Proveedores',
         href: suppliers(),
         icon: Truck,
+        permission: 'manage-purchases',
       },
       {
         title: 'Órdenes de Compra',
         href: purchaseOrders(),
         icon: ShoppingCart,
+        permission: 'manage-purchases',
       },
       {
         title: 'Comprobantes',
         href: supplierVouchers(),
         icon: ReceiptText,
+        permission: 'manage-purchases',
       },
       {
         title: 'Órdenes de Pago',
         href: paymentOrders(),
         icon: Wallet,
+        permission: 'manage-purchases',
       },
       {
         title: 'Cuenta Corriente',
         href: accountStatement(),
         icon: Landmark,
+        permission: 'manage-purchases',
       },
     ],
   },
@@ -176,11 +192,13 @@ const navGroups: NavGroup[] = [
         title: 'Sucursales',
         href: branches(),
         icon: Building2,
+        permission: 'manage-organization',
       },
       {
         title: 'Puntos de Venta',
         href: pointsOfSale(),
         icon: Store,
+        permission: 'manage-organization',
       },
     ],
   },
@@ -191,21 +209,25 @@ const navGroups: NavGroup[] = [
         title: 'Turno de caja',
         href: currentCashSession(),
         icon: Vault,
+        permission: 'operate-cash',
       },
       {
         title: 'Ventas',
         href: sales(),
         icon: ShoppingBag,
+        permission: 'operate-cash',
       },
       {
         title: 'Clientes',
         href: customers(),
         icon: Users,
+        permission: 'manage-customers',
       },
       {
         title: 'Medios de Pago',
         href: paymentMethods(),
         icon: CreditCard,
+        permission: 'manage-organization',
       },
     ],
   },
@@ -216,11 +238,13 @@ const navGroups: NavGroup[] = [
         title: 'Listas de Precios',
         href: priceLists(),
         icon: Banknote,
+        permission: 'manage-pricing',
       },
       {
         title: 'Alícuotas de IVA',
         href: vatRates(),
         icon: Percent,
+        permission: 'manage-organization',
       },
     ],
   },
@@ -231,6 +255,7 @@ const navGroups: NavGroup[] = [
         title: 'Usuarios',
         href: '/settings/users',
         icon: UserCog,
+        permission: 'manage-users',
       },
     ],
   },
@@ -320,11 +345,15 @@ export function AppSidebar() {
   const { auth } = usePage().props;
   const isInternalStaff = Boolean(auth?.user && auth.user.role !== 'cliente');
   const isClient = auth?.user?.role === 'cliente';
-  const isAdmin = auth?.user?.role === 'administrador';
 
-  const userNavGroups = isAdmin
-    ? navGroups
-    : navGroups.filter((group) => group.label !== 'Configuración');
+  const userNavGroups = navGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter(
+        (item) => !item.permission || auth.can?.[item.permission],
+      ),
+    }))
+    .filter((group) => group.items.length > 0);
 
   const groups = isInternalStaff
     ? userNavGroups
@@ -338,7 +367,7 @@ export function AppSidebar() {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
-              <Link href={isInternalStaff ? dashboard() : '/tienda'} prefetch>
+              <Link href={isInternalStaff ? panel() : '/tienda'} prefetch>
                 <AppLogo />
               </Link>
             </SidebarMenuButton>

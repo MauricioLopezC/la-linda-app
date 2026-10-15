@@ -30,7 +30,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { dashboard } from '@/routes';
+import { panel } from '@/routes';
 import { index } from '@/routes/catalog/brands';
 import type { BreadcrumbItem } from '@/types';
 
@@ -281,7 +281,7 @@ export default function BrandsIndex({ brands = [] }: Props) {
 
 BrandsIndex.layout = {
   breadcrumbs: [
-    { title: 'Dashboard', href: dashboard() },
+    { title: 'Inicio', href: panel() },
     { title: 'Marcas', href: index() },
   ] satisfies BreadcrumbItem[],
 };

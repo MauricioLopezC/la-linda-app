@@ -38,7 +38,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
-import { dashboard } from '@/routes';
+import { panel } from '@/routes';
 import { index, show } from '@/routes/pricing/price-lists';
 import type { BreadcrumbItem } from '@/types';
 
@@ -490,7 +490,7 @@ export default function PriceListsIndex({ priceLists = [] }: Props) {
 
 PriceListsIndex.layout = {
   breadcrumbs: [
-    { title: 'Dashboard', href: dashboard() },
+    { title: 'Inicio', href: panel() },
     { title: 'Listas de Precios', href: index() },
   ] satisfies BreadcrumbItem[],
 };
