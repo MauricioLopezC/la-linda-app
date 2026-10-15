@@ -2,16 +2,46 @@
 
 use App\Actions\Ecommerce\MarkWebOrderAsPaid;
 use App\Enums\Ecommerce\WebOrderStatus;
+use App\Enums\Pricing\PriceListChannel;
+use App\Enums\Sales\SaleChannel;
+use App\Enums\Sales\SaleStatus;
+use App\Models\Catalog\Article;
 use App\Models\Ecommerce\WebOrder;
+use App\Models\Ecommerce\WebOrderItem;
+use App\Models\Inventory\Warehouse;
+use App\Models\Pricing\PriceList;
+use App\Models\Pricing\VatRate;
+use App\Models\Sales\PointOfSale;
+use App\Models\Sales\Sale;
 use Carbon\Carbon;
 use InvalidArgumentException;
 use RuntimeException;
 
 beforeEach(function () {
     $this->action = app(MarkWebOrderAsPaid::class);
+
+    $this->vat21 = VatRate::query()->where('percentage', 21.0)->first()
+        ?? VatRate::factory()->create(['percentage' => 21.0, 'description' => 'IVA 21%']);
+
+    $this->onlineWarehouse = Warehouse::factory()->online()->create([
+        'name' => 'Depósito E-commerce',
+        'is_active' => true,
+    ]);
+
+    $this->onlinePos = PointOfSale::factory()->create([
+        'warehouse_id' => $this->onlineWarehouse->id,
+        'number' => 2,
+        'is_active' => true,
+    ]);
+
+    $this->onlinePriceList = PriceList::factory()->forChannel(PriceListChannel::Online)->create();
+
+    $this->article = Article::factory()->create([
+        'vat_rate_id' => $this->vat21->id,
+    ]);
 });
 
-test('marks pending order as paid with payment id amount and timestamp', function () {
+test('marks pending order as paid and creates confirmed sale with invoice atomically', function () {
     $order = WebOrder::factory()->create([
         'items_amount' => '3000.00',
         'shipping_cost' => '0.00',
@@ -19,6 +49,15 @@ test('marks pending order as paid with payment id amount and timestamp', functio
         'status' => WebOrderStatus::Pending,
         'paid_at' => null,
         'paid_amount' => null,
+    ]);
+
+    WebOrderItem::factory()->create([
+        'web_order_id' => $order->id,
+        'article_id' => $this->article->id,
+        'quantity' => '1.000',
+        'unit_price' => '3000.00',
+        'price_list_id' => $this->onlinePriceList->id,
+        'line_total' => '3000.00',
     ]);
 
     $paidAt = Carbon::parse('2026-10-08 14:30:00');
@@ -31,6 +70,15 @@ test('marks pending order as paid with payment id amount and timestamp', functio
 
     expect($order->fresh()->status)->toBe(WebOrderStatus::Paid)
         ->and($order->fresh()->paid_amount)->toBe('3000.00');
+
+    // Asserts EPIC-15: sale and invoice created
+    $sale = Sale::query()->where('web_order_id', $order->id)->first();
+    expect($sale)->not->toBeNull()
+        ->and($sale->status)->toBe(SaleStatus::Confirmed)
+        ->and($sale->channel)->toBe(SaleChannel::Online)
+        ->and($sale->total_amount)->toBe('3000.00')
+        ->and($sale->invoice)->not->toBeNull()
+        ->and($sale->invoice->total_amount)->toBe('3000.00');
 });
 
 test('is idempotent when called multiple times with the same payment id', function () {
@@ -44,6 +92,15 @@ test('is idempotent when called multiple times with the same payment id', functi
         'paid_at' => $paidAt,
     ]);
 
+    WebOrderItem::factory()->create([
+        'web_order_id' => $order->id,
+        'article_id' => $this->article->id,
+        'quantity' => '1.000',
+        'unit_price' => '5000.00',
+        'price_list_id' => $this->onlinePriceList->id,
+        'line_total' => '5000.00',
+    ]);
+
     // Replay exact same notification
     $result = $this->action->execute($order, 'pay-repeat-123', '5000.00', Carbon::parse('2026-10-08 15:00:00'));
 
@@ -51,6 +108,8 @@ test('is idempotent when called multiple times with the same payment id', functi
         ->and($result->status)->toBe(WebOrderStatus::Paid)
         ->and($result->mp_payment_id)->toBe('pay-repeat-123')
         ->and($result->paid_at->toDateTimeString())->toBe('2026-10-08 14:30:00');
+
+    expect(Sale::query()->where('web_order_id', $order->id)->count())->toBe(1);
 });
 
 test('rejects payment when paid amount does not match order total', function () {

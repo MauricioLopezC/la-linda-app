@@ -2,6 +2,7 @@
 
 namespace App\Data\Ecommerce;
 
+use App\Data\Sales\SaleInvoiceData;
 use App\Models\Ecommerce\WebOrder;
 use App\Models\Ecommerce\WebOrderItem;
 use Spatie\LaravelData\Data;
@@ -40,6 +41,7 @@ class WebOrderData extends Data
         public ?string $mp_preference_id,
         public ?string $mp_payment_id,
         public array $items,
+        public ?SaleInvoiceData $invoice = null,
     ) {}
 
     /**
@@ -77,6 +79,9 @@ class WebOrderData extends Data
                 ->map(fn (WebOrderItem $item): WebOrderItemData => WebOrderItemData::fromModel($item))
                 ->values()
                 ->all(),
+            invoice: ($order->relationLoaded('sale') && $order->sale?->invoice !== null)
+                ? SaleInvoiceData::fromModel($order->sale->invoice)
+                : null,
         );
     }
 

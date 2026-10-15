@@ -2,6 +2,9 @@
 
 use App\Enums\Ecommerce\WebOrderStatus;
 use App\Models\Ecommerce\WebOrder;
+use App\Models\Inventory\Warehouse;
+use App\Models\Organization\Branch;
+use App\Models\Sales\PointOfSale;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 
@@ -9,6 +12,16 @@ beforeEach(function () {
     config([
         'services.mercadopago.access_token' => 'TEST-ACCESS-TOKEN-WEBHOOK',
         'services.mercadopago.base_url' => 'https://api.mercadopago.test',
+    ]);
+
+    $branch = Branch::factory()->create(['is_active' => true]);
+    $warehouse = Warehouse::factory()->online()->create([
+        'branch_id' => $branch->id,
+        'is_active' => true,
+    ]);
+    PointOfSale::factory()->create([
+        'warehouse_id' => $warehouse->id,
+        'is_active' => true,
     ]);
 });
 

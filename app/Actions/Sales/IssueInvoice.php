@@ -26,7 +26,7 @@ class IssueInvoice
      *
      * @throws ValidationException
      */
-    public function handle(Sale $sale, User $user): Invoice
+    public function handle(Sale $sale, ?User $user = null): Invoice
     {
         return DB::transaction(function () use ($sale, $user): Invoice {
             /** @var Sale $lockedSale */
@@ -97,7 +97,7 @@ class IssueInvoice
                 'net_amount' => $lockedSale->netAmount(),
                 'vat_amount' => $lockedSale->vatAmount(),
                 'total_amount' => $lockedSale->total_amount,
-                'user_id' => $user->id,
+                'user_id' => $user?->id,
                 'created_at' => now(),
             ]);
 
@@ -113,6 +113,22 @@ class IssueInvoice
                     'net_amount' => $item->net_amount,
                     'vat_amount' => $item->vat_amount,
                     'line_total' => $item->line_total,
+                ]);
+            }
+
+            if ((float) ($lockedSale->shipping_amount ?? 0) > 0) {
+                $shippingBreakdown = SaleItem::calculateVatBreakdown((string) $lockedSale->shipping_amount, '21.00');
+
+                InvoiceItem::create([
+                    'invoice_id' => $invoice->id,
+                    'article_id' => null,
+                    'description' => 'Envío a domicilio',
+                    'quantity' => '1.000',
+                    'unit_price' => $lockedSale->shipping_amount,
+                    'vat_rate' => '21.00',
+                    'net_amount' => $shippingBreakdown['net_amount'],
+                    'vat_amount' => $shippingBreakdown['vat_amount'],
+                    'line_total' => $lockedSale->shipping_amount,
                 ]);
             }
 

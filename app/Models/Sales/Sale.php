@@ -11,6 +11,7 @@ use App\Models\Customers\Customer;
 use App\Models\Ecommerce\WebOrder;
 use App\Models\Inventory\StockMovement;
 use App\Models\Pricing\PriceList;
+use App\Models\Pricing\VatRate;
 use App\Models\User;
 use Database\Factories\Sales\SaleFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -226,7 +227,7 @@ class Sale extends Model
     }
 
     /**
-     * Compute total net amount of the sale by summing item net amounts, in cents to avoid float drift.
+     * Compute total net amount of the sale by summing item net amounts (and shipping net if present), in cents to avoid float drift.
      */
     public function netAmount(): string
     {
@@ -234,17 +235,27 @@ class Sale extends Model
 
         $netCents = $items->sum(fn (SaleItem $item): int => $this->moneyToCents($item->net_amount));
 
+        if ((float) ($this->shipping_amount ?? 0) > 0) {
+            $shippingBreakdown = SaleItem::calculateVatBreakdown((string) $this->shipping_amount, '21.00');
+            $netCents += $this->moneyToCents($shippingBreakdown['net_amount']);
+        }
+
         return $this->centsToMoney($netCents);
     }
 
     /**
-     * Compute total VAT amount of the sale by summing item VAT amounts, in cents to avoid float drift.
+     * Compute total VAT amount of the sale by summing item VAT amounts (and shipping VAT if present), in cents to avoid float drift.
      */
     public function vatAmount(): string
     {
         $items = $this->relationLoaded('items') ? $this->items : $this->items()->get();
 
         $vatCents = $items->sum(fn (SaleItem $item): int => $this->moneyToCents($item->vat_amount));
+
+        if ((float) ($this->shipping_amount ?? 0) > 0) {
+            $shippingBreakdown = SaleItem::calculateVatBreakdown((string) $this->shipping_amount, '21.00');
+            $vatCents += $this->moneyToCents($shippingBreakdown['vat_amount']);
+        }
 
         return $this->centsToMoney($vatCents);
     }
@@ -287,11 +298,39 @@ class Sale extends Model
                     'vat_amount' => $this->centsToMoney($vatCents),
                     'total_amount' => $this->centsToMoney($totalCents),
                 ];
-            })
-            ->sortByDesc(fn (array $row): float => (float) $row['vat_rate'])
-            ->values();
+            });
 
-        return $breakdown->all();
+        if ((float) ($this->shipping_amount ?? 0) > 0) {
+            $shippingBreakdown = SaleItem::calculateVatBreakdown((string) $this->shipping_amount, '21.00');
+            $shippingNetCents = $this->moneyToCents($shippingBreakdown['net_amount']);
+            $shippingVatCents = $this->moneyToCents($shippingBreakdown['vat_amount']);
+            $shippingTotalCents = $this->moneyToCents((string) $this->shipping_amount);
+
+            $rate21 = VatRate::query()->where('percentage', 21.0)->first();
+            $rate21Id = $rate21->id ?? 1;
+
+            $existingRow = $breakdown->get($rate21Id);
+            if ($existingRow !== null) {
+                $existingRow['net_amount'] = $this->centsToMoney($this->moneyToCents($existingRow['net_amount']) + $shippingNetCents);
+                $existingRow['vat_amount'] = $this->centsToMoney($this->moneyToCents($existingRow['vat_amount']) + $shippingVatCents);
+                $existingRow['total_amount'] = $this->centsToMoney($this->moneyToCents($existingRow['total_amount']) + $shippingTotalCents);
+                $breakdown->put($rate21Id, $existingRow);
+            } else {
+                $breakdown->put($rate21Id, [
+                    'vat_rate_id' => $rate21Id,
+                    'vat_rate' => '21.00',
+                    'vat_rate_description' => $rate21->description ?? 'IVA 21%',
+                    'net_amount' => $this->centsToMoney($shippingNetCents),
+                    'vat_amount' => $this->centsToMoney($shippingVatCents),
+                    'total_amount' => $this->centsToMoney($shippingTotalCents),
+                ]);
+            }
+        }
+
+        return $breakdown
+            ->sortByDesc(fn (array $row): float => (float) $row['vat_rate'])
+            ->values()
+            ->all();
     }
 
     /**

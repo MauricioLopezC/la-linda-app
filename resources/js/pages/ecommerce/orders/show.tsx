@@ -5,7 +5,10 @@ import {
   CalendarClock,
   CheckCircle2,
   CreditCard,
+  Download,
+  FileText,
   MapPin,
+  Printer,
   StickyNote,
   Truck,
 } from 'lucide-react';
@@ -30,6 +33,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { index, pay } from '@/routes/tienda/orders';
+import { pdf as orderInvoicePdf } from '@/routes/tienda/orders/invoice';
 import type { BreadcrumbItem } from '@/types';
 
 type Props = {
@@ -74,6 +78,14 @@ export default function OrderShow({ order }: Props) {
             >
               {order.status_label}
             </Badge>
+            {order.invoice && (
+              <Badge
+                variant="outline"
+                className="w-fit border-primary/30 text-sm font-semibold text-primary"
+              >
+                {order.invoice.voucher_label}
+              </Badge>
+            )}
             {!isPaid && (
               <Button
                 size="sm"
@@ -84,6 +96,40 @@ export default function OrderShow({ order }: Props) {
                 <CreditCard className="size-4" />
                 {isPaying ? 'Conectando...' : 'Pagar con Mercado Pago'}
               </Button>
+            )}
+            {order.invoice && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  asChild
+                  className="gap-1.5 shadow-xs"
+                >
+                  <a
+                    href={orderInvoicePdf.url(order.id)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Printer className="size-4" />
+                    Ver factura
+                  </a>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  asChild
+                  className="gap-1.5 shadow-xs"
+                >
+                  <a
+                    href={orderInvoicePdf.url(order.id, {
+                      query: { download: 1 },
+                    })}
+                  >
+                    <Download className="size-4" />
+                    Descargar PDF
+                  </a>
+                </Button>
+              </>
             )}
           </div>
         </div>
@@ -293,6 +339,81 @@ export default function OrderShow({ order }: Props) {
                 )}
               </CardContent>
             </Card>
+
+            {order.invoice && (
+              <Card className="border-border shadow-xs">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+                      <FileText className="size-5 text-primary" />
+                      Factura emitida
+                    </CardTitle>
+                    <Badge variant="secondary" className="font-semibold">
+                      Tipo {order.invoice.type}
+                    </Badge>
+                  </div>
+                  <CardDescription className="text-xs">
+                    Comprobante fiscal legal emitido
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm">
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Comprobante</span>
+                    <span className="font-semibold text-foreground">
+                      {order.invoice.voucher_label}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Punto de venta</span>
+                    <span className="text-foreground">
+                      {String(order.invoice.point_of_sale_number).padStart(
+                        4,
+                        '0',
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Fecha de emisión</span>
+                    <span className="text-foreground">
+                      {order.invoice.issued_at_formatted}
+                    </span>
+                  </div>
+                  <Separator />
+                  <div className="flex flex-col gap-2 pt-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      asChild
+                      className="w-full gap-2"
+                    >
+                      <a
+                        href={orderInvoicePdf.url(order.id)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <Printer className="size-4" />
+                        Ver factura
+                      </a>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      asChild
+                      className="w-full gap-2"
+                    >
+                      <a
+                        href={orderInvoicePdf.url(order.id, {
+                          query: { download: 1 },
+                        })}
+                      >
+                        <Download className="size-4" />
+                        Descargar PDF
+                      </a>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
 
