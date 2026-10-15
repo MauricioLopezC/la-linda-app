@@ -11,6 +11,8 @@ use App\Models\Sales\CashSession;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
+use Inertia\Inertia;
+use Inertia\Testing\AssertableInertia;
 use Laravel\Fortify\Features;
 
 beforeEach(function () {
@@ -95,10 +97,10 @@ test('admin can create a user with generated password', function () {
     ]);
 
     $response->assertRedirect();
-    $response->assertSessionHas('generated_password');
+    $response->assertInertiaFlash('generated_password');
     $response->assertSessionHas('success');
 
-    $plainPassword = session('generated_password');
+    $plainPassword = Inertia::getFlashed()['generated_password'];
     expect($plainPassword)->toBeString()->and(strlen($plainPassword))->toBeGreaterThanOrEqual(12);
 
     $user = User::where('email', 'nuevo@lalinda.com')->first();
@@ -120,7 +122,7 @@ test('admin can create a user with defined password', function () {
     ]);
 
     $response->assertRedirect();
-    $response->assertSessionHas('generated_password', 'MiClaveSegura123');
+    $response->assertInertiaFlash('generated_password', 'MiClaveSegura123');
 
     $user = User::where('email', 'manual@lalinda.com')->first();
     expect($user)->not->toBeNull()
@@ -158,8 +160,8 @@ test('admin can reset user password with generated or manual password', function
     // 1. Reset con contraseña generada
     $responseGen = $this->actingAs($this->admin)->post(route('settings.users.reset-password', $user));
     $responseGen->assertRedirect();
-    $responseGen->assertSessionHas('generated_password');
-    $plainGen = session('generated_password');
+    $responseGen->assertInertiaFlash('generated_password');
+    $plainGen = Inertia::getFlashed()['generated_password'];
     expect($user->refresh()->password)->not->toBe('antigua_clave')
         ->and(Hash::check($plainGen, $user->password))->toBeTrue();
 
@@ -168,7 +170,7 @@ test('admin can reset user password with generated or manual password', function
         'password' => 'NuevaClave456',
     ]);
     $responseManual->assertRedirect();
-    $responseManual->assertSessionHas('generated_password', 'NuevaClave456');
+    $responseManual->assertInertiaFlash('generated_password', 'NuevaClave456');
     expect(Hash::check('NuevaClave456', $user->refresh()->password))->toBeTrue();
 });
 
@@ -352,8 +354,8 @@ test('creating user with empty password generates and flashes password', functio
 
     $response->assertRedirect();
     $response->assertSessionHas('success');
-    $response->assertSessionHas('generated_password');
-    $generatedPassword = session('generated_password');
+    $response->assertInertiaFlash('generated_password');
+    $generatedPassword = Inertia::getFlashed()['generated_password'];
     expect($generatedPassword)->not->toBeEmpty();
     expect(strlen((string) $generatedPassword))->toBeGreaterThanOrEqual(12);
 });
@@ -370,7 +372,7 @@ test('creating user with manual password flashes plain password', function () {
 
     $response->assertRedirect();
     $response->assertSessionHas('success');
-    $response->assertSessionHas('generated_password', 'secret12345');
+    $response->assertInertiaFlash('generated_password', 'secret12345');
 });
 
 test('resetting password with empty field generates and flashes new password', function () {
@@ -383,8 +385,8 @@ test('resetting password with empty field generates and flashes new password', f
 
     $response->assertRedirect();
     $response->assertSessionHas('success');
-    $response->assertSessionHas('generated_password');
-    expect(session('generated_password'))->not->toBeEmpty();
+    $response->assertInertiaFlash('generated_password');
+    expect(Inertia::getFlashed()['generated_password'])->not->toBeEmpty();
 });
 
 test('resetting password with manual password flashes plain password', function () {
@@ -397,7 +399,7 @@ test('resetting password with manual password flashes plain password', function 
 
     $response->assertRedirect();
     $response->assertSessionHas('success');
-    $response->assertSessionHas('generated_password', 'manualNewPass123');
+    $response->assertInertiaFlash('generated_password', 'manualNewPass123');
 });
 
 test('customer registration via tienda registro endpoint creates client and logs in', function () {
@@ -419,4 +421,115 @@ test('customer registration via tienda registro endpoint creates client and logs
     expect($createdUser->role)->toBe(UserRole::Cliente);
     expect($createdUser->customer)->not->toBeNull();
     expect($createdUser->customer->id_number)->toBe('35123456');
+});
+
+test('creating user delivers generated password via native flash without leaking into page props (issue #99)', function () {
+    $admin = User::factory()->administrador()->create(['is_active' => true]);
+    $branch = Branch::factory()->create();
+
+    $response = $this->actingAs($admin)->post(route('settings.users.store'), [
+        'name' => 'Empleado Flash Test',
+        'email' => 'flash-test@lalinda.com',
+        'role' => 'cajero',
+        'branch_id' => $branch->id,
+        'password' => '',
+    ]);
+
+    $response->assertRedirect();
+    $response->assertInertiaFlash('generated_password');
+
+    // 1. Visita inmediata (redirección): la contraseña viaja en flash nativo, NO en props persistidas
+    $followResponse = $this->actingAs($admin)->get(route('settings.users.index'));
+    $followResponse->assertOk();
+    $followResponse->assertInertia(fn (AssertableInertia $page) => $page
+        ->component('settings/users/index')
+        ->hasFlash('generated_password')
+        ->missing('flash.generated_password')
+        ->missing('generated_password')
+    );
+
+    // 2. Segunda visita (simula volver con Atrás en el historial o recargar la página): flash se consume y queda limpio
+    $secondVisitResponse = $this->actingAs($admin)->get(route('settings.users.index'));
+    $secondVisitResponse->assertOk();
+    $secondVisitResponse->assertInertia(fn (AssertableInertia $page) => $page
+        ->component('settings/users/index')
+        ->missingFlash('generated_password')
+        ->missing('flash.generated_password')
+        ->missing('generated_password')
+    );
+});
+
+test('resetting password delivers new password via native flash without leaking into page props (issue #99)', function () {
+    $admin = User::factory()->administrador()->create(['is_active' => true]);
+    $user = User::factory()->cashier()->create();
+
+    $response = $this->actingAs($admin)->post(route('settings.users.reset-password', $user), [
+        'password' => '',
+    ]);
+
+    $response->assertRedirect();
+    $response->assertInertiaFlash('generated_password');
+
+    // 1. Visita inmediata: flash nativo presente, props limpias
+    $followResponse = $this->actingAs($admin)->get(route('settings.users.index'));
+    $followResponse->assertOk();
+    $followResponse->assertInertia(fn (AssertableInertia $page) => $page
+        ->component('settings/users/index')
+        ->hasFlash('generated_password')
+        ->missing('flash.generated_password')
+        ->missing('generated_password')
+    );
+
+    // 2. Visita posterior: flash limpio
+    $secondVisitResponse = $this->actingAs($admin)->get(route('settings.users.index'));
+    $secondVisitResponse->assertOk();
+    $secondVisitResponse->assertInertia(fn (AssertableInertia $page) => $page
+        ->component('settings/users/index')
+        ->missingFlash('generated_password')
+        ->missing('flash.generated_password')
+        ->missing('generated_password')
+    );
+});
+
+test('user can login with generated and reset password', function () {
+    $admin = User::factory()->administrador()->create(['is_active' => true]);
+    $branch = Branch::factory()->create();
+
+    // Alta con clave generada
+    $this->actingAs($admin)->post(route('settings.users.store'), [
+        'name' => 'Login Test User',
+        'email' => 'login-test@lalinda.com',
+        'role' => 'cajero',
+        'branch_id' => $branch->id,
+        'password' => '',
+    ]);
+
+    $generatedPassword = Inertia::getFlashed()['generated_password'];
+
+    // Login con clave generada
+    auth()->logout();
+    $loginResponse = $this->post('/login', [
+        'email' => 'login-test@lalinda.com',
+        'password' => $generatedPassword,
+    ]);
+    $loginResponse->assertRedirect();
+    $this->assertAuthenticated();
+
+    // Reset con nueva clave generada
+    $user = User::where('email', 'login-test@lalinda.com')->first();
+    $this->actingAs($admin)->post(route('settings.users.reset-password', $user), [
+        'password' => '',
+    ]);
+
+    $resetPassword = Inertia::getFlashed()['generated_password'];
+    expect($resetPassword)->not->toBe($generatedPassword);
+
+    // Login con nueva clave reset
+    auth()->logout();
+    $loginResetResponse = $this->post('/login', [
+        'email' => 'login-test@lalinda.com',
+        'password' => $resetPassword,
+    ]);
+    $loginResetResponse->assertRedirect();
+    $this->assertAuthenticated();
 });

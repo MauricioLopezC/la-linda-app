@@ -77,10 +77,9 @@ class UserController extends Controller
     {
         $result = $createUser->execute($request->userData());
 
-        return redirect()->back()->with([
-            'success' => 'Usuario creado exitosamente.',
-            'generated_password' => $result['plain_password'],
-        ]);
+        Inertia::flash('generated_password', $result['plain_password']);
+
+        return redirect()->back()->with('success', 'Usuario creado exitosamente.');
     }
 
     public function update(UpdateUserRequest $request, User $user, UpdateUser $updateUser): RedirectResponse
@@ -109,9 +108,8 @@ class UserController extends Controller
 
         $newPassword = $resetUserPassword->execute($user, $validated['password'] ?? null);
 
-        return redirect()->back()->with([
-            'success' => 'Contraseña restablecida exitosamente.',
-            'generated_password' => $newPassword,
-        ]);
+        Inertia::flash('generated_password', $newPassword);
+
+        return redirect()->back()->with('success', 'Contraseña restablecida exitosamente.');
     }
 }

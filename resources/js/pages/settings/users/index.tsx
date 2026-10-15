@@ -86,9 +86,8 @@ export default function UsersIndex({
   roles = [],
   filters,
 }: Props) {
-  const { flash } = usePage<{
-    flash?: { success?: string; generated_password?: string };
-  }>().props;
+  const page = usePage();
+  const flashPassword = page.flash?.generated_password ?? null;
 
   const [searchTerm, setSearchTerm] = useState(filters.search ?? '');
   const [selectedRole, setSelectedRole] = useState(filters.role ?? 'all');
@@ -103,9 +102,7 @@ export default function UsersIndex({
     null,
   );
   const displayedPassword =
-    flash?.generated_password && flash.generated_password !== dismissedPassword
-      ? flash.generated_password
-      : null;
+    flashPassword && flashPassword !== dismissedPassword ? flashPassword : null;
   const [copied, setCopied] = useState(false);
 
   const createForm = useForm({
@@ -773,8 +770,8 @@ export default function UsersIndex({
       <Dialog
         open={Boolean(displayedPassword)}
         onOpenChange={(open) => {
-          if (!open) {
-            setDismissedPassword(flash?.generated_password ?? '');
+          if (!open && flashPassword) {
+            setDismissedPassword(flashPassword);
           }
         }}
       >
@@ -820,9 +817,11 @@ export default function UsersIndex({
           <DialogFooter>
             <Button
               type="button"
-              onClick={() =>
-                setDismissedPassword(flash?.generated_password ?? '')
-              }
+              onClick={() => {
+                if (flashPassword) {
+                  setDismissedPassword(flashPassword);
+                }
+              }}
               className="w-full"
             >
               Entendido, ya la copié
