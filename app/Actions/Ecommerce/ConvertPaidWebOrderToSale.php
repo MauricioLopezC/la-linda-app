@@ -11,11 +11,11 @@ use App\Models\Ecommerce\WebOrder;
 use App\Models\Ecommerce\WebOrderItem;
 use App\Models\Inventory\Warehouse;
 use App\Models\Pricing\PriceList;
-use App\Models\Pricing\VatRate;
 use App\Models\Sales\PointOfSale;
 use App\Models\Sales\Sale;
 use App\Models\Sales\SaleItem;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 use RuntimeException;
 
@@ -32,6 +32,7 @@ class ConvertPaidWebOrderToSale
      *
      * @throws InvalidArgumentException
      * @throws RuntimeException
+     * @throws ValidationException
      */
     public function execute(WebOrder $order): Sale
     {
@@ -78,11 +79,23 @@ class ConvertPaidWebOrderToSale
 
             $order->loadMissing(['customer', 'items.article.vatRate']);
 
-            $fallbackPriceListId = PriceList::query()->forChannel(PriceListChannel::Online)->active()->currentlyValid()->value('id')
+            $vatRatesByItemId = [];
+            foreach ($order->items as $orderItem) {
+                $vatRate = $orderItem->article->vatRate;
+
+                if ($vatRate === null) {
+                    throw ValidationException::withMessages([
+                        'article_id' => "El artículo \"{$orderItem->article->description}\" no tiene alícuota de IVA asignada.",
+                    ]);
+                }
+
+                $vatRatesByItemId[$orderItem->id] = $vatRate;
+            }
+
+            $priceListId = $order->items->first()->price_list_id
+                ?? PriceList::query()->forChannel(PriceListChannel::Online)->active()->currentlyValid()->value('id')
                 ?? $order->customer->price_list_id
                 ?? PriceList::query()->value('id');
-
-            $priceListId = $order->items->first()->price_list_id ?? $fallbackPriceListId;
 
             /** @var Sale $sale */
             $sale = Sale::create([
@@ -100,18 +113,9 @@ class ConvertPaidWebOrderToSale
                 'total_amount' => $order->total_amount,
             ]);
 
-            $defaultVatRate = null;
-
             /** @var WebOrderItem $orderItem */
             foreach ($order->items as $orderItem) {
-                $vatRateModel = $orderItem->article->vatRate;
-                if ($vatRateModel === null) {
-                    $defaultVatRate ??= VatRate::query()->where('percentage', 21.0)->first();
-                    $vatRateModel = $defaultVatRate;
-                }
-
-                $vatRateId = $vatRateModel->id ?? 1;
-                $vatRateValue = number_format((float) ($vatRateModel->percentage ?? 21.0), 2, '.', '');
+                $vatRate = $vatRatesByItemId[$orderItem->id];
 
                 SaleItem::create([
                     'sale_id' => $sale->id,
@@ -120,8 +124,8 @@ class ConvertPaidWebOrderToSale
                     'unit_price' => $orderItem->unit_price,
                     'price_list_id' => $orderItem->price_list_id ?? $priceListId,
                     'line_total' => $orderItem->line_total,
-                    'vat_rate_id' => $vatRateId,
-                    'vat_rate' => $vatRateValue,
+                    'vat_rate_id' => $vatRate->id,
+                    'vat_rate' => number_format($vatRate->percentage, 2, '.', ''),
                 ]);
             }
 

@@ -604,7 +604,9 @@ export default function SaleShow({
                   </TableHeader>
                   <TableBody>
                     {sale.vat_breakdown.map((row) => (
-                      <TableRow key={row.vat_rate_id}>
+                      <TableRow
+                        key={`${row.vat_rate_id ?? 'shipping'}:${row.vat_rate}`}
+                      >
                         <TableCell className="font-medium">
                           {row.vat_rate_description} (
                           {Number(row.vat_rate).toLocaleString('es-AR')}%)

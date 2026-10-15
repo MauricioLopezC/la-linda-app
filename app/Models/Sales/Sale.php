@@ -264,7 +264,7 @@ class Sale extends Model
      * Summary of net and VAT amounts grouped by VAT rate (HU-063).
      *
      * @return array<int, array{
-     *     vat_rate_id: int,
+     *     vat_rate_id: int|null,
      *     vat_rate: string,
      *     vat_rate_description: string,
      *     net_amount: string,
@@ -276,7 +276,7 @@ class Sale extends Model
     {
         $items = $this->relationLoaded('items') ? $this->items : $this->items()->with('vatRate')->get();
 
-        /** @var \Illuminate\Support\Collection<int, array{vat_rate_id: int, vat_rate: string, vat_rate_description: string, net_amount: string, vat_amount: string, total_amount: string}> $breakdown */
+        /** @var \Illuminate\Support\Collection<int|string, array{vat_rate_id: int|null, vat_rate: string, vat_rate_description: string, net_amount: string, vat_amount: string, total_amount: string}> $breakdown */
         $breakdown = $items
             ->groupBy('vat_rate_id')
             ->map(function (Collection $groupItems, int|string $vatRateId): array {
@@ -306,18 +306,22 @@ class Sale extends Model
             $shippingVatCents = $this->moneyToCents($shippingBreakdown['vat_amount']);
             $shippingTotalCents = $this->moneyToCents((string) $this->shipping_amount);
 
-            $rate21 = VatRate::query()->where('percentage', 21.0)->first();
-            $rate21Id = $rate21->id ?? 1;
+            $existingKey = $breakdown->search(fn (array $row): bool => $row['vat_rate'] === '21.00');
+            if ($existingKey === false) {
+                $existingKey = 'shipping:21.00';
+            }
 
-            $existingRow = $breakdown->get($rate21Id);
+            $existingRow = $breakdown->get($existingKey);
             if ($existingRow !== null) {
                 $existingRow['net_amount'] = $this->centsToMoney($this->moneyToCents($existingRow['net_amount']) + $shippingNetCents);
                 $existingRow['vat_amount'] = $this->centsToMoney($this->moneyToCents($existingRow['vat_amount']) + $shippingVatCents);
                 $existingRow['total_amount'] = $this->centsToMoney($this->moneyToCents($existingRow['total_amount']) + $shippingTotalCents);
-                $breakdown->put($rate21Id, $existingRow);
+                $breakdown->put($existingKey, $existingRow);
             } else {
-                $breakdown->put($rate21Id, [
-                    'vat_rate_id' => $rate21Id,
+                $rate21 = VatRate::query()->where('percentage', 21.0)->first();
+
+                $breakdown->put($existingKey, [
+                    'vat_rate_id' => $rate21?->id,
                     'vat_rate' => '21.00',
                     'vat_rate_description' => $rate21->description ?? 'IVA 21%',
                     'net_amount' => $this->centsToMoney($shippingNetCents),

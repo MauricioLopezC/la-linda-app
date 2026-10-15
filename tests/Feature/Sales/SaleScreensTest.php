@@ -126,6 +126,44 @@ test('the sale screen marks accepts_changes as false when the cash session is cl
             ->where('sale.accepts_changes', false));
 });
 
+test('the online sale screen serializes shipping without a catalog VAT rate', function () {
+    $rate = VatRate::factory()->create(['percentage' => 0, 'description' => 'Exento']);
+    $article = Article::factory()->create(['vat_rate_id' => $rate->id]);
+    $sale = Sale::factory()->online()->confirmed()->create([
+        'shipping_amount' => '121.00',
+        'total_amount' => '221.00',
+    ]);
+    SaleItem::factory()->create([
+        'sale_id' => $sale->id,
+        'article_id' => $article->id,
+        'vat_rate_id' => $rate->id,
+        'vat_rate' => '0.00',
+        'quantity' => '1.000',
+        'unit_price' => '100.00',
+        'line_total' => '100.00',
+    ]);
+    expect(VatRate::query()->where('percentage', 21)->exists())->toBeFalse();
+
+    $this->actingAs(User::factory()->create())
+        ->get(route('sales.sales.show', $sale))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('sales/sales/show')
+            ->where('sale.net_amount', '200.00')
+            ->where('sale.vat_amount', '21.00')
+            ->where('sale.total_amount', '221.00')
+            ->has('sale.vat_breakdown', 2)
+            ->where('sale.vat_breakdown.0.vat_rate_id', null)
+            ->where('sale.vat_breakdown.0.vat_rate', '21.00')
+            ->where('sale.vat_breakdown.0.vat_rate_description', 'IVA 21%')
+            ->where('sale.vat_breakdown.0.net_amount', '100.00')
+            ->where('sale.vat_breakdown.0.vat_amount', '21.00')
+            ->where('sale.vat_breakdown.0.total_amount', '121.00')
+            ->where('sale.vat_breakdown.1.vat_rate_id', $rate->id)
+            ->where('sale.vat_breakdown.1.vat_rate', '0.00')
+            ->where('sale.vat_breakdown.1.total_amount', '100.00'));
+});
+
 test('the sale screen displays the VAT breakdown and net and VAT amounts for multiple rates', function () {
     $sale = Sale::factory()->create();
     $vat21 = VatRate::factory()->create(['description' => 'IVA General 21%', 'percentage' => 21.0]);

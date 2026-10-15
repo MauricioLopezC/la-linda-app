@@ -1,6 +1,7 @@
 <?php
 
 use App\Actions\Ecommerce\ConvertPaidWebOrderToSale;
+use App\Enums\Catalog\ArticleStatus;
 use App\Enums\Customers\CustomerIdType;
 use App\Enums\Customers\CustomerTaxCondition;
 use App\Enums\Ecommerce\DeliveryMethod;
@@ -21,6 +22,8 @@ use App\Models\Pricing\VatRate;
 use App\Models\Sales\Invoice;
 use App\Models\Sales\PointOfSale;
 use App\Models\Sales\Sale;
+use App\Models\Sales\SaleItem;
+use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 use RuntimeException;
 
@@ -257,3 +260,91 @@ test('throws runtime exception if no online warehouse is configured', function (
     expect(fn () => $this->action->execute($order))
         ->toThrow(RuntimeException::class, 'No se encontró un depósito activo asignado al canal online');
 });
+
+test('rejects an article that lost its VAT rate after checkout', function (bool $hasStandardRate) {
+    $order = WebOrder::factory()->paid()->create([
+        'items_amount' => '121.00',
+        'total_amount' => '121.00',
+        'paid_amount' => '121.00',
+    ]);
+    WebOrderItem::factory()->create([
+        'web_order_id' => $order->id,
+        'article_id' => $this->article->id,
+        'price_list_id' => $this->onlinePriceList->id,
+        'unit_price' => '121.00',
+        'line_total' => '121.00',
+    ]);
+    $this->article->update(['status' => ArticleStatus::Inactive, 'vat_rate_id' => null]);
+    if (! $hasStandardRate) {
+        $this->vat21->update(['percentage' => 0]);
+    }
+
+    expect(fn () => $this->action->execute($order))
+        ->toThrow(ValidationException::class, 'El artículo "'.$this->article->description.'" no tiene alícuota de IVA asignada.');
+
+    expect(Sale::query()->where('web_order_id', $order->id)->exists())->toBeFalse()
+        ->and(SaleItem::count())->toBe(0)
+        ->and(Invoice::count())->toBe(0);
+})->with(['standard VAT exists' => true, 'standard VAT is absent' => false]);
+
+test('preserves frozen prices and mixed VAT rates when converting and replaying an order', function () {
+    $order = WebOrder::factory()->paid()->shipping('121.00')->create([
+        'items_amount' => '210.50',
+        'total_amount' => '331.50',
+        'paid_amount' => '331.50',
+    ]);
+    $itemList = PriceList::factory()->particular()->inactive()->create();
+    $orderItems = collect([['0.00', '100.00'], ['10.50', '110.50']])->map(function (array $line) use ($order, $itemList): WebOrderItem {
+        $rate = VatRate::factory()->create(['percentage' => (float) $line[0]]);
+        $article = Article::factory()->create(['vat_rate_id' => $rate->id]);
+
+        return WebOrderItem::factory()->create([
+            'web_order_id' => $order->id,
+            'article_id' => $article->id,
+            'price_list_id' => $itemList->id,
+            'quantity' => '1.000',
+            'unit_price' => $line[1],
+            'line_total' => $line[1],
+        ]);
+    });
+    $orderItems->first()->article->update(['status' => ArticleStatus::Inactive]);
+
+    $sale = $this->action->execute($order);
+    $invoiceId = $sale->invoice->id;
+    $breakdown = collect($sale->getVatBreakdown())->keyBy('vat_rate');
+
+    expect($sale->price_list_id)->toBe($itemList->id)
+        ->and($sale->items->pluck('price_list_id')->all())->toBe([$itemList->id, $itemList->id])
+        ->and($sale->items->pluck('unit_price')->all())->toBe(['100.00', '110.50'])
+        ->and($sale->items->pluck('quantity')->all())->toBe(['1.000', '1.000'])
+        ->and($sale->items->pluck('line_total')->all())->toBe(['100.00', '110.50'])
+        ->and($breakdown->keys()->all())->toBe(['21.00', '10.50', '0.00'])
+        ->and($breakdown->pluck('net_amount')->all())->toBe(['100.00', '100.00', '100.00'])
+        ->and($breakdown->pluck('vat_amount')->all())->toBe(['21.00', '10.50', '0.00'])
+        ->and($sale->invoice->net_amount)->toBe('300.00')
+        ->and($sale->invoice->vat_amount)->toBe('31.50')
+        ->and($sale->invoice->total_amount)->toBe($order->paid_amount)
+        ->and($sale->invoice->items)->toHaveCount(3);
+
+    $orderItems->first()->article->update(['vat_rate_id' => null]);
+    $replayed = $this->action->execute($order->fresh());
+
+    expect($replayed->id)->toBe($sale->id)
+        ->and($replayed->invoice->id)->toBe($invoiceId)
+        ->and($replayed->items->pluck('vat_rate')->all())->toBe(['0.00', '10.50'])
+        ->and(Sale::query()->where('web_order_id', $order->id)->count())->toBe(1)
+        ->and(Invoice::query()->where('sale_id', $sale->id)->count())->toBe(1);
+});
+
+test('keeps the price list fallback for legacy orders without lines', function (string $source) {
+    $customerList = $source === 'customer' ? PriceList::factory()->particular()->create() : null;
+    $customer = Customer::factory()->create(['price_list_id' => $customerList?->id]);
+    if ($source !== 'online') {
+        $this->onlinePriceList->update(['is_active' => false]);
+    }
+    $order = WebOrder::factory()->paid()->create(['customer_id' => $customer->id]);
+
+    $sale = $this->action->execute($order);
+
+    expect($sale->price_list_id)->toBe($source === 'customer' ? $customerList->id : $this->onlinePriceList->id);
+})->with(['online', 'customer', 'first available']);

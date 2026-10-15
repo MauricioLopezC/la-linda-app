@@ -1,6 +1,8 @@
 <?php
 
 use App\Actions\Ecommerce\MarkWebOrderAsPaid;
+use App\Actions\Sales\IssueInvoice;
+use App\Enums\Catalog\ArticleStatus;
 use App\Enums\Ecommerce\WebOrderStatus;
 use App\Enums\Pricing\PriceListChannel;
 use App\Enums\Sales\SaleChannel;
@@ -8,13 +10,21 @@ use App\Enums\Sales\SaleStatus;
 use App\Models\Catalog\Article;
 use App\Models\Ecommerce\WebOrder;
 use App\Models\Ecommerce\WebOrderItem;
+use App\Models\Inventory\StockBalance;
+use App\Models\Inventory\StockMovement;
 use App\Models\Inventory\Warehouse;
 use App\Models\Pricing\PriceList;
 use App\Models\Pricing\VatRate;
+use App\Models\Sales\CashMovement;
+use App\Models\Sales\Invoice;
+use App\Models\Sales\InvoiceItem;
 use App\Models\Sales\PointOfSale;
 use App\Models\Sales\Sale;
+use App\Models\Sales\SaleItem;
 use Carbon\Carbon;
+use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
+use Mockery\MockInterface;
 use RuntimeException;
 
 beforeEach(function () {
@@ -137,3 +147,53 @@ test('rejects paying order with a different payment id if already paid', functio
     expect(fn () => $this->action->execute($order, 'pay-second-222', '3000.00', now()))
         ->toThrow(RuntimeException::class, 'ya se encuentra pagado con otro pago de Mercado Pago');
 });
+
+test('rolls back payment and conversion when fiscal processing fails', function (string $failure) {
+    $order = WebOrder::factory()->create([
+        'items_amount' => '121.00',
+        'total_amount' => '121.00',
+    ]);
+    WebOrderItem::factory()->create([
+        'web_order_id' => $order->id,
+        'article_id' => $this->article->id,
+        'price_list_id' => $this->onlinePriceList->id,
+        'unit_price' => '121.00',
+        'line_total' => '121.00',
+    ]);
+    $balance = StockBalance::factory()->create([
+        'article_id' => $this->article->id,
+        'warehouse_id' => $this->onlineWarehouse->id,
+        'quantity' => '50.000',
+    ]);
+    $originalPayment = $order->only(['status', 'mp_payment_id', 'paid_at', 'paid_amount']);
+    $stockMovements = StockMovement::count();
+    $cashMovements = CashMovement::count();
+
+    if ($failure === 'missing VAT') {
+        $this->article->update(['status' => ArticleStatus::Inactive, 'vat_rate_id' => null]);
+    } else {
+        $issueInvoice = app(IssueInvoice::class);
+        $this->mock(IssueInvoice::class, function (MockInterface $mock) use ($issueInvoice): void {
+            $mock->shouldReceive('handle')->once()->andReturnUsing(function (Sale $sale) use ($issueInvoice): never {
+                $issueInvoice->handle($sale, null);
+
+                throw new RuntimeException('Simulated failure after invoice creation');
+            });
+        });
+    }
+
+    expect(fn () => app(MarkWebOrderAsPaid::class)->execute($order, 'pay-fiscal-error', '121.00', now()))
+        ->toThrow(
+            $failure === 'missing VAT' ? ValidationException::class : RuntimeException::class,
+            $failure === 'missing VAT' ? $this->article->description : 'Simulated failure after invoice creation',
+        );
+
+    expect($order->fresh()->only(array_keys($originalPayment)))->toEqual($originalPayment)
+        ->and(Sale::query()->where('web_order_id', $order->id)->exists())->toBeFalse()
+        ->and(SaleItem::count())->toBe(0)
+        ->and(Invoice::count())->toBe(0)
+        ->and(InvoiceItem::count())->toBe(0)
+        ->and($balance->fresh()->quantity)->toBe('50.000')
+        ->and(StockMovement::count())->toBe($stockMovements)
+        ->and(CashMovement::count())->toBe($cashMovements);
+})->with(['missing VAT', 'invoice error']);
