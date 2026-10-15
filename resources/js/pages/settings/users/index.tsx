@@ -41,6 +41,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { panel } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 
 type UserItem = App.Data.Security.UserData;
@@ -836,8 +837,8 @@ export default function UsersIndex({
 UsersIndex.layout = {
   breadcrumbs: [
     {
-      title: 'Dashboard',
-      href: '/dashboard',
+      title: 'Inicio',
+      href: panel(),
     },
     {
       title: 'Configuración',

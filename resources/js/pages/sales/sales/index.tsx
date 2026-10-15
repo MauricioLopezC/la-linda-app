@@ -24,7 +24,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { formatCurrency } from '@/lib/utils';
-import { dashboard } from '@/routes';
+import { panel } from '@/routes';
 import {
   create as createCashSession,
   show as showCashSession,
@@ -337,7 +337,7 @@ export default function SalesIndex({
 
 SalesIndex.layout = {
   breadcrumbs: [
-    { title: 'Dashboard', href: dashboard() },
+    { title: 'Inicio', href: panel() },
     { title: 'Ventas', href: index() },
   ] satisfies BreadcrumbItem[],
 };

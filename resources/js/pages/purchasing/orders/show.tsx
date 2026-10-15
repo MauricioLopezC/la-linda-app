@@ -37,7 +37,7 @@ import {
 } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { formatCurrency } from '@/lib/utils';
-import { dashboard } from '@/routes';
+import { panel } from '@/routes';
 import { cancel, edit, index, issue, pdf } from '@/routes/purchasing/orders';
 import { show as showVoucher } from '@/routes/purchasing/vouchers';
 import type { BreadcrumbItem } from '@/types';
@@ -656,7 +656,7 @@ export default function PurchaseOrderShow({ order }: Props) {
 
 PurchaseOrderShow.layout = {
   breadcrumbs: [
-    { title: 'Dashboard', href: dashboard() },
+    { title: 'Inicio', href: panel() },
     { title: 'Compras', href: '#' },
     { title: 'Órdenes de compra', href: index() },
     { title: 'Detalle', href: '#' },

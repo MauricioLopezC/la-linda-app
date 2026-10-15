@@ -415,7 +415,7 @@ independiente.
 - **Comportamiento:**
     - el sistema aplica los cinco roles operativos de La Linda:
         - `administrador`: acceso total e irrestricto a todos los módulos, incluyendo la gestión de usuarios (`HU-003`)
-        - `gerente`: acceso al Tablero Gerencial (`/dashboard`), listas de precios, organización/parámetros y consulta de operaciones (ventas, comprobantes, turnos de caja, cuentas corrientes, stock y pedidos web); sin acceso al ABM de usuarios
+        - `gerente`: acceso al Tablero Gerencial (`/dashboard`), listas de precios, organización/parámetros y consulta de operaciones (catálogo, compras con sus comprobantes y cuentas corrientes, clientes, stock y pedidos web); no opera la caja ni las ventas de mostrador (`operate-cash`) y no tiene acceso al ABM de usuarios
         - `compras` (*Encargado de compras*): acceso a catálogo, proveedores, órdenes de compra, comprobantes de proveedor, órdenes de pago, cuentas corrientes, pagos/egresos y consulta de existencias de stock
         - `deposito` (*Encargado de depósito*): acceso a existencias de stock, movimientos manuales, historial de movimientos y preparación/entrega de pedidos web (`EPIC-17`)
         - `cajero` (*Cajero / Vendedor*): acceso a apertura/cierre de su caja, movimientos de caja, ventas de mostrador, cobro, facturación y clientes

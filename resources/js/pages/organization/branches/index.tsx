@@ -30,6 +30,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { panel } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 
 type Branch = App.Data.Organization.BranchData;
@@ -391,8 +392,8 @@ export default function BranchesIndex({ branches = [] }: Props) {
 BranchesIndex.layout = {
   breadcrumbs: [
     {
-      title: 'Dashboard',
-      href: '/dashboard',
+      title: 'Inicio',
+      href: panel(),
     },
     {
       title: 'Sucursales',

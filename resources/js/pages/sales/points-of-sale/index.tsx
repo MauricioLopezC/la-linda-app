@@ -37,6 +37,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { panel } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 
 type PointOfSale = App.Data.Sales.PointOfSaleData;
@@ -409,8 +410,8 @@ export default function PointsOfSaleIndex({
 PointsOfSaleIndex.layout = {
   breadcrumbs: [
     {
-      title: 'Dashboard',
-      href: '/dashboard',
+      title: 'Inicio',
+      href: panel(),
     },
     {
       title: 'Puntos de Venta',
