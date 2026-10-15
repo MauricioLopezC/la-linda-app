@@ -33,7 +33,7 @@ export default function Dashboard({
         />
 
         <DashboardRevenuesSection revenues={revenues} />
-        <DashboardExpensesSection expenses={expenses} />
+        <DashboardExpensesSection expenses={expenses} filters={filters} />
         <DashboardEvolutionSection evolution={evolution} />
         <DashboardOperationalSection operational={operational} />
       </div>
