@@ -40,6 +40,7 @@ class DatabaseSeeder extends Seeder
                 'password' => config('demo.admin_password'),
                 'email_verified_at' => now(),
                 'role' => UserRole::Administrador,
+                'is_active' => true,
             ]
         );
 

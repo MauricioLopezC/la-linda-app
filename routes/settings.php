@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Security\UserController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\SecurityController;
 use Illuminate\Auth\Middleware\RequirePassword;
@@ -24,4 +25,12 @@ Route::middleware(['internal.staff', 'verified'])->group(function () {
         ->name('user-password.update');
 
     Route::inertia('settings/appearance', 'settings/appearance')->name('appearance.edit');
+});
+
+Route::middleware(['internal.staff', 'verified', 'can:manage-users'])->prefix('settings/users')->name('settings.users.')->group(function () {
+    Route::get('/', [UserController::class, 'index'])->name('index');
+    Route::post('/', [UserController::class, 'store'])->name('store');
+    Route::put('{user}', [UserController::class, 'update'])->name('update');
+    Route::patch('{user}/toggle-active', [UserController::class, 'toggleActive'])->name('toggle-active');
+    Route::post('{user}/reset-password', [UserController::class, 'resetPassword'])->name('reset-password');
 });

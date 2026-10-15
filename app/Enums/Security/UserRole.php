@@ -25,6 +25,20 @@ enum UserRole: string
         };
     }
 
+    /**
+     * @return array<string, string>
+     */
+    public static function internalRoles(): array
+    {
+        return [
+            self::Administrador->value => self::Administrador->label(),
+            self::Gerente->value => self::Gerente->label(),
+            self::Compras->value => self::Compras->label(),
+            self::Deposito->value => self::Deposito->label(),
+            self::Cajero->value => self::Cajero->label(),
+        ];
+    }
+
     public function isInternal(): bool
     {
         return $this !== self::Cliente;
