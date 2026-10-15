@@ -37,7 +37,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { dashboard } from '@/routes';
+import { panel } from '@/routes';
 import { index } from '@/routes/sales/payment-methods';
 import type { BreadcrumbItem } from '@/types';
 
@@ -380,7 +380,7 @@ export default function PaymentMethodsIndex({
 
 PaymentMethodsIndex.layout = {
   breadcrumbs: [
-    { title: 'Dashboard', href: dashboard() },
+    { title: 'Inicio', href: panel() },
     { title: 'Medios de Pago', href: index() },
   ] satisfies BreadcrumbItem[],
 };

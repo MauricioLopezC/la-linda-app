@@ -42,7 +42,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { cn, formatCurrency } from '@/lib/utils';
-import { dashboard } from '@/routes';
+import { panel } from '@/routes';
 import {
   associableInvoices as searchAssociableInvoices,
   associablePurchaseOrders as searchAssociablePurchaseOrders,
@@ -1742,7 +1742,7 @@ function PurchaseOrderAssociation({
 
 CreateSupplierVoucher.layout = {
   breadcrumbs: [
-    { title: 'Dashboard', href: dashboard() },
+    { title: 'Inicio', href: panel() },
     { title: 'Comprobantes de proveedores', href: index() },
     { title: 'Registrar comprobante', href: '#' },
   ] satisfies BreadcrumbItem[],

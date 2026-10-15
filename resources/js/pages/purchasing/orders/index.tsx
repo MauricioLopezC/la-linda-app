@@ -33,7 +33,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { formatCurrency } from '@/lib/utils';
-import { dashboard } from '@/routes';
+import { panel } from '@/routes';
 import { create, edit, index, pdf, show } from '@/routes/purchasing/orders';
 import type { BreadcrumbItem } from '@/types';
 
@@ -401,7 +401,7 @@ export default function PurchaseOrdersIndex({
 
 PurchaseOrdersIndex.layout = {
   breadcrumbs: [
-    { title: 'Dashboard', href: dashboard() },
+    { title: 'Inicio', href: panel() },
     { title: 'Compras', href: '#' },
     { title: 'Órdenes de compra', href: index() },
   ] satisfies BreadcrumbItem[],

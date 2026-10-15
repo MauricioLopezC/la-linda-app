@@ -1,10 +1,12 @@
 <?php
 
+use App\Enums\Security\UserRole;
 use App\Models\Catalog\Article;
 use App\Models\Customers\Customer;
 use App\Models\Pricing\PriceList;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
+use Illuminate\Support\Facades\Hash;
 
 it('seeds the configured demo admin user from config', function () {
     config([
@@ -29,6 +31,25 @@ it('reseeding the demo admin user stays idempotent', function () {
     $this->seed(DatabaseSeeder::class);
 
     expect(User::where('email', 'demo-admin@example.com')->count())->toBe(1);
+});
+
+it('seeds one demo staff user per operational role', function () {
+    config([
+        'demo.staff_email_domain' => 'demo.test',
+        'demo.staff_password' => 'staff-secret-password',
+    ]);
+
+    $this->seed(DatabaseSeeder::class);
+    $this->seed(DatabaseSeeder::class);
+
+    foreach ([UserRole::Gerente, UserRole::Compras, UserRole::Deposito, UserRole::Cajero] as $role) {
+        $user = User::query()->where('email', "{$role->value}@demo.test")->sole();
+
+        expect($user->role)->toBe($role)
+            ->and($user->is_active)->toBeTrue()
+            ->and($user->branch_id)->not->toBeNull()
+            ->and(Hash::check('staff-secret-password', $user->password))->toBeTrue();
+    }
 });
 
 it('seeds demo prices that exercise every step of the price cascade', function () {

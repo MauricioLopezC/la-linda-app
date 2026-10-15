@@ -3,8 +3,10 @@
 namespace App\Http\Middleware;
 
 use App\Data\Sales\OpenCashSessionData;
+use App\Enums\Security\Permission;
 use App\Models\Sales\CashSession;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -42,6 +44,7 @@ class HandleInertiaRequests extends Middleware
             'name' => config('app.name'),
             'auth' => [
                 'user' => $request->user(),
+                'can' => fn (): array => $this->moduleCapabilities($request),
             ],
             'flash' => [
                 'success' => $request->session()->get('success'),
@@ -69,5 +72,24 @@ class HandleInertiaRequests extends Middleware
             },
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
+    }
+
+    /**
+     * Module Gates (HU-004) the current user holds, keyed by Gate name, so the sidebar and screen
+     * actions only offer what the server will authorize.
+     *
+     * @return array<string, bool>
+     */
+    protected function moduleCapabilities(Request $request): array
+    {
+        $user = $request->user();
+
+        $capabilities = [];
+
+        foreach (Permission::cases() as $permission) {
+            $capabilities[$permission->value] = $user !== null && Gate::forUser($user)->allows($permission->value);
+        }
+
+        return $capabilities;
     }
 }

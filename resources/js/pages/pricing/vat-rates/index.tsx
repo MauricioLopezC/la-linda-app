@@ -30,7 +30,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { dashboard } from '@/routes';
+import { panel } from '@/routes';
 import { index } from '@/routes/pricing/vat-rates';
 import type { BreadcrumbItem } from '@/types';
 
@@ -326,7 +326,7 @@ export default function VatRatesIndex({ vatRates = [] }: Props) {
 
 VatRatesIndex.layout = {
   breadcrumbs: [
-    { title: 'Dashboard', href: dashboard() },
+    { title: 'Inicio', href: panel() },
     { title: 'Alícuotas de IVA', href: index() },
   ] satisfies BreadcrumbItem[],
 };

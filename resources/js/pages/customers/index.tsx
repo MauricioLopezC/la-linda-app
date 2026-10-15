@@ -50,7 +50,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { dashboard } from '@/routes';
+import { panel } from '@/routes';
 import { index } from '@/routes/customers';
 import type { BreadcrumbItem } from '@/types';
 
@@ -1343,8 +1343,8 @@ export default function CustomersIndex({
 CustomersIndex.layout = {
   breadcrumbs: [
     {
-      title: 'Dashboard',
-      href: dashboard(),
+      title: 'Inicio',
+      href: panel(),
     },
     {
       title: 'Clientes',

@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { formatCurrency } from '@/lib/utils';
-import { dashboard } from '@/routes';
+import { panel } from '@/routes';
 import { store } from '@/routes/purchasing/payment-orders';
 import type { BreadcrumbItem } from '@/types';
 import InvoiceSelectionTable from './components/invoice-selection-table';
@@ -338,7 +338,7 @@ export default function CreatePaymentOrder({
       <div className="flex h-full flex-1 flex-col gap-6 p-4 md:p-8">
         <div className="space-y-1">
           <Button variant="ghost" size="sm" asChild className="mb-2 gap-1">
-            <Link href={dashboard()}>
+            <Link href={panel()}>
               <ArrowLeft className="size-4" />
               Volver
             </Link>
@@ -759,7 +759,7 @@ export default function CreatePaymentOrder({
 
 CreatePaymentOrder.layout = {
   breadcrumbs: [
-    { title: 'Dashboard', href: dashboard() },
+    { title: 'Inicio', href: panel() },
     { title: 'Compras', href: '#' },
     { title: 'Órdenes de Pago', href: '#' },
     { title: 'Nueva', href: '#' },

@@ -35,35 +35,38 @@ use App\Http\Controllers\Sales\CashSessionController;
 use App\Http\Controllers\Sales\PaymentMethodController;
 use App\Http\Controllers\Sales\PointOfSaleController;
 use App\Http\Controllers\Sales\SaleController;
+use App\Http\Controllers\Security\RoleHomeController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'welcome')->name('home');
 
 Route::middleware(['internal.staff', 'verified'])->group(function () {
+    Route::get('panel', RoleHomeController::class)->name('panel');
+
     Route::get('dashboard', [DashboardController::class, 'index'])->middleware('can:view-dashboard')->name('dashboard');
 
-    Route::prefix('catalog/categories')->name('catalog.categories.')->group(function () {
+    Route::prefix('catalog/categories')->name('catalog.categories.')->middleware('can:manage-catalog')->group(function () {
         Route::get('/', [CategoryController::class, 'index'])->name('index');
         Route::post('/', [CategoryController::class, 'store'])->name('store');
         Route::put('{category}', [CategoryController::class, 'update'])->name('update');
         Route::patch('{category}/toggle', [CategoryController::class, 'toggleStatus'])->name('toggle');
     });
 
-    Route::prefix('catalog/brands')->name('catalog.brands.')->group(function () {
+    Route::prefix('catalog/brands')->name('catalog.brands.')->middleware('can:manage-catalog')->group(function () {
         Route::get('/', [BrandController::class, 'index'])->name('index');
         Route::post('/', [BrandController::class, 'store'])->name('store');
         Route::put('{brand}', [BrandController::class, 'update'])->name('update');
         Route::patch('{brand}/toggle', [BrandController::class, 'toggleStatus'])->name('toggle');
     });
 
-    Route::prefix('catalog/units-of-measure')->name('catalog.units-of-measure.')->group(function () {
+    Route::prefix('catalog/units-of-measure')->name('catalog.units-of-measure.')->middleware('can:manage-catalog')->group(function () {
         Route::get('/', [UnitOfMeasureController::class, 'index'])->name('index');
         Route::post('/', [UnitOfMeasureController::class, 'store'])->name('store');
         Route::put('{unit_of_measure}', [UnitOfMeasureController::class, 'update'])->name('update');
         Route::patch('{unit_of_measure}/toggle', [UnitOfMeasureController::class, 'toggleStatus'])->name('toggle');
     });
 
-    Route::prefix('catalog/articles')->name('catalog.articles.')->group(function () {
+    Route::prefix('catalog/articles')->name('catalog.articles.')->middleware('can:manage-catalog')->group(function () {
         Route::get('/', [ArticleController::class, 'index'])->name('index');
         Route::post('/', [ArticleController::class, 'store'])->name('store');
         Route::put('{article}', [ArticleController::class, 'update'])->name('update');
@@ -73,58 +76,58 @@ Route::middleware(['internal.staff', 'verified'])->group(function () {
         Route::delete('{article}/suppliers/{supplier}', [ArticleSupplierController::class, 'destroyForArticle'])->name('suppliers.destroy');
     });
 
-    Route::prefix('organization/branches')->name('organization.branches.')->group(function () {
+    Route::prefix('organization/branches')->name('organization.branches.')->middleware('can:manage-organization')->group(function () {
         Route::get('/', [BranchController::class, 'index'])->name('index');
         Route::post('/', [BranchController::class, 'store'])->name('store');
         Route::put('{branch}', [BranchController::class, 'update'])->name('update');
         Route::patch('{branch}/toggle', [BranchController::class, 'toggleStatus'])->name('toggle');
     });
 
-    Route::prefix('inventory/warehouses')->name('inventory.warehouses.')->group(function () {
+    Route::prefix('inventory/warehouses')->name('inventory.warehouses.')->middleware('can:manage-organization')->group(function () {
         Route::get('/', [WarehouseController::class, 'index'])->name('index');
         Route::post('/', [WarehouseController::class, 'store'])->name('store');
         Route::put('{warehouse}', [WarehouseController::class, 'update'])->name('update');
         Route::patch('{warehouse}/toggle', [WarehouseController::class, 'toggleStatus'])->name('toggle');
     });
 
-    Route::prefix('inventory/stocks')->name('inventory.stocks.')->group(function () {
+    Route::prefix('inventory/stocks')->name('inventory.stocks.')->middleware('can:manage-stock')->group(function () {
         Route::get('/', [StockConsultationController::class, 'index'])->name('index');
     });
 
-    Route::prefix('inventory/adjustments')->name('inventory.adjustments.')->group(function () {
+    Route::prefix('inventory/adjustments')->name('inventory.adjustments.')->middleware('can:manage-stock')->group(function () {
         Route::get('create', [StockAdjustmentController::class, 'create'])->name('create');
         Route::get('articles', [StockAdjustmentController::class, 'searchArticles'])->name('articles');
         Route::post('/', [StockAdjustmentController::class, 'store'])->name('store');
         Route::get('{stock_movement}', [StockAdjustmentController::class, 'show'])->name('show');
     });
 
-    Route::prefix('inventory/movements')->name('inventory.movements.')->group(function () {
+    Route::prefix('inventory/movements')->name('inventory.movements.')->middleware('can:manage-stock')->group(function () {
         Route::get('/', [StockMovementHistoryController::class, 'index'])->name('index');
         Route::get('articles', [StockMovementHistoryController::class, 'searchArticles'])->name('articles');
     });
 
-    Route::prefix('sales/points-of-sale')->name('sales.points-of-sale.')->group(function () {
+    Route::prefix('sales/points-of-sale')->name('sales.points-of-sale.')->middleware('can:manage-organization')->group(function () {
         Route::get('/', [PointOfSaleController::class, 'index'])->name('index');
         Route::post('/', [PointOfSaleController::class, 'store'])->name('store');
         Route::put('{point_of_sale}', [PointOfSaleController::class, 'update'])->name('update');
         Route::patch('{point_of_sale}/toggle', [PointOfSaleController::class, 'toggleStatus'])->name('toggle');
     });
 
-    Route::prefix('inventory/parameters')->name('inventory.parameters.')->group(function () {
+    Route::prefix('inventory/parameters')->name('inventory.parameters.')->middleware('can:manage-organization')->group(function () {
         Route::get('/', [StockParameterController::class, 'index'])->name('index');
         Route::post('movement-types', [StockParameterController::class, 'storeMovementType'])->name('movement-types.store');
         Route::put('movement-types/{movement_type}', [StockParameterController::class, 'updateMovementType'])->name('movement-types.update');
         Route::delete('movement-types/{movement_type}', [StockParameterController::class, 'destroyMovementType'])->name('movement-types.destroy');
     });
 
-    Route::prefix('pricing/vat-rates')->name('pricing.vat-rates.')->group(function () {
+    Route::prefix('pricing/vat-rates')->name('pricing.vat-rates.')->middleware('can:manage-organization')->group(function () {
         Route::get('/', [VatRateController::class, 'index'])->name('index');
         Route::post('/', [VatRateController::class, 'store'])->name('store');
         Route::put('{vat_rate}', [VatRateController::class, 'update'])->name('update');
         Route::patch('{vat_rate}/toggle', [VatRateController::class, 'toggleStatus'])->name('toggle');
     });
 
-    Route::prefix('pricing/price-lists')->name('pricing.price-lists.')->group(function () {
+    Route::prefix('pricing/price-lists')->name('pricing.price-lists.')->middleware('can:manage-pricing')->group(function () {
         Route::get('/', [PriceListController::class, 'index'])->name('index');
         Route::post('/', [PriceListController::class, 'store'])->name('store');
         Route::put('{price_list}', [PriceListController::class, 'update'])->name('update');
@@ -135,14 +138,14 @@ Route::middleware(['internal.staff', 'verified'])->group(function () {
         Route::get('{price_list}', [PriceListController::class, 'show'])->name('show');
     });
 
-    Route::prefix('sales/payment-methods')->name('sales.payment-methods.')->group(function () {
+    Route::prefix('sales/payment-methods')->name('sales.payment-methods.')->middleware('can:manage-organization')->group(function () {
         Route::get('/', [PaymentMethodController::class, 'index'])->name('index');
         Route::post('/', [PaymentMethodController::class, 'store'])->name('store');
         Route::put('{payment_method}', [PaymentMethodController::class, 'update'])->name('update');
         Route::patch('{payment_method}/toggle', [PaymentMethodController::class, 'toggleStatus'])->name('toggle');
     });
 
-    Route::prefix('sales/cash-sessions')->name('sales.cash-sessions.')->group(function () {
+    Route::prefix('sales/cash-sessions')->name('sales.cash-sessions.')->middleware('can:operate-cash')->group(function () {
         Route::get('open', [CashSessionController::class, 'create'])->name('create');
         Route::post('/', [CashSessionController::class, 'store'])->name('store');
         Route::get('current', [CashSessionController::class, 'current'])->name('current');
@@ -153,7 +156,7 @@ Route::middleware(['internal.staff', 'verified'])->group(function () {
         Route::get('{cashSession}', [CashSessionController::class, 'show'])->name('show');
     });
 
-    Route::prefix('sales/sales')->name('sales.sales.')->group(function () {
+    Route::prefix('sales/sales')->name('sales.sales.')->middleware('can:operate-cash')->group(function () {
         Route::get('/', [SaleController::class, 'index'])->name('index');
         Route::post('/', [SaleController::class, 'store'])->name('store');
         Route::get('search-articles', [SaleController::class, 'searchArticles'])->name('search-articles');
@@ -170,7 +173,7 @@ Route::middleware(['internal.staff', 'verified'])->group(function () {
         Route::get('{sale}', [SaleController::class, 'show'])->name('show');
     });
 
-    Route::prefix('purchasing/suppliers')->name('purchasing.suppliers.')->group(function () {
+    Route::prefix('purchasing/suppliers')->name('purchasing.suppliers.')->middleware('can:manage-purchases')->group(function () {
         Route::get('/', [SupplierController::class, 'index'])->name('index');
         Route::post('/', [SupplierController::class, 'store'])->name('store');
         Route::put('{supplier}', [SupplierController::class, 'update'])->name('update');
@@ -181,7 +184,7 @@ Route::middleware(['internal.staff', 'verified'])->group(function () {
         Route::delete('{supplier}/articles/{article}', [ArticleSupplierController::class, 'destroyForSupplier'])->name('articles.destroy');
     });
 
-    Route::prefix('purchasing/vouchers')->name('purchasing.vouchers.')->group(function () {
+    Route::prefix('purchasing/vouchers')->name('purchasing.vouchers.')->middleware('can:manage-purchases')->group(function () {
         Route::get('/', [SupplierVoucherController::class, 'index'])->name('index');
         Route::get('create', [SupplierVoucherController::class, 'create'])->name('create');
         Route::get('articles', [SupplierVoucherController::class, 'searchArticles'])->name('articles');
@@ -192,7 +195,7 @@ Route::middleware(['internal.staff', 'verified'])->group(function () {
         Route::post('{supplier_voucher}/annul', [SupplierVoucherController::class, 'annul'])->name('annul');
     });
 
-    Route::prefix('purchasing/orders')->name('purchasing.orders.')->group(function () {
+    Route::prefix('purchasing/orders')->name('purchasing.orders.')->middleware('can:manage-purchases')->group(function () {
         Route::get('/', [PurchaseOrderController::class, 'index'])->name('index');
         Route::get('create', [PurchaseOrderController::class, 'create'])->name('create');
         Route::post('/', [PurchaseOrderController::class, 'store'])->name('store');
@@ -205,7 +208,7 @@ Route::middleware(['internal.staff', 'verified'])->group(function () {
         Route::get('{purchase_order}/pdf', [PurchaseOrderController::class, 'pdf'])->name('pdf');
     });
 
-    Route::prefix('purchasing/payment-orders')->name('purchasing.payment-orders.')->group(function () {
+    Route::prefix('purchasing/payment-orders')->name('purchasing.payment-orders.')->middleware('can:manage-purchases')->group(function () {
         Route::get('/', [PaymentOrderController::class, 'index'])->name('index');
         Route::get('create', [PaymentOrderController::class, 'create'])->name('create');
         Route::post('/', [PaymentOrderController::class, 'store'])->name('store');
@@ -217,7 +220,7 @@ Route::middleware(['internal.staff', 'verified'])->group(function () {
             ->name('suppliers.invoices');
     });
 
-    Route::prefix('customers')->name('customers.')->group(function () {
+    Route::prefix('customers')->name('customers.')->middleware('can:manage-customers')->group(function () {
         Route::get('/', [CustomerController::class, 'index'])->name('index');
         Route::post('/', [CustomerController::class, 'store'])->name('store');
         Route::put('{customer}', [CustomerController::class, 'update'])->name('update');
@@ -225,7 +228,7 @@ Route::middleware(['internal.staff', 'verified'])->group(function () {
         Route::delete('{customer}', [CustomerController::class, 'destroy'])->name('destroy');
     });
 
-    Route::prefix('purchasing/account-statement')->name('purchasing.account-statement.')->group(function () {
+    Route::prefix('purchasing/account-statement')->name('purchasing.account-statement.')->middleware('can:manage-purchases')->group(function () {
         Route::get('/', [SupplierAccountStatementController::class, 'index'])->name('index');
         Route::get('export/csv', [SupplierAccountStatementController::class, 'exportCsv'])->name('export.csv');
         Route::get('export/excel', [SupplierAccountStatementController::class, 'exportExcel'])->name('export.excel');

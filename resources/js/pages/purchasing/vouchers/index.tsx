@@ -33,7 +33,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { formatCurrency } from '@/lib/utils';
-import { dashboard } from '@/routes';
+import { panel } from '@/routes';
 import { create, index, show } from '@/routes/purchasing/vouchers';
 import type { BreadcrumbItem } from '@/types';
 
@@ -349,7 +349,7 @@ function FilterSelect({
 
 SupplierVouchersIndex.layout = {
   breadcrumbs: [
-    { title: 'Dashboard', href: dashboard() },
+    { title: 'Inicio', href: panel() },
     { title: 'Comprobantes de proveedores', href: index() },
   ] satisfies BreadcrumbItem[],
 };

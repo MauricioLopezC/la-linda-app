@@ -2,7 +2,7 @@ import { Head, Link, usePage } from '@inertiajs/react';
 import { ArrowRight, ShoppingBasket, Store } from 'lucide-react';
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { dashboard, login } from '@/routes';
+import { login, panel } from '@/routes';
 
 export default function Welcome() {
   const { auth } = usePage().props;
@@ -25,8 +25,8 @@ export default function Welcome() {
               </Button>
               {user ? (
                 <Button asChild size="sm">
-                  <Link href={isClient ? '/tienda' : dashboard()}>
-                    {isClient ? 'Mi Tienda' : 'Dashboard'}
+                  <Link href={isClient ? '/tienda' : panel()}>
+                    {isClient ? 'Mi Tienda' : 'Mi panel'}
                   </Link>
                 </Button>
               ) : (

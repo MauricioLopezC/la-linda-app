@@ -57,8 +57,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { useCan } from '@/hooks/use-can';
 import { formatCurrency } from '@/lib/utils';
-import { dashboard } from '@/routes';
+import { panel } from '@/routes';
 import { show as showAdjustment } from '@/routes/inventory/adjustments';
 import {
   confirmPayment,
@@ -129,6 +130,7 @@ export default function SaleShow({
   activePaymentMethods = [],
   priceLists = [],
 }: Props) {
+  const can = useCan();
   const [code, setCode] = useState('');
   const [codeError, setCodeError] = useState<string | undefined>();
   const [isAdding, setIsAdding] = useState(false);
@@ -276,7 +278,7 @@ export default function SaleShow({
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {sale.invoice && <InvoicePdfButtons saleId={sale.id} />}
-              {sale.stock_movement_id && (
+              {sale.stock_movement_id && can('manage-stock') && (
                 <Button variant="outline" size="sm" asChild>
                   <Link
                     href={showAdjustment({
@@ -365,7 +367,7 @@ export default function SaleShow({
               </span>
             </div>
           </div>
-          {sale.stock_movement_id && (
+          {sale.stock_movement_id && can('manage-stock') && (
             <div className="space-y-1.5">
               <p className="text-sm font-medium text-muted-foreground">
                 Stock descontado
@@ -1745,7 +1747,7 @@ function PriceListSelect({
 
 SaleShow.layout = {
   breadcrumbs: [
-    { title: 'Dashboard', href: dashboard() },
+    { title: 'Inicio', href: panel() },
     { title: 'Ventas', href: index() },
     { title: 'Detalle', href: '#' },
   ] satisfies BreadcrumbItem[],

@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { formatCurrency } from '@/lib/utils';
-import { dashboard } from '@/routes';
+import { panel } from '@/routes';
 import { show } from '@/routes/sales/cash-sessions';
 import { create as closingCreate } from '@/routes/sales/cash-sessions/closing';
 import { index as salesIndex } from '@/routes/sales/sales';
@@ -53,7 +53,7 @@ export default function CloseCashSession({
 }: Props) {
   setLayoutProps({
     breadcrumbs: [
-      { title: 'Dashboard', href: dashboard() },
+      { title: 'Inicio', href: panel() },
       {
         title: `Turno #${cashSession.id}`,
         href: show.url(cashSession.id),

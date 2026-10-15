@@ -19,4 +19,19 @@ return [
     'admin_email' => env('DEMO_ADMIN_EMAIL', 'test@example.com'),
     'admin_password' => env('DEMO_ADMIN_PASSWORD', 'password'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Demo Staff Users
+    |--------------------------------------------------------------------------
+    |
+    | One user per operational role (gerente, compras, deposito, cajero), seeded
+    | as `<role>@<domain>` so each role's landing screen and module access can be
+    | demoed. The password falls back to the demo admin one, so production only
+    | needs the existing DEMO_ADMIN_PASSWORD unless a separate one is wanted.
+    |
+    */
+
+    'staff_email_domain' => env('DEMO_STAFF_EMAIL_DOMAIN', 'example.com'),
+    'staff_password' => env('DEMO_STAFF_PASSWORD', env('DEMO_ADMIN_PASSWORD', 'password')),
+
 ];

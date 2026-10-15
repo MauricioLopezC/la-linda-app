@@ -41,6 +41,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { formatStockQuantity } from '@/lib/utils';
+import { panel } from '@/routes';
 import { index as movementsIndex } from '@/routes/inventory/movements';
 import { index } from '@/routes/inventory/stocks';
 import type { BreadcrumbItem } from '@/types';
@@ -591,8 +592,8 @@ export default function StockConsultationIndex({
 StockConsultationIndex.layout = {
   breadcrumbs: [
     {
-      title: 'Dashboard',
-      href: '/dashboard',
+      title: 'Inicio',
+      href: panel(),
     },
     {
       title: 'Existencias por Depósito',
