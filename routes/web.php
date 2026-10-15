@@ -9,6 +9,7 @@ use App\Http\Controllers\Customers\CustomerController;
 use App\Http\Controllers\Ecommerce\CartController;
 use App\Http\Controllers\Ecommerce\CheckoutController;
 use App\Http\Controllers\Ecommerce\CustomerAccountController;
+use App\Http\Controllers\Ecommerce\CustomerRegistrationController;
 use App\Http\Controllers\Ecommerce\MercadoPagoWebhookController;
 use App\Http\Controllers\Ecommerce\StoreHomeController;
 use App\Http\Controllers\Ecommerce\WebOrderController;
@@ -233,7 +234,8 @@ Route::post('webhooks/mercadopago', MercadoPagoWebhookController::class)->name('
 
 Route::prefix('tienda')->name('tienda.')->group(function () {
     Route::get('/', [StoreHomeController::class, 'index'])->name('home');
-    Route::redirect('registro', '/register')->name('register');
+    Route::get('registro', [CustomerRegistrationController::class, 'create'])->name('register');
+    Route::post('registro', [CustomerRegistrationController::class, 'store'])->name('register.store');
     Route::redirect('login', '/login')->name('login');
 
     Route::middleware('auth')->group(function () {
@@ -260,5 +262,7 @@ Route::prefix('tienda')->name('tienda.')->group(function () {
         });
     });
 });
+
+Route::post('tienda/registro', [CustomerRegistrationController::class, 'store'])->name('register.store');
 
 require __DIR__.'/settings.php';

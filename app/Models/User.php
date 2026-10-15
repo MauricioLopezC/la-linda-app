@@ -6,12 +6,14 @@ namespace App\Models;
 use App\Enums\Security\UserRole;
 use App\Models\Customers\Customer;
 use App\Models\Organization\Branch;
+use App\Models\Sales\CashSession;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
@@ -79,6 +81,14 @@ class User extends Authenticatable
     public function isInternal(): bool
     {
         return $this->role->isInternal();
+    }
+
+    /**
+     * @return HasMany<CashSession, $this>
+     */
+    public function cashSessions(): HasMany
+    {
+        return $this->hasMany(CashSession::class);
     }
 
     /**
