@@ -1,6 +1,11 @@
+import type { FC } from 'react';
 import DashboardSectionPlaceholder from './dashboard-section-placeholder';
 
-export default function DashboardEvolutionSection() {
+type Props = {
+  evolution: App.Data.Reporting.DashboardEvolutionData | null;
+};
+
+const DashboardEvolutionSection: FC<Props> = () => {
   return (
     <DashboardSectionPlaceholder
       title="Resultado neto y evolución"
@@ -8,4 +13,6 @@ export default function DashboardEvolutionSection() {
       story="EPIC-20"
     />
   );
-}
+};
+
+export default DashboardEvolutionSection;

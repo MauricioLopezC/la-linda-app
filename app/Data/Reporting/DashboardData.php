@@ -18,5 +18,7 @@ class DashboardData extends Data
         public array $branches,
         public ?DashboardRevenuesData $revenues = null,
         public ?DashboardExpensesData $expenses = null,
+        public ?DashboardEvolutionData $evolution = null,
+        public ?DashboardOperationalData $operational = null,
     ) {}
 }

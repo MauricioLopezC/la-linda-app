@@ -14,6 +14,8 @@ export default function Dashboard({
   branches,
   revenues,
   expenses,
+  evolution,
+  operational,
 }: Props) {
   return (
     <>
@@ -32,8 +34,8 @@ export default function Dashboard({
 
         <DashboardRevenuesSection revenues={revenues} />
         <DashboardExpensesSection expenses={expenses} />
-        <DashboardEvolutionSection />
-        <DashboardOperationalSection />
+        <DashboardEvolutionSection evolution={evolution} />
+        <DashboardOperationalSection operational={operational} />
       </div>
     </>
   );

@@ -13,6 +13,16 @@ class DashboardFilterRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        $today = today();
+
+        $this->merge([
+            'date_from' => $this->input('date_from') ?? $today->copy()->startOfMonth()->toDateString(),
+            'date_to' => $this->input('date_to') ?? $today->toDateString(),
+        ]);
+    }
+
     /**
      * @return array<string, array<int, mixed>>
      */
@@ -37,8 +47,8 @@ class DashboardFilterRequest extends FormRequest
         $validated = $this->validated();
 
         return [
-            'date_from' => $validated['date_from'] ?? today()->startOfMonth()->toDateString(),
-            'date_to' => $validated['date_to'] ?? today()->toDateString(),
+            'date_from' => $validated['date_from'],
+            'date_to' => $validated['date_to'],
             'branch_id' => isset($validated['branch_id']) ? (int) $validated['branch_id'] : null,
             'channel' => $validated['channel'] ?? null,
         ];
