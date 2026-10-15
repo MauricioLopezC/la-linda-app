@@ -66,6 +66,7 @@ class StoreHomeController extends Controller
                 'category_id' => $filters['category_id'] ? (string) $filters['category_id'] : 'all',
                 'brand_id' => $filters['brand_id'] ? (string) $filters['brand_id'] : 'all',
                 'min_price' => $filters['min_price'] !== null ? (string) $filters['min_price'] : '',
+                'max_price' => $filters['max_price'] !== null ? (string) $filters['max_price'] : '',
                 'sort' => $filters['sort'],
             ],
         ]);

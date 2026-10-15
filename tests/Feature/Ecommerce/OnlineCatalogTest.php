@@ -902,6 +902,8 @@ test('catalog can be filtered by price range for guest visitor', function () {
         ->has('articles.data', 1)
         ->where('articles.data.0.id', $medium->id)
         ->where('articles.total', 1)
+        ->where('filters.min_price', '1000')
+        ->where('filters.max_price', '2000')
     );
 
     // Min 2000 -> only expensive
