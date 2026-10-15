@@ -21,3 +21,6 @@ That SQL is valid in both dialects, and the constraint is actually exercised by 
 - "At most one open X" rules are partial unique indexes created with `DB::statement("create unique index ... on t (col) where status = 'abierta'")` after `Schema::create()`. Unlike ALTER TABLE ADD CONSTRAINT, CREATE INDEX ... WHERE works in SQLite and Postgres, so tests exercise it. See `create_cash_sessions_table`.
 - A CHECK that compares sums of money (`net + vat = total`) must use a tolerance, `abs(a + b - c) < 0.005`, never `=`: SQLite stores decimal columns as floating point, so an exact equality fails at random. See `create_invoices_table`, `revise_sale_items_for_vat`.
 - A column CHECK may reference other columns of the same row (both engines accept it). Use it for state/timestamp pairs such as `(status = 'cerrada' and closed_at is not null) or (status = 'abierta' and closed_at is null)`.
+
+## Migrations use literal values, never enum cases
+Write role/status values in migrations as string literals ('personal_interno', 'cliente'), not `UserRole::X->value`. Enum cases get renamed or removed later (Sprint 5 dropped UserRole::PersonalInterno), and an old migration that references them breaks `migrate:fresh` and the test suite. The past state the migration describes has to stay frozen in the migration itself.

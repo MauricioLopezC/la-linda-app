@@ -53,54 +53,82 @@ class UserFactory extends Factory
      */
     public function client(): static
     {
-        return $this->state(fn (array $attributes) => [
-            'role' => UserRole::Cliente,
-        ]);
+        return $this->role(UserRole::Cliente);
     }
 
     /**
-     * Indicate that the user is internal staff.
+     * Indicate that the user is an Administrador, who passes every Gate.
      */
-    public function internal(): static
+    public function administrador(): static
+    {
+        return $this->role(UserRole::Administrador);
+    }
+
+    /**
+     * Indicate that the user is a Gerente (management).
+     */
+    public function gerente(): static
+    {
+        return $this->role(UserRole::Gerente);
+    }
+
+    /**
+     * Indicate that the user is an Encargado de compras.
+     */
+    public function compras(): static
+    {
+        return $this->role(UserRole::Compras);
+    }
+
+    /**
+     * Indicate that the user is an Encargado de depósito.
+     */
+    public function deposito(): static
+    {
+        return $this->role(UserRole::Deposito);
+    }
+
+    /**
+     * Indicate that the user is a Cajero.
+     */
+    public function cajero(): static
+    {
+        return $this->role(UserRole::Cajero);
+    }
+
+    /**
+     * Indicate that the user has the given role.
+     */
+    public function role(UserRole $role): static
     {
         return $this->state(fn (array $attributes) => [
-            'role' => UserRole::Administrador,
+            'role' => $role,
         ]);
     }
 
     public function admin(): static
     {
-        return $this->state(fn (array $attributes) => [
-            'role' => UserRole::Administrador,
-        ]);
+        return $this->administrador();
     }
 
     public function manager(): static
     {
-        return $this->state(fn (array $attributes) => [
-            'role' => UserRole::Gerente,
-        ]);
+        return $this->gerente();
     }
 
     public function cashier(): static
     {
-        return $this->state(fn (array $attributes) => [
-            'role' => UserRole::Cajero,
-        ]);
+        return $this->cajero();
     }
 
     public function warehouse(): static
     {
-        return $this->state(fn (array $attributes) => [
-            'role' => UserRole::Deposito,
-        ]);
+        return $this->deposito();
     }
 
     public function purchases(): static
     {
-        return $this->state(fn (array $attributes) => [
-            'role' => UserRole::Compras,
-        ]);
+        return $this->compras();
     }
 
     public function inactive(): static

@@ -34,13 +34,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'internal.staff' => EnsureInternalStaff::class,
         ]);
 
-        $middleware->redirectUsersTo(function (Request $request): string {
-            if ($request->user()?->isClient()) {
-                return route('tienda.home');
-            }
-
-            return '/dashboard';
-        });
+        $middleware->redirectUsersTo(
+            fn (Request $request): string => route($request->user()?->role->homeRoute() ?? 'dashboard'),
+        );
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

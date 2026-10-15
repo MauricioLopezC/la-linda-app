@@ -1,6 +1,5 @@
 <?php
 
-use App\Enums\Security\UserRole;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -13,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->string('role', 50)->default(UserRole::PersonalInterno->value)->after('password');
+            $table->string('role', 50)->default('personal_interno')->after('password');
             $table->foreignId('customer_id')->nullable()->after('role')->constrained('customers')->nullOnDelete();
         });
     }

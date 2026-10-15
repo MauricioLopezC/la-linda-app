@@ -19,10 +19,6 @@ class LoginResponse implements LoginResponseContract
         /** @var User|null $user */
         $user = $request->user();
 
-        if ($user?->isClient()) {
-            return redirect()->intended(route('tienda.home'));
-        }
-
-        return redirect()->intended('/dashboard');
+        return redirect()->intended(route($user?->role->homeRoute() ?? 'dashboard'));
     }
 }

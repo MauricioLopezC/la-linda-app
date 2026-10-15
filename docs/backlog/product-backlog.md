@@ -419,7 +419,7 @@ independiente.
         - `compras` (*Encargado de compras*): acceso a catálogo, proveedores, órdenes de compra, comprobantes de proveedor, órdenes de pago, cuentas corrientes, pagos/egresos y consulta de existencias de stock
         - `deposito` (*Encargado de depósito*): acceso a existencias de stock, movimientos manuales, historial de movimientos y preparación/entrega de pedidos web (`EPIC-17`)
         - `cajero` (*Cajero / Vendedor*): acceso a apertura/cierre de su caja, movimientos de caja, ventas de mostrador, cobro, facturación y clientes
-    - **pantalla principal por rol al iniciar sesión (`LoginResponse`) y al entrar a `/`:** el `gerente` (y el `administrador`) entra a `/dashboard`, `deposito` entra a la bandeja de pedidos web a preparar, `cajero` entra a la caja (`/sales/cash-sessions`), `compras` entra al módulo de compras (`/purchases/orders`) y `cliente` a la tienda online (`/tienda`)
+    - **pantalla principal por rol al iniciar sesión (`LoginResponse`) y al entrar a `/`:** el `gerente` (y el `administrador`) entra a `/dashboard`, `deposito` entra a la bandeja de pedidos web a preparar, `cajero` entra a la caja (`/sales/cash-sessions/current`), `compras` entra al módulo de compras (`/purchasing/orders`) y `cliente` a la tienda online (`/tienda`)
     - cada grupo de rutas del panel interno verifica el Gate correspondiente en el servidor mediante middleware `can:<gate>`; si un usuario intenta acceder por URL directa o ejecutar una acción de un módulo no autorizado, recibe `403 Forbidden`
     - la barra lateral de navegación (`app-sidebar.tsx`) y las acciones de pantalla se adaptan a las capacidades compartidas en las props de Inertia (`auth.can`), mostrando únicamente los módulos habilitados para el rol del usuario
 - **Verificación:** se inicia sesión con cada uno de los cinco roles de personal y se comprueba que cada uno aterriza en su pantalla principal correspondiente (`Gerente` en `/dashboard`, `Depósito` en pedidos a preparar, `Cajero` en la caja) y que un usuario `cajero` puede operar Caja, Ventas y Clientes pero no ve en el menú ni puede abrir por URL directa Compras, Listas de Precios, Tablero Gerencial ni Usuarios (recibe `403`)
@@ -1478,7 +1478,7 @@ reimputación innecesarios.
 
 **Criterios de aceptación**
 
-- **Datos:** por cada artículo publicado en la tienda online, cantidad disponible para la venta online (`available_quantity`), calculada como la existencia actual en el depósito asignado al canal online (`warehouses.is_ecommerce = true`) **menos** las unidades comprometidas en pedidos web ya pagados o en preparación pendientes de salida de depósito (`web_orders.status IN ('pagado', 'en_preparacion')`), e indicador de disponibilidad (`disponible`, `ultimas_unidades`, `sin_stock`)
+- **Datos:** por cada artículo publicado en la tienda online, cantidad disponible para la venta online (`available_quantity`), calculada como la existencia actual en el depósito asignado al canal online (`warehouses.is_online_channel = true`) **menos** las unidades comprometidas en pedidos web ya pagados o en preparación pendientes de salida de depósito (`web_orders.status IN ('pagado', 'en_preparacion')`), e indicador de disponibilidad (`disponible`, `ultimas_unidades`, `sin_stock`)
 - **Validaciones:**
     - no se puede agregar al carrito ni incrementar una línea por encima de la cantidad disponible online (`available_quantity`) del artículo
     - al confirmar el pedido desde el carrito (`HU-062` / `PlaceWebOrder`), se vuelve a verificar dentro de la transacción la disponibilidad de cada renglón: si otro cliente agotó o comprometió el stock antes, la confirmación se rechaza nombrando el artículo afectado y la cantidad disponible real
@@ -1590,7 +1590,7 @@ reimputación innecesarios.
 - **Validaciones:**
     - un pedido web genera a lo sumo una venta y una factura (idempotente ante notificaciones repetidas del webhook de Mercado Pago)
     - solo se procesa cuando el pago fue acreditado (`status = 'pagado'`)
-    - el punto de venta utilizado corresponde al depósito activo asignado al canal online (`warehouses.is_ecommerce = true`)
+    - el punto de venta utilizado corresponde al depósito activo asignado al canal online (`warehouses.is_online_channel = true`)
     - integridad de canal: toda venta con `channel = 'online'` tiene `web_order_id IS NOT NULL` y toda venta con `channel = 'mostrador'` tiene `web_order_id IS NULL`
 - **Comportamiento:**
     - al acreditarse el pago del pedido web (`MarkWebOrderAsPaid`), dentro de la misma transacción atómica se ejecuta `ConvertPaidWebOrderToSale`: 1) crea la `Sale` en estado `confirmada` con `channel = 'online'`, `cash_session_id = null` y los precios congelados en `web_order_items` (respetando la alícuota de IVA de cada artículo), 2) si el pedido incluye costo de envío (`shipping_cost > 0`), lo incorpora en el total de la venta (`sales.shipping_amount`) y como renglón de concepto "Envío a domicilio" en la factura (al 21% de IVA contenido) para que el total facturado coincida al centavo con lo cobrado por Mercado Pago, y 3) emite la `Invoice` correlativa reutilizando `IssueInvoice`
@@ -1624,7 +1624,7 @@ reimputación innecesarios.
 
 **Criterios de aceptación**
 
-- **Datos:** listado y detalle de pedidos web con número de pedido y número de venta asociada (`EPIC-15`), fecha, cliente ("Juan Pérez"), modalidad de entrega (`retiro` en sucursal o `envio` a domicilio), domicilio o sucursal de destino, detalle de artículos y cantidades a juntar del depósito (*picking list*), depósito desde el cual se entrega (`warehouses.is_ecommerce = true`), estado operativo (`pendiente`, `pagado`, `en_preparacion`, `entregado`), auditoría de preparación (`preparation_started_at`, `prepared_by`), auditoría de entrega/despacho (`delivered_at`, `delivered_by`) y movimiento de stock generado (`stock_movements` con `sale_id` y tipo de sistema `"Salida por Entrega de Pedido Web"`)
+- **Datos:** listado y detalle de pedidos web con número de pedido y número de venta asociada (`EPIC-15`), fecha, cliente ("Juan Pérez"), modalidad de entrega (`retiro` en sucursal o `envio` a domicilio), domicilio o sucursal de destino, detalle de artículos y cantidades a juntar del depósito (*picking list*), depósito desde el cual se entrega (`warehouses.is_online_channel = true`), estado operativo (`pendiente`, `pagado`, `en_preparacion`, `entregado`), auditoría de preparación (`preparation_started_at`, `prepared_by`), auditoría de entrega/despacho (`delivered_at`, `delivered_by`) y movimiento de stock generado (`stock_movements` con `sale_id` y tipo de sistema `"Salida por Entrega de Pedido Web"`)
 - **Validaciones:**
     - el ciclo de vida del pedido tiene exactamente cuatro estados (`pendiente` → `pagado` → `en_preparacion` → `entregado`) y el pedido se cierra al salir del depósito (no existen los estados `listo_para_retiro`, `en_camino` ni `cancelado`)
     - las transiciones operativas las ejecuta el personal con permiso `manage-web-orders` (`deposito`, `gerente`, `administrador`):

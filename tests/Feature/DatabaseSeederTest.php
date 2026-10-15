@@ -18,6 +18,7 @@ it('seeds the configured demo admin user from config', function () {
     $this->assertDatabaseHas('users', [
         'name' => 'Demo Admin',
         'email' => 'demo-admin@example.com',
+        'role' => 'administrador',
     ]);
 });
 

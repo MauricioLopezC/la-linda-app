@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Enums\Security\Permission;
 use App\Enums\Security\UserRole;
 use App\Models\User;
 use Carbon\CarbonImmutable;
@@ -28,6 +29,19 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureDefaults();
         $this->configureGates();
+    }
+
+    /**
+     * Module Gates (HU-004): one per Permission case, granted by the user's role. The
+     * Administrador passes every check, including any Gate defined later, through Gate::before.
+     */
+    protected function configureGates(): void
+    {
+        Gate::before(fn (User $user): ?bool => $user->role === UserRole::Administrador ? true : null);
+
+        foreach (Permission::cases() as $permission) {
+            Gate::define($permission->value, fn (User $user): bool => $user->role->grants($permission));
+        }
     }
 
     /**
@@ -61,10 +75,5 @@ class AppServiceProvider extends ServiceProvider
     {
         return app()->isProduction()
             && ! config('database.allow_destructive_commands');
-    }
-
-    protected function configureGates(): void
-    {
-        Gate::define('manage-users', fn (User $user): bool => $user->role === UserRole::Administrador);
     }
 }
