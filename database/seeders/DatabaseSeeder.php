@@ -22,8 +22,10 @@ use Database\Seeders\Purchasing\SupplierSeeder;
 use Database\Seeders\Purchasing\SupplierVoucherSeeder;
 use Database\Seeders\Sales\PaymentMethodSeeder;
 use Database\Seeders\Sales\PointOfSaleSeeder;
+use Database\Seeders\Sales\SalesHistorySeeder;
 use Database\Seeders\Security\StaffUserSeeder;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Date;
 
 class DatabaseSeeder extends Seeder
 {
@@ -62,9 +64,22 @@ class DatabaseSeeder extends Seeder
             ArticleSeeder::class,
             ArticleSupplierSeeder::class,
             PriceListItemSeeder::class,
+        ]);
+
+        // The initial stock load opens the kardex on the first day of the sales history, which
+        // then sells and restocks day by day up to today.
+        Date::setTestNow(SalesHistorySeeder::startsAt());
+
+        try {
+            $this->call(WarehouseStockSeeder::class);
+        } finally {
+            Date::setTestNow();
+        }
+
+        $this->call([
+            SalesHistorySeeder::class,
             SupplierVoucherSeeder::class,
             PurchaseOrderSeeder::class,
-            WarehouseStockSeeder::class,
         ]);
     }
 }
