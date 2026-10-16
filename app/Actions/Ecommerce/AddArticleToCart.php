@@ -15,6 +15,7 @@ class AddArticleToCart
 {
     public function __construct(
         private readonly ResolveArticlePrice $resolveArticlePrice,
+        private readonly GetOnlineAvailability $getOnlineAvailability,
     ) {}
 
     /**
@@ -60,6 +61,14 @@ class AddArticleToCart
             ]);
         }
 
+        $availability = $this->getOnlineAvailability->forArticle($article);
+
+        if (! $availability->isAvailable || $availability->numericQuantity <= 0) {
+            throw ValidationException::withMessages([
+                'article_id' => 'El artículo no se encuentra disponible por falta de stock.',
+            ]);
+        }
+
         /** @var CartItem|null $existingItem */
         $existingItem = CartItem::query()
             ->where('customer_id', $customer->id)
@@ -68,10 +77,23 @@ class AddArticleToCart
 
         if ($existingItem !== null) {
             $accumulated = (float) $existingItem->quantity + $numericQuantity;
+
+            if ($accumulated > $availability->numericQuantity) {
+                throw ValidationException::withMessages([
+                    'quantity' => "La cantidad total solicitada ({$accumulated}) supera el stock disponible en la tienda online ({$availability->availableQuantity}).",
+                ]);
+            }
+
             $existingItem->quantity = number_format($accumulated, 3, '.', '');
             $existingItem->save();
 
             return $existingItem;
+        }
+
+        if ($numericQuantity > $availability->numericQuantity) {
+            throw ValidationException::withMessages([
+                'quantity' => "La cantidad solicitada ({$numericQuantity}) supera el stock disponible en la tienda online ({$availability->availableQuantity}).",
+            ]);
         }
 
         return CartItem::create([

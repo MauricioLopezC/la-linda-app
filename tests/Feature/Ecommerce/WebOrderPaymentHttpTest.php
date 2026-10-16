@@ -11,6 +11,7 @@ use App\Models\Ecommerce\CartItem;
 use App\Models\Ecommerce\CustomerAccount;
 use App\Models\Ecommerce\WebOrder;
 use App\Models\Ecommerce\WebOrderItem;
+use App\Models\Inventory\StockBalance;
 use App\Models\Inventory\Warehouse;
 use App\Models\Organization\Branch;
 use App\Models\Pricing\PriceList;
@@ -61,6 +62,11 @@ beforeEach(function () {
     $this->onlineWarehouse = Warehouse::factory()->online()->create([
         'branch_id' => $this->branch->id,
         'is_active' => true,
+    ]);
+    StockBalance::factory()->create([
+        'warehouse_id' => $this->onlineWarehouse->id,
+        'article_id' => $this->article->id,
+        'quantity' => '100.000',
     ]);
     $this->onlinePos = PointOfSale::factory()->create([
         'warehouse_id' => $this->onlineWarehouse->id,

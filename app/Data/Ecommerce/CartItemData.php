@@ -26,6 +26,8 @@ class CartItemData extends Data
         public string $formatted_subtotal,
         public bool $is_available,
         public ?string $unavailable_reason,
+        public string $available_quantity,
+        public string $availability_status,
     ) {}
 
     public static function fromModel(
@@ -34,6 +36,8 @@ class CartItemData extends Data
         string $subtotal,
         bool $isAvailable,
         ?string $unavailableReason,
+        string $availableQuantity = '0.000',
+        string $availabilityStatus = 'disponible',
     ): self {
         $article = $item->article;
         $formattedUnitPrice = $unitPrice !== null
@@ -60,6 +64,8 @@ class CartItemData extends Data
             formatted_subtotal: $formattedSubtotal,
             is_available: $isAvailable,
             unavailable_reason: $unavailableReason,
+            available_quantity: $availableQuantity,
+            availability_status: $availabilityStatus,
         );
     }
 }

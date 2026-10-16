@@ -11,6 +11,8 @@ use App\Models\Catalog\UnitOfMeasure;
 use App\Models\Customers\Customer;
 use App\Models\Ecommerce\CartItem;
 use App\Models\Ecommerce\WebOrder;
+use App\Models\Inventory\StockBalance;
+use App\Models\Inventory\Warehouse;
 use App\Models\Organization\Branch;
 use App\Models\Pricing\PriceList;
 use App\Models\Pricing\PriceListItem;
@@ -30,6 +32,7 @@ beforeEach(function () {
 
     $this->customer = Customer::factory()->create();
     $this->branch = Branch::factory()->create(['name' => 'Sucursal Centro', 'is_active' => true]);
+    $this->onlineWarehouse = Warehouse::factory()->online()->create(['branch_id' => $this->branch->id]);
 
     $this->action = app(PlaceWebOrder::class);
 
@@ -50,6 +53,12 @@ beforeEach(function () {
                 'price' => $price,
             ]);
         }
+
+        StockBalance::factory()->create([
+            'warehouse_id' => $this->onlineWarehouse->id,
+            'article_id' => $article->id,
+            'quantity' => '100.000',
+        ]);
 
         CartItem::factory()->create([
             'customer_id' => $this->customer->id,

@@ -9,6 +9,10 @@ use Illuminate\Validation\ValidationException;
 
 class UpdateCartItemQuantity
 {
+    public function __construct(
+        private readonly GetOnlineAvailability $getOnlineAvailability,
+    ) {}
+
     /**
      * Update the quantity of an item in the customer's cart.
      *
@@ -34,6 +38,14 @@ class UpdateCartItemQuantity
         if (! $cartItem->article->allowsDecimalQuantity() && fmod($numericQuantity, 1.0) !== 0.0) {
             throw ValidationException::withMessages([
                 'quantity' => 'La unidad de medida del artículo no admite cantidades decimales.',
+            ]);
+        }
+
+        $availability = $this->getOnlineAvailability->forArticle($cartItem->article);
+
+        if ($numericQuantity > $availability->numericQuantity) {
+            throw ValidationException::withMessages([
+                'quantity' => "La cantidad solicitada ({$numericQuantity}) supera el stock disponible en la tienda online ({$availability->availableQuantity}).",
             ]);
         }
 

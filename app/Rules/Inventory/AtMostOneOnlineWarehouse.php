@@ -21,11 +21,12 @@ class AtMostOneOnlineWarehouse implements ValidationRule
 
         $alreadyExists = Warehouse::query()
             ->where('is_online_channel', true)
+            ->where('is_active', true)
             ->when($this->ignoreWarehouseId, fn ($query, $ignoreId) => $query->where('id', '!=', $ignoreId))
             ->exists();
 
         if ($alreadyExists) {
-            $fail('Ya existe un depósito marcado como canal online. Solo puede haber uno.');
+            $fail('Ya existe un depósito activo marcado como canal online. Solo puede haber uno.');
         }
     }
 }

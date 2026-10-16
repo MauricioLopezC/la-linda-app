@@ -12,6 +12,7 @@ class GetCustomerCart
 {
     public function __construct(
         private readonly ResolveCartLine $resolveCartLine,
+        private readonly GetOnlineAvailability $getOnlineAvailability,
     ) {}
 
     /**
@@ -25,6 +26,8 @@ class GetCustomerCart
             ->orderBy('id')
             ->get();
 
+        $availabilities = $this->getOnlineAvailability->forArticles($cartItems->pluck('article'));
+
         $itemsData = [];
         $totalAmount = 0.0;
         $totalQuantity = 0.0;
@@ -36,10 +39,27 @@ class GetCustomerCart
             $unavailableReason = $line['unavailable_reason'];
             $isAvailable = $resolvedPrice !== null;
 
-            $unitPriceStr = $resolvedPrice?->unit_price;
-            $subtotalStr = '0.00';
+            $availability = $availabilities[$item->article_id] ?? null;
+            $availableQty = $availability !== null ? $availability->availableQuantity : '0.000';
+            $numericAvailable = $availability !== null ? $availability->numericQuantity : 0.0;
+            $statusStr = $availability !== null ? $availability->status->value : 'sin_stock';
+
             $qty = (float) $item->quantity;
             $totalQuantity += $qty;
+
+            if ($isAvailable) {
+                if ($numericAvailable <= 0.0) {
+                    $isAvailable = false;
+                    $unavailableReason = 'Sin stock disponible';
+                } elseif ($qty > $numericAvailable) {
+                    $isAvailable = false;
+                    $uom = $item->article->unitOfMeasure->abbreviation ?? 'u.';
+                    $unavailableReason = "Stock insuficiente (disponible: {$availableQty} {$uom})";
+                }
+            }
+
+            $unitPriceStr = $resolvedPrice?->unit_price;
+            $subtotalStr = '0.00';
 
             if ($isAvailable && $unitPriceStr !== null) {
                 $lineSubtotal = round($qty * (float) $unitPriceStr, 2);
@@ -55,6 +75,8 @@ class GetCustomerCart
                 subtotal: $subtotalStr,
                 isAvailable: $isAvailable,
                 unavailableReason: $unavailableReason,
+                availableQuantity: $availableQty,
+                availabilityStatus: $statusStr,
             );
         }
 

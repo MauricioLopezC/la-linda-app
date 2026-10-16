@@ -8,6 +8,8 @@ use App\Models\Catalog\Category;
 use App\Models\Catalog\UnitOfMeasure;
 use App\Models\Customers\Customer;
 use App\Models\Ecommerce\CartItem;
+use App\Models\Inventory\StockBalance;
+use App\Models\Inventory\Warehouse;
 use App\Models\Pricing\PriceList;
 use App\Models\Pricing\PriceListItem;
 use Illuminate\Validation\ValidationException;
@@ -32,8 +34,17 @@ beforeEach(function () {
     ]);
 
     $this->customer = Customer::factory()->create();
+    $this->onlineWarehouse = Warehouse::factory()->online()->create();
 
     $this->action = app(AddArticleToCart::class);
+
+    $this->setStock = function (Article $article, string $qty = '50.000'): void {
+        StockBalance::factory()->create([
+            'warehouse_id' => $this->onlineWarehouse->id,
+            'article_id' => $article->id,
+            'quantity' => $qty,
+        ]);
+    };
 });
 
 test('adds a discrete article to cart successfully', function () {
@@ -49,6 +60,8 @@ test('adds a discrete article to cart successfully', function () {
         'article_id' => $article->id,
         'price' => '250.00',
     ]);
+
+    ($this->setStock)($article);
 
     $cartItem = $this->action->execute($this->customer, $article, 3);
 
@@ -78,6 +91,8 @@ test('accumulates quantity when adding an article that is already in the cart', 
         'price' => '100.00',
     ]);
 
+    ($this->setStock)($article);
+
     $this->action->execute($this->customer, $article, 2);
     $cartItem = $this->action->execute($this->customer, $article, 3);
 
@@ -105,6 +120,8 @@ test('allows decimal quantities for weighable articles', function () {
         'article_id' => $article->id,
         'price' => '500.00',
     ]);
+
+    ($this->setStock)($article);
 
     $cartItem = $this->action->execute($this->customer, $article, 1.75);
 

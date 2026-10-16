@@ -487,7 +487,8 @@ test('stock alerts respect branch and channel independently of dates', function 
     $expectedWarehouseIds = [];
 
     foreach ($branches as $branchIndex => $branch) {
-        foreach ([false, true] as $online) {
+        $channels = $branchIndex === 0 ? [false, true] : [false];
+        foreach ($channels as $online) {
             $warehouse = Warehouse::factory()->create([
                 'branch_id' => $branch->id,
                 'is_online_channel' => $online,
