@@ -80,6 +80,13 @@ export default function DashboardExpensesSection({ expenses, filters }: Props) {
             Compras y pagos a proveedores son globales. La sucursal solo filtra
             los egresos de caja. El canal no aplica a este bloque.
           </p>
+          {filters.channel === 'online' && (
+            <p className="font-medium text-amber-800 dark:text-amber-400">
+              Filtro por canal online: Las compras y pagos a proveedores se
+              consolidan como globales de la empresa. La sucursal seleccionada
+              filtra los egresos de caja.
+            </p>
+          )}
           {filters.branch_id !== null && (
             <p>
               El desembolso total combina pagos globales a proveedores y egresos

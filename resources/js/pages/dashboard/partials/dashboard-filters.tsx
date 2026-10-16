@@ -21,10 +21,56 @@ type Props = {
   branches: App.Data.Reporting.DashboardBranchOptionData[];
 };
 
+type PresetKey =
+  'today' | 'this_month' | 'last_month' | 'last_6_months' | 'this_year';
+
 const channels = [
   { value: 'mostrador', label: 'Mostrador' },
   { value: 'online', label: 'Online' },
 ];
+
+function formatDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+}
+
+function getPresetRange(preset: PresetKey): { from: string; to: string } {
+  const now = new Date();
+  const today = formatDate(now);
+
+  switch (preset) {
+    case 'today':
+      return { from: today, to: today };
+    case 'this_month': {
+      const from = formatDate(new Date(now.getFullYear(), now.getMonth(), 1));
+
+      return { from, to: today };
+    }
+    case 'last_month': {
+      const from = formatDate(
+        new Date(now.getFullYear(), now.getMonth() - 1, 1),
+      );
+      const to = formatDate(new Date(now.getFullYear(), now.getMonth(), 0));
+
+      return { from, to };
+    }
+    case 'last_6_months': {
+      const from = formatDate(
+        new Date(now.getFullYear(), now.getMonth() - 6, now.getDate()),
+      );
+
+      return { from, to: today };
+    }
+    case 'this_year': {
+      const from = formatDate(new Date(now.getFullYear(), 0, 1));
+
+      return { from, to: today };
+    }
+  }
+}
 
 export default function DashboardFilters({ filters, branches }: Props) {
   const [dateFrom, setDateFrom] = useState(filters.date_from);
@@ -57,9 +103,40 @@ export default function DashboardFilters({ filters, branches }: Props) {
     );
   };
 
+  const applyPreset = (preset: PresetKey) => {
+    const range = getPresetRange(preset);
+    setDateFrom(range.from);
+    setDateTo(range.to);
+    setErrors({});
+
+    router.get(
+      dashboard.url({
+        query: {
+          date_from: range.from,
+          date_to: range.to,
+          branch_id: branchId === 'all' ? undefined : branchId,
+          channel: channel === 'all' ? undefined : channel,
+        },
+      }),
+      {},
+      {
+        preserveState: true,
+        preserveScroll: true,
+        onError: setErrors,
+        onSuccess: () => setErrors({}),
+      },
+    );
+  };
+
   const resetFilters = () => {
     setErrors({});
     router.get(dashboard.url(), {}, { preserveScroll: true });
+  };
+
+  const isPresetActive = (preset: PresetKey) => {
+    const range = getPresetRange(preset);
+
+    return dateFrom === range.from && dateTo === range.to;
   };
 
   return (
@@ -125,6 +202,57 @@ export default function DashboardFilters({ filters, branches }: Props) {
             aria-label="Limpiar filtros"
           >
             <RotateCcw className="size-4" />
+          </Button>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-1.5 border-t pt-3 md:col-span-2 xl:col-span-12">
+          <span className="mr-1 text-xs font-medium text-muted-foreground">
+            Atajos rápidos:
+          </span>
+          <Button
+            type="button"
+            variant={isPresetActive('today') ? 'secondary' : 'outline'}
+            size="sm"
+            className="h-7 text-xs"
+            onClick={() => applyPreset('today')}
+          >
+            Hoy
+          </Button>
+          <Button
+            type="button"
+            variant={isPresetActive('this_month') ? 'secondary' : 'outline'}
+            size="sm"
+            className="h-7 text-xs"
+            onClick={() => applyPreset('this_month')}
+          >
+            Este mes
+          </Button>
+          <Button
+            type="button"
+            variant={isPresetActive('last_month') ? 'secondary' : 'outline'}
+            size="sm"
+            className="h-7 text-xs"
+            onClick={() => applyPreset('last_month')}
+          >
+            Mes anterior
+          </Button>
+          <Button
+            type="button"
+            variant={isPresetActive('last_6_months') ? 'secondary' : 'outline'}
+            size="sm"
+            className="h-7 text-xs"
+            onClick={() => applyPreset('last_6_months')}
+          >
+            Últimos 6 meses
+          </Button>
+          <Button
+            type="button"
+            variant={isPresetActive('this_year') ? 'secondary' : 'outline'}
+            size="sm"
+            className="h-7 text-xs"
+            onClick={() => applyPreset('this_year')}
+          >
+            Este año
           </Button>
         </div>
       </CardContent>

@@ -44,6 +44,12 @@ Route::middleware(['internal.staff', 'verified'])->group(function () {
     Route::get('panel', RoleHomeController::class)->name('panel');
 
     Route::get('dashboard', [DashboardController::class, 'index'])->middleware('can:view-dashboard')->name('dashboard');
+    Route::get('dashboard/export', [DashboardController::class, 'export'])->middleware('can:view-dashboard')->name('dashboard.export');
+
+    Route::prefix('dashboard/export')->name('dashboard.export.')->middleware('can:view-dashboard')->group(function () {
+        Route::get('csv', [DashboardController::class, 'exportCsv'])->name('csv');
+        Route::get('excel', [DashboardController::class, 'exportExcel'])->name('excel');
+    });
 
     Route::prefix('catalog/categories')->name('catalog.categories.')->middleware('can:manage-catalog')->group(function () {
         Route::get('/', [CategoryController::class, 'index'])->name('index');
