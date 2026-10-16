@@ -48,6 +48,7 @@ test('dashboard defaults to the current month up to today with every branch and 
             ->has('evolution.series', 14)
             ->where('evolution.series.0', [
                 'period' => '2026-10-01', 'net_revenue' => '0.00', 'accrued_expenses' => '0.00', 'net_result' => '0.00',
+                'accrued_charges' => '0.00', 'credit_notes' => '0.00', 'cumulative_net_result' => '0.00',
             ])
             ->where('operational.top_articles', [])
             ->where('operational.stock_alerts', [])

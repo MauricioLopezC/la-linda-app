@@ -5,6 +5,7 @@ namespace Database\Seeders\Pricing;
 use App\Enums\Pricing\PriceListChannel;
 use App\Enums\Pricing\PriceListScope;
 use App\Models\Pricing\PriceList;
+use Database\Seeders\Sales\SalesHistorySeeder;
 use Illuminate\Database\Seeder;
 
 class PriceListSeeder extends Seeder
@@ -14,6 +15,9 @@ class PriceListSeeder extends Seeder
      */
     public function run(): void
     {
+        // Valid since before the simulated sales history (SalesHistorySeeder), which prices with these lists.
+        $validFrom = SalesHistorySeeder::startsAt()->subMonth()->startOfMonth()->toDateString();
+
         PriceList::updateOrCreate(
             ['name_normalized' => 'lista general'],
             [
@@ -21,7 +25,7 @@ class PriceListSeeder extends Seeder
                 'description' => 'Lista de precios base del sistema. Es la última de la cascada, por eso no lleva fecha de fin.',
                 'scope' => PriceListScope::Canal,
                 'channel' => PriceListChannel::General,
-                'valid_from' => now()->toDateString(),
+                'valid_from' => $validFrom,
                 'valid_to' => null,
                 'is_active' => true,
             ]
@@ -34,7 +38,7 @@ class PriceListSeeder extends Seeder
                 'description' => 'Precios de la venta de mostrador. Los artículos que no figuran acá toman el precio de la Lista General.',
                 'scope' => PriceListScope::Canal,
                 'channel' => PriceListChannel::Mostrador,
-                'valid_from' => now()->toDateString(),
+                'valid_from' => $validFrom,
                 'valid_to' => null,
                 'is_active' => true,
             ]
@@ -47,7 +51,7 @@ class PriceListSeeder extends Seeder
                 'description' => 'Lista particular para clientes mayoristas. Tiene precedencia sobre la lista del canal.',
                 'scope' => PriceListScope::Particular,
                 'channel' => null,
-                'valid_from' => now()->toDateString(),
+                'valid_from' => $validFrom,
                 'valid_to' => null,
                 'is_active' => true,
             ]
@@ -60,7 +64,7 @@ class PriceListSeeder extends Seeder
                 'description' => 'Precios vigentes para el canal de venta online.',
                 'scope' => PriceListScope::Canal,
                 'channel' => PriceListChannel::Online,
-                'valid_from' => now()->toDateString(),
+                'valid_from' => $validFrom,
                 'valid_to' => null,
                 'is_active' => true,
             ]

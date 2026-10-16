@@ -104,7 +104,7 @@ class SupplierVoucherSeeder extends Seeder
 
     /**
      * Demo of HU-054 "vinculación en la carga": a credit note that immediately lowers the balance
-     * of the first invoice of its supplier. The remaining free credit note (C 0003-00000321,
+     * of the first invoice seeded above for its supplier. The remaining free credit note (C 0003-00000321,
      * seeded above) covers the compensation-in-a-payment-order path.
      *
      * @param  Collection<int, Article>  $articles
@@ -120,10 +120,12 @@ class SupplierVoucherSeeder extends Seeder
 
         $supplier = Supplier::query()->where('tax_id', '30500858628')->firstOrFail();
 
+        // By its number: the supplier also has the (already paid) invoices of SalesHistorySeeder.
         $invoice = SupplierVoucher::query()
             ->whereBelongsTo($supplier)
             ->where('type', SupplierVoucherType::Invoice)
-            ->orderBy('id')
+            ->where('point_of_sale', '0001')
+            ->where('number', '00012001')
             ->first();
 
         if ($invoice === null) {
