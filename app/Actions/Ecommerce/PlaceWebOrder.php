@@ -8,6 +8,8 @@ use App\Models\Catalog\Article;
 use App\Models\Customers\Customer;
 use App\Models\Ecommerce\CartItem;
 use App\Models\Ecommerce\WebOrder;
+use App\Models\Inventory\StockBalance;
+use App\Models\Inventory\Warehouse;
 use App\Models\Organization\Branch;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -131,15 +133,17 @@ class PlaceWebOrder
         $articleIds = $cartItems->pluck('article_id')->unique()->sort()->values()->all();
         Article::query()->whereIn('id', $articleIds)->orderBy('id')->lockForUpdate()->get();
 
+        $warehouse = Warehouse::query()->online()->active()->first();
+        StockBalance::query()->where('warehouse_id', $warehouse?->id)
+            ->whereIn('article_id', $articleIds)->orderBy('article_id')->lockForUpdate()->get();
+
         $availabilities = $this->getOnlineAvailability->forArticles($articleIds);
 
         foreach ($cartItems as $item) {
             $availability = $availabilities[$item->article_id] ?? null;
-            $numericAvailable = $availability !== null ? $availability->numericQuantity : 0.0;
             $availableStr = $availability !== null ? $availability->availableQuantity : '0.000';
-            $qty = (float) $item->quantity;
 
-            if ($numericAvailable <= 0.0 || $qty > $numericAvailable) {
+            if (bccomp($availableStr, '0', 3) <= 0 || bccomp($item->quantity, $availableStr, 3) > 0) {
                 throw ValidationException::withMessages([
                     'cart' => "No se puede confirmar el pedido porque no hay stock suficiente para: {$item->article->description} (solicitado: {$item->quantity}, disponible: {$availableStr}).",
                 ]);

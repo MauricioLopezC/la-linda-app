@@ -9,6 +9,7 @@ use App\Models\Customers\Customer;
 use App\Models\Ecommerce\WebOrder;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -42,6 +43,9 @@ class WebOrderPaymentController extends Controller
             }
 
             return Inertia::location($preference['redirect_url']);
+        } catch (ValidationException $exception) {
+            return redirect()->route('tienda.orders.show', $webOrder)
+                ->with('error', $exception->validator->errors()->first());
         } catch (\Throwable $exception) {
             if ($webOrder->fresh()->status === WebOrderStatus::Paid) {
                 return redirect()->route('tienda.orders.show', $webOrder)

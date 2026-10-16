@@ -166,7 +166,6 @@ test('verification scenario: Client A buys 2 units of 3, Client B enters store, 
     // 4. Cliente B entra a la tienda y consulta la disponibilidad real: solo queda 1 unidad disponible
     $availability = app(GetOnlineAvailability::class)->forArticle($article);
     expect($availability->availableQuantity)->toBe('1.000')
-        ->and($availability->numericQuantity)->toBe(1.0)
         ->and($availability->status)->toBe(OnlineAvailabilityStatus::LastUnits);
 
     // 5. Si Cliente B intenta agregar 2 unidades al carrito, es rechazado

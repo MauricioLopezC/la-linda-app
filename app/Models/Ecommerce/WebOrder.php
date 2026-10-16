@@ -36,6 +36,10 @@ use Illuminate\Support\Carbon;
  * @property numeric-string $total_amount
  * @property string|null $mp_preference_id
  * @property string|null $mp_payment_id
+ * @property Carbon|null $stock_reserved_until
+ * @property string|null $payment_reservation_token
+ * @property string|null $mp_init_point
+ * @property string|null $mp_sandbox_init_point
  * @property numeric-string|null $paid_amount
  * @property Carbon|null $paid_at
  * @property Carbon|null $preparation_started_at
@@ -66,6 +70,10 @@ use Illuminate\Support\Carbon;
     'total_amount',
     'mp_preference_id',
     'mp_payment_id',
+    'stock_reserved_until',
+    'payment_reservation_token',
+    'mp_init_point',
+    'mp_sandbox_init_point',
     'paid_amount',
     'paid_at',
     'preparation_started_at',
@@ -99,6 +107,7 @@ class WebOrder extends Model
             'total_amount' => 'decimal:2',
             'paid_amount' => 'decimal:2',
             'paid_at' => 'datetime',
+            'stock_reserved_until' => 'datetime',
             'preparation_started_at' => 'datetime',
             'delivered_at' => 'datetime',
             'placed_at' => 'datetime',

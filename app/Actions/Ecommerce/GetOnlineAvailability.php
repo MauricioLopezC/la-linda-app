@@ -23,7 +23,6 @@ class GetOnlineAvailability
 
         return $results[$articleId] ?? new OnlineAvailabilityResult(
             availableQuantity: '0.000',
-            numericQuantity: 0.0,
             status: OnlineAvailabilityStatus::OutOfStock,
             isAvailable: false,
         );
@@ -54,7 +53,6 @@ class GetOnlineAvailability
             foreach ($articleIds as $id) {
                 $results[$id] = new OnlineAvailabilityResult(
                     availableQuantity: '0.000',
-                    numericQuantity: 0.0,
                     status: OnlineAvailabilityStatus::OutOfStock,
                     isAvailable: false,
                 );
@@ -64,23 +62,26 @@ class GetOnlineAvailability
         }
 
         // Query 1: Physical balances in the active online warehouse
-        /** @var array<int, string|float> $physicalBalances */
+        /** @var array<int, numeric-string|float> $physicalBalances */
         $physicalBalances = StockBalance::query()
             ->where('warehouse_id', $onlineWarehouse->id)
             ->whereIn('article_id', $articleIds)
             ->pluck('quantity', 'article_id')
             ->all();
 
-        // Query 2: Committed quantities in paid or in-preparation web orders awaiting warehouse dispatch
-        /** @var array<int, string|float> $committedBalances */
+        // Reservations stay committed until payment reconciliation explicitly releases them.
+        /** @var array<int, numeric-string|float> $committedBalances */
         $committedBalances = WebOrderItem::query()
-            ->selectRaw('article_id, sum(quantity) as total_committed')
+            ->selectRaw('article_id, round(sum(quantity), 3) as total_committed')
             ->whereIn('article_id', $articleIds)
             ->whereHas('webOrder', function (Builder $query): void {
                 $query->whereIn('status', [
                     WebOrderStatus::Paid->value,
                     WebOrderStatus::InPreparation->value,
-                ]);
+                ])->orWhere(function (Builder $reserved): void {
+                    $reserved->where('status', WebOrderStatus::Pending->value)
+                        ->whereNotNull('stock_reserved_until');
+                });
             })
             ->groupBy('article_id')
             ->pluck('total_committed', 'article_id')
@@ -88,14 +89,14 @@ class GetOnlineAvailability
 
         $results = [];
         foreach ($articleIds as $id) {
-            $physical = (float) ($physicalBalances[$id] ?? 0.0);
-            $committed = (float) ($committedBalances[$id] ?? 0.0);
-            $available = max(0.0, $physical - $committed);
+            $physical = (string) ($physicalBalances[$id] ?? '0.000');
+            $committed = (string) ($committedBalances[$id] ?? '0.000');
+            $difference = bcsub($physical, $committed, 3);
+            $available = bccomp($difference, '0', 3) > 0 ? $difference : '0.000';
             $status = $this->resolveStatus($available);
 
             $results[$id] = new OnlineAvailabilityResult(
-                availableQuantity: number_format($available, 3, '.', ''),
-                numericQuantity: $available,
+                availableQuantity: $available,
                 status: $status,
                 isAvailable: $status !== OnlineAvailabilityStatus::OutOfStock,
             );
@@ -105,17 +106,20 @@ class GetOnlineAvailability
     }
 
     /**
-     * Determine the availability status enum from the numeric available quantity.
+     * Determine availability from a quantity normalized to stock precision.
+     *
+     * @param  numeric-string  $available
      */
-    private function resolveStatus(float $available): OnlineAvailabilityStatus
+    private function resolveStatus(string $available): OnlineAvailabilityStatus
     {
-        if ($available <= 0.0) {
+        if (bccomp($available, '0', 3) <= 0) {
             return OnlineAvailabilityStatus::OutOfStock;
         }
 
-        $lowStockThreshold = (float) config('ecommerce.low_stock_threshold', 5.0);
+        /** @var numeric-string $lowStockThreshold */
+        $lowStockThreshold = (string) config('ecommerce.low_stock_threshold', 5);
 
-        if ($available <= $lowStockThreshold) {
+        if (bccomp($available, $lowStockThreshold, 3) <= 0) {
             return OnlineAvailabilityStatus::LastUnits;
         }
 

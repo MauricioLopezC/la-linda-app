@@ -12,6 +12,7 @@ use App\Models\Customers\Customer;
 use App\Models\Ecommerce\CustomerAccount;
 use App\Models\Ecommerce\WebOrder;
 use App\Models\Ecommerce\WebOrderItem;
+use App\Models\Inventory\StockBalance;
 use App\Models\Inventory\Warehouse;
 use App\Models\Organization\Branch;
 use App\Models\Pricing\PriceList;
@@ -81,6 +82,14 @@ test('generates preference with order items and shipping cost for pending order'
         'line_total' => '1000.00',
     ]);
 
+    foreach (WebOrderItem::query()->get() as $item) {
+        StockBalance::factory()->create([
+            'warehouse_id' => $this->warehouse->id,
+            'article_id' => $item->article_id,
+            'quantity' => '100.000',
+        ]);
+    }
+
     Http::fake([
         'https://api.mercadopago.test/checkout/preferences' => Http::response([
             'id' => 'pref-123456789',
@@ -100,7 +109,7 @@ test('generates preference with order items and shipping cost for pending order'
 
         return $request->url() === 'https://api.mercadopago.test/checkout/preferences'
             && $request->hasHeader('Authorization', 'Bearer TEST-ACCESS-TOKEN-123456')
-            && $data['external_reference'] === (string) $order->id
+            && str_starts_with($data['external_reference'], $order->id.':')
             && $data['payer']['name'] === 'Juan Pérez'
             && $data['payer']['email'] === 'juan.perez@example.test'
             && count($data['items']) === 2
@@ -165,6 +174,14 @@ test('supports fractional quantities and line rounding for weighted articles', f
         'price_list_id' => $this->onlineList->id,
         'line_total' => '166.50',
     ]);
+
+    foreach (WebOrderItem::query()->get() as $item) {
+        StockBalance::factory()->create([
+            'warehouse_id' => $this->warehouse->id,
+            'article_id' => $item->article_id,
+            'quantity' => '100.000',
+        ]);
+    }
 
     Http::fake([
         'https://api.mercadopago.test/checkout/preferences' => Http::response([
@@ -249,6 +266,14 @@ test('refuses to persist preference if order is accredited while preference crea
         'price_list_id' => $this->onlineList->id,
         'line_total' => '1000.00',
     ]);
+
+    foreach (WebOrderItem::query()->get() as $item) {
+        StockBalance::factory()->create([
+            'warehouse_id' => $this->warehouse->id,
+            'article_id' => $item->article_id,
+            'quantity' => '100.000',
+        ]);
+    }
 
     Http::fake([
         'https://api.mercadopago.test/checkout/preferences' => function () use ($order) {

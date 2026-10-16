@@ -3,6 +3,7 @@
 namespace App\Actions\Ecommerce;
 
 use App\Actions\Pricing\ResolveArticlePrice;
+use App\Concerns\NormalizesStockQuantity;
 use App\Enums\Catalog\ArticleStatus;
 use App\Enums\Pricing\PriceListChannel;
 use App\Exceptions\Pricing\ArticleNotPricedException;
@@ -13,6 +14,8 @@ use Illuminate\Validation\ValidationException;
 
 class AddArticleToCart
 {
+    use NormalizesStockQuantity;
+
     public function __construct(
         private readonly ResolveArticlePrice $resolveArticlePrice,
         private readonly GetOnlineAvailability $getOnlineAvailability,
@@ -25,13 +28,8 @@ class AddArticleToCart
      */
     public function execute(Customer $customer, Article $article, float|int|string $quantity): CartItem
     {
-        $numericQuantity = (float) $quantity;
-
-        if ($numericQuantity <= 0) {
-            throw ValidationException::withMessages([
-                'quantity' => 'La cantidad debe ser mayor a cero.',
-            ]);
-        }
+        $normalizedQuantity = $this->normalizeStockQuantity($quantity);
+        $displayQuantity = rtrim(rtrim($normalizedQuantity, '0'), '.');
 
         if ($article->status !== ArticleStatus::Active) {
             throw ValidationException::withMessages([
@@ -47,7 +45,7 @@ class AddArticleToCart
 
         $article->loadMissing('unitOfMeasure');
 
-        if (! $article->allowsDecimalQuantity() && fmod($numericQuantity, 1.0) !== 0.0) {
+        if (! $article->allowsDecimalQuantity() && bccomp($normalizedQuantity, bcadd($normalizedQuantity, '0', 0), 3) !== 0) {
             throw ValidationException::withMessages([
                 'quantity' => 'La unidad de medida del artículo no admite cantidades decimales.',
             ]);
@@ -63,7 +61,7 @@ class AddArticleToCart
 
         $availability = $this->getOnlineAvailability->forArticle($article);
 
-        if (! $availability->isAvailable || $availability->numericQuantity <= 0) {
+        if (! $availability->isAvailable || bccomp($availability->availableQuantity, '0', 3) <= 0) {
             throw ValidationException::withMessages([
                 'article_id' => 'El artículo no se encuentra disponible por falta de stock.',
             ]);
@@ -76,30 +74,31 @@ class AddArticleToCart
             ->first();
 
         if ($existingItem !== null) {
-            $accumulated = (float) $existingItem->quantity + $numericQuantity;
+            $accumulated = bcadd($existingItem->quantity, $normalizedQuantity, 3);
+            $displayAccumulated = rtrim(rtrim($accumulated, '0'), '.');
 
-            if ($accumulated > $availability->numericQuantity) {
+            if (bccomp($accumulated, $availability->availableQuantity, 3) > 0) {
                 throw ValidationException::withMessages([
-                    'quantity' => "La cantidad total solicitada ({$accumulated}) supera el stock disponible en la tienda online ({$availability->availableQuantity}).",
+                    'quantity' => "La cantidad total solicitada ({$displayAccumulated}) supera el stock disponible en la tienda online ({$availability->availableQuantity}).",
                 ]);
             }
 
-            $existingItem->quantity = number_format($accumulated, 3, '.', '');
+            $existingItem->quantity = $accumulated;
             $existingItem->save();
 
             return $existingItem;
         }
 
-        if ($numericQuantity > $availability->numericQuantity) {
+        if (bccomp($normalizedQuantity, $availability->availableQuantity, 3) > 0) {
             throw ValidationException::withMessages([
-                'quantity' => "La cantidad solicitada ({$numericQuantity}) supera el stock disponible en la tienda online ({$availability->availableQuantity}).",
+                'quantity' => "La cantidad solicitada ({$displayQuantity}) supera el stock disponible en la tienda online ({$availability->availableQuantity}).",
             ]);
         }
 
         return CartItem::create([
             'customer_id' => $customer->id,
             'article_id' => $article->id,
-            'quantity' => number_format($numericQuantity, 3, '.', ''),
+            'quantity' => $normalizedQuantity,
         ]);
     }
 }

@@ -16,7 +16,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $id
  * @property int $web_order_id
  * @property int $article_id
- * @property string $quantity
+ * @property numeric-string $quantity
  * @property string $unit_price
  * @property int $price_list_id
  * @property string $line_total

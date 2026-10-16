@@ -4,6 +4,7 @@ namespace App\Actions\Ecommerce;
 
 use App\Concerns\ConvertsMoneyToCents;
 use App\Enums\Ecommerce\WebOrderStatus;
+use App\Models\Catalog\Article;
 use App\Models\Ecommerce\WebOrder;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
@@ -60,10 +61,14 @@ class MarkWebOrderAsPaid
                 );
             }
 
+            $articleIds = $lockedOrder->items()->orderBy('article_id')->pluck('article_id')->all();
+            Article::query()->whereIn('id', $articleIds)->orderBy('id')->lockForUpdate()->get();
+
             $normalizedAmount = $this->centsToMoney($this->moneyToCents($paidAmount));
 
             $lockedOrder->update([
                 'status' => WebOrderStatus::Paid,
+                'stock_reserved_until' => null,
                 'mp_payment_id' => $paymentId,
                 'paid_amount' => $normalizedAmount,
                 'paid_at' => $paidAt,
