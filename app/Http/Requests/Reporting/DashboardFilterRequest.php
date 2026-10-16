@@ -33,6 +33,7 @@ class DashboardFilterRequest extends FormRequest
             'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
             'branch_id' => ['nullable', 'integer', 'exists:branches,id'],
             'channel' => ['nullable', 'string', Rule::enum(SaleChannel::class)],
+            'format' => ['nullable', 'string', 'in:csv,excel,xlsx'],
         ];
     }
 
