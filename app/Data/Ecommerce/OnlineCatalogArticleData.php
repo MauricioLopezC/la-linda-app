@@ -2,7 +2,9 @@
 
 namespace App\Data\Ecommerce;
 
+use App\Actions\Ecommerce\OnlineAvailabilityResult;
 use App\Data\Pricing\ResolvedPriceData;
+use App\Enums\Ecommerce\OnlineAvailabilityStatus;
 use App\Enums\Pricing\PriceListScope;
 use App\Models\Catalog\Article;
 use Spatie\LaravelData\Data;
@@ -26,10 +28,19 @@ class OnlineCatalogArticleData extends Data
         public string $price_list_scope,
         public bool $is_particular_price,
         public bool $allows_decimals,
+        public string $available_quantity,
+        public string $availability_status,
+        public string $availability_label,
     ) {}
 
-    public static function fromArticleAndPrice(Article $article, ResolvedPriceData $priceData): self
-    {
+    public static function fromArticleAndPrice(
+        Article $article,
+        ResolvedPriceData $priceData,
+        ?OnlineAvailabilityResult $availability = null,
+    ): self {
+        $availableQty = $availability !== null ? $availability->availableQuantity : '0.000';
+        $status = $availability !== null ? $availability->status : OnlineAvailabilityStatus::OutOfStock;
+
         return new self(
             id: $article->id,
             description: $article->description,
@@ -47,6 +58,9 @@ class OnlineCatalogArticleData extends Data
             price_list_scope: $priceData->price_list_scope,
             is_particular_price: $priceData->price_list_scope === PriceListScope::Particular->value,
             allows_decimals: $article->allowsDecimalQuantity(),
+            available_quantity: $availableQty,
+            availability_status: $status->value,
+            availability_label: $status->label(),
         );
     }
 }

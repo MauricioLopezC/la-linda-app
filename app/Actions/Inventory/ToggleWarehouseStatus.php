@@ -21,6 +21,20 @@ class ToggleWarehouseStatus
             ]);
         }
 
+        if (! $warehouse->is_active && $warehouse->is_online_channel) {
+            $anotherActiveOnlineExists = Warehouse::query()
+                ->where('is_online_channel', true)
+                ->where('is_active', true)
+                ->where('id', '!=', $warehouse->id)
+                ->exists();
+
+            if ($anotherActiveOnlineExists) {
+                throw ValidationException::withMessages([
+                    'warehouse' => 'Ya existe un depósito activo asignado al canal online.',
+                ]);
+            }
+        }
+
         $warehouse->update([
             'is_active' => ! $warehouse->is_active,
         ]);

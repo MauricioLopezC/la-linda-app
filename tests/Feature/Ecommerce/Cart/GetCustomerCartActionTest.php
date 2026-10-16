@@ -9,6 +9,8 @@ use App\Models\Catalog\Category;
 use App\Models\Catalog\UnitOfMeasure;
 use App\Models\Customers\Customer;
 use App\Models\Ecommerce\CartItem;
+use App\Models\Inventory\StockBalance;
+use App\Models\Inventory\Warehouse;
 use App\Models\Pricing\PriceList;
 use App\Models\Pricing\PriceListItem;
 
@@ -26,8 +28,17 @@ beforeEach(function () {
     ]);
 
     $this->customer = Customer::factory()->create();
+    $this->onlineWarehouse = Warehouse::factory()->online()->create();
 
     $this->action = app(GetCustomerCart::class);
+
+    $this->setStock = function (Article $article, string $qty = '50.000'): void {
+        StockBalance::factory()->create([
+            'warehouse_id' => $this->onlineWarehouse->id,
+            'article_id' => $article->id,
+            'quantity' => $qty,
+        ]);
+    };
 });
 
 test('retrieves customer cart with dynamically resolved prices and calculated totals', function () {
@@ -43,6 +54,7 @@ test('retrieves customer cart with dynamically resolved prices and calculated to
         'article_id' => $article1->id,
         'price' => '100.00',
     ]);
+    ($this->setStock)($article1);
 
     $article2 = Article::factory()->create([
         'description' => 'Gaseosa Cola 2.25L',
@@ -56,6 +68,7 @@ test('retrieves customer cart with dynamically resolved prices and calculated to
         'article_id' => $article2->id,
         'price' => '250.00',
     ]);
+    ($this->setStock)($article2);
 
     CartItem::factory()->create([
         'customer_id' => $this->customer->id,
@@ -98,6 +111,7 @@ test('dynamically updates prices when price list item changes without editing ca
         'article_id' => $article->id,
         'price' => '500.00',
     ]);
+    ($this->setStock)($article);
 
     CartItem::factory()->create([
         'customer_id' => $this->customer->id,
@@ -131,6 +145,7 @@ test('marks article as unavailable and excludes it from total when article is in
         'article_id' => $activeArticle->id,
         'price' => '200.00',
     ]);
+    ($this->setStock)($activeArticle);
 
     $inactiveArticle = Article::factory()->create([
         'category_id' => $this->category->id,
@@ -245,6 +260,8 @@ test('resolves customer particular price list when assigned', function () {
         'article_id' => $article->id,
         'price' => '420.00',
     ]);
+
+    ($this->setStock)($article);
 
     CartItem::factory()->create([
         'customer_id' => $this->customer->id,

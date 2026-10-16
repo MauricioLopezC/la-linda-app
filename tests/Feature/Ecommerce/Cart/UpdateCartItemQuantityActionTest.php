@@ -7,6 +7,8 @@ use App\Models\Catalog\Category;
 use App\Models\Catalog\UnitOfMeasure;
 use App\Models\Customers\Customer;
 use App\Models\Ecommerce\CartItem;
+use App\Models\Inventory\StockBalance;
+use App\Models\Inventory\Warehouse;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Validation\ValidationException;
 
@@ -27,8 +29,17 @@ beforeEach(function () {
 
     $this->customer = Customer::factory()->create();
     $this->otherCustomer = Customer::factory()->create();
+    $this->onlineWarehouse = Warehouse::factory()->online()->create();
 
     $this->action = app(UpdateCartItemQuantity::class);
+
+    $this->setStock = function (Article $article, string $qty = '50.000'): void {
+        StockBalance::factory()->create([
+            'warehouse_id' => $this->onlineWarehouse->id,
+            'article_id' => $article->id,
+            'quantity' => $qty,
+        ]);
+    };
 });
 
 test('updates quantity of an existing cart item', function () {
@@ -38,6 +49,8 @@ test('updates quantity of an existing cart item', function () {
         'status' => ArticleStatus::Active,
         'is_online_publishable' => true,
     ]);
+
+    ($this->setStock)($article);
 
     $cartItem = CartItem::factory()->create([
         'customer_id' => $this->customer->id,
@@ -110,6 +123,8 @@ test('allows decimal quantities for weighable article when updating', function (
         'category_id' => $this->category->id,
         'unit_of_measure_id' => $this->unitDecimal->id,
     ]);
+
+    ($this->setStock)($article);
 
     $cartItem = CartItem::factory()->create([
         'customer_id' => $this->customer->id,

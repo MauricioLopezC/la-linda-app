@@ -122,6 +122,11 @@ function ArticleCard({
   onAddToCart: (article: Article, qty: number) => void;
   onPreview: (article: Article) => void;
 }) {
+  const isOutOfStock =
+    article.availability_status === 'sin_stock' ||
+    parseFloat(article.available_quantity) <= 0;
+  const availableQty = parseFloat(article.available_quantity);
+
   return (
     <div className="group flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-2xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
       {/* Image Area */}
@@ -166,13 +171,37 @@ function ArticleCard({
       {/* Article Info Body */}
       <div className="flex flex-1 flex-col justify-between gap-3 p-4">
         <div className="space-y-1">
-          {article.brand_name ? (
-            <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-              {article.brand_name}
-            </span>
-          ) : (
-            <span className="text-xs text-transparent select-none">-</span>
-          )}
+          <div className="flex items-center justify-between gap-2">
+            {article.brand_name ? (
+              <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+                {article.brand_name}
+              </span>
+            ) : (
+              <span className="text-xs text-transparent select-none">-</span>
+            )}
+            {article.availability_status === 'sin_stock' ? (
+              <Badge
+                variant="destructive"
+                className="text-[10px] font-semibold"
+              >
+                Sin stock
+              </Badge>
+            ) : article.availability_status === 'ultimas_unidades' ? (
+              <Badge
+                variant="outline"
+                className="border-amber-500/40 bg-amber-500/10 text-[10px] font-medium text-amber-700 dark:text-amber-400"
+              >
+                Últimas unidades
+              </Badge>
+            ) : (
+              <Badge
+                variant="outline"
+                className="border-emerald-500/40 bg-emerald-500/10 text-[10px] font-medium text-emerald-700 dark:text-emerald-400"
+              >
+                Disponible
+              </Badge>
+            )}
+          </div>
           <h3
             className="line-clamp-2 min-h-[2.75rem] cursor-pointer text-base leading-snug font-bold text-foreground transition-colors hover:text-primary"
             title={article.description}
@@ -215,7 +244,9 @@ function ArticleCard({
                 onClick={() =>
                   onUpdateQuantity(article.id, -1, article.allows_decimals)
                 }
-                disabled={qty <= (article.allows_decimals ? 0.5 : 1)}
+                disabled={
+                  isOutOfStock || qty <= (article.allows_decimals ? 0.5 : 1)
+                }
                 title="Disminuir cantidad"
               >
                 <Minus className="size-3" />
@@ -231,6 +262,7 @@ function ArticleCard({
                 onClick={() =>
                   onUpdateQuantity(article.id, 1, article.allows_decimals)
                 }
+                disabled={isOutOfStock || qty >= availableQty}
                 title="Aumentar cantidad"
               >
                 <Plus className="size-3" />
@@ -239,12 +271,19 @@ function ArticleCard({
 
             <Button
               type="button"
-              disabled={isAdding}
+              disabled={isOutOfStock || isAdding}
+              variant={isOutOfStock ? 'secondary' : 'default'}
               className="h-8 flex-1 gap-1.5 text-xs font-semibold"
               onClick={() => onAddToCart(article, qty)}
             >
-              <ShoppingCart className="size-3.5" />
-              {isAdding ? 'Añadiendo...' : 'Añadir'}
+              {isOutOfStock ? (
+                'Sin stock'
+              ) : (
+                <>
+                  <ShoppingCart className="size-3.5" />
+                  {isAdding ? 'Añadiendo...' : 'Añadir'}
+                </>
+              )}
             </Button>
           </div>
         </div>
@@ -692,6 +731,36 @@ export default function StoreHome({
                         : 'No (entero)'}
                     </span>
                   </div>
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-foreground">
+                      Disponibilidad:
+                    </span>
+                    <div>
+                      {previewArticle.availability_status === 'sin_stock' ? (
+                        <Badge
+                          variant="destructive"
+                          className="text-[10px] font-semibold"
+                        >
+                          Sin stock
+                        </Badge>
+                      ) : previewArticle.availability_status ===
+                        'ultimas_unidades' ? (
+                        <Badge
+                          variant="outline"
+                          className="border-amber-500/40 bg-amber-500/10 text-[10px] font-medium text-amber-700 dark:text-amber-400"
+                        >
+                          Últimas unidades
+                        </Badge>
+                      ) : (
+                        <Badge
+                          variant="outline"
+                          className="border-emerald-500/40 bg-emerald-500/10 text-[10px] font-medium text-emerald-700 dark:text-emerald-400"
+                        >
+                          Disponible
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
                 {/* Price and Cart Actions */}
@@ -714,68 +783,95 @@ export default function StoreHome({
                   </div>
 
                   {/* Quantity and Action Button */}
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center rounded-lg border border-border bg-muted/30 p-1">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="size-8 rounded-md"
-                        onClick={() =>
-                          updateQuantity(
-                            previewArticle.id,
-                            -1,
-                            previewArticle.allows_decimals,
-                          )
-                        }
-                        disabled={
-                          getArticleQty(
-                            previewArticle.id,
-                            previewArticle.allows_decimals,
-                          ) <= (previewArticle.allows_decimals ? 0.5 : 1)
-                        }
-                      >
-                        <Minus className="size-3.5" />
-                      </Button>
-                      <span className="w-10 text-center text-sm font-semibold tabular-nums">
-                        {getArticleQty(
-                          previewArticle.id,
-                          previewArticle.allows_decimals,
-                        )}
-                      </span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="size-8 rounded-md"
-                        onClick={() =>
-                          updateQuantity(
-                            previewArticle.id,
-                            1,
-                            previewArticle.allows_decimals,
-                          )
-                        }
-                      >
-                        <Plus className="size-3.5" />
-                      </Button>
-                    </div>
+                  {(() => {
+                    const isPreviewOutOfStock =
+                      previewArticle.availability_status === 'sin_stock' ||
+                      parseFloat(previewArticle.available_quantity) <= 0;
+                    const previewAvailableQty = parseFloat(
+                      previewArticle.available_quantity,
+                    );
+                    const currentQty = getArticleQty(
+                      previewArticle.id,
+                      previewArticle.allows_decimals,
+                    );
 
-                    <Button
-                      type="button"
-                      size="default"
-                      disabled={loadingArticleId === previewArticle.id}
-                      className="flex-1 gap-2"
-                      onClick={() => {
-                        handleAddToCart(previewArticle);
-                        setPreviewArticle(null);
-                      }}
-                    >
-                      <ShoppingCart className="size-4" />
-                      {loadingArticleId === previewArticle.id
-                        ? 'Añadiendo...'
-                        : 'Añadir al carrito'}
-                    </Button>
-                  </div>
+                    return (
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center rounded-lg border border-border bg-muted/30 p-1">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="size-8 rounded-md"
+                            onClick={() =>
+                              updateQuantity(
+                                previewArticle.id,
+                                -1,
+                                previewArticle.allows_decimals,
+                              )
+                            }
+                            disabled={
+                              isPreviewOutOfStock ||
+                              currentQty <=
+                                (previewArticle.allows_decimals ? 0.5 : 1)
+                            }
+                          >
+                            <Minus className="size-3.5" />
+                          </Button>
+                          <span className="w-10 text-center text-sm font-semibold tabular-nums">
+                            {currentQty}
+                          </span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="size-8 rounded-md"
+                            onClick={() =>
+                              updateQuantity(
+                                previewArticle.id,
+                                1,
+                                previewArticle.allows_decimals,
+                              )
+                            }
+                            disabled={
+                              isPreviewOutOfStock ||
+                              currentQty >= previewAvailableQty
+                            }
+                          >
+                            <Plus className="size-3.5" />
+                          </Button>
+                        </div>
+
+                        <Button
+                          type="button"
+                          size="default"
+                          disabled={
+                            isPreviewOutOfStock ||
+                            loadingArticleId === previewArticle.id
+                          }
+                          variant={
+                            isPreviewOutOfStock ? 'secondary' : 'default'
+                          }
+                          className="flex-1 gap-2"
+                          onClick={() => {
+                            handleAddToCart(previewArticle);
+                            setPreviewArticle(null);
+                          }}
+                        >
+                          {isPreviewOutOfStock ? (
+                            'Sin stock'
+                          ) : (
+                            <>
+                              <ShoppingCart className="size-4" />
+                              {loadingArticleId === previewArticle.id
+                                ? 'Añadiendo...'
+                                : 'Añadir al carrito'}
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             </div>

@@ -22,6 +22,7 @@ class ConsultOnlineCatalog
 {
     public function __construct(
         private readonly ResolveArticlePrice $resolveArticlePrice,
+        private readonly GetOnlineAvailability $getOnlineAvailability,
     ) {}
 
     /**
@@ -57,15 +58,21 @@ class ConsultOnlineCatalog
         /** @var LengthAwarePaginator<int, Article> $paginator */
         $paginator = $query->paginate($perPage)->withQueryString();
 
+        $availabilities = $this->getOnlineAvailability->forArticles($paginator->items());
+
         /** @var LengthAwarePaginator<int, OnlineCatalogArticleData> $transformed */
-        $transformed = $paginator->through(function (Article $article) use ($customer): OnlineCatalogArticleData {
+        $transformed = $paginator->through(function (Article $article) use ($customer, $availabilities): OnlineCatalogArticleData {
             $priceData = $this->resolveArticlePrice->execute(
                 $article,
                 PriceListChannel::Online,
                 $customer,
             );
 
-            return OnlineCatalogArticleData::fromArticleAndPrice($article, $priceData);
+            return OnlineCatalogArticleData::fromArticleAndPrice(
+                $article,
+                $priceData,
+                $availabilities[$article->id] ?? null,
+            );
         });
 
         return $transformed;

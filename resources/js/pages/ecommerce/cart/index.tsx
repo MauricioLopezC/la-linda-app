@@ -343,9 +343,19 @@ export default function CartIndex({ cart }: Props) {
                                 variant="ghost"
                                 size="icon"
                                 className="size-7 rounded-md text-muted-foreground hover:text-foreground"
-                                disabled={isBusy}
+                                disabled={
+                                  isBusy ||
+                                  (parseFloat(item.available_quantity) > 0 &&
+                                    qtyNum >=
+                                      parseFloat(item.available_quantity))
+                                }
                                 onClick={() => handleUpdateQuantity(item, 1)}
-                                title="Aumentar cantidad"
+                                title={
+                                  parseFloat(item.available_quantity) > 0 &&
+                                  qtyNum >= parseFloat(item.available_quantity)
+                                    ? 'Stock máximo disponible alcanzado'
+                                    : 'Aumentar cantidad'
+                                }
                               >
                                 <Plus className="size-3" />
                               </Button>
