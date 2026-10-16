@@ -90,7 +90,7 @@ function fakeDashboardExportData(string $text = '00123', ?float $variation = 25.
     ));
     mock(GetDashboardEvolution::class)->shouldReceive('handle')->andReturn(new DashboardEvolutionData(
         '-1000.20', -100.0, -50.0,
-        [new DashboardEvolutionPointData('2026-10-15', '1000.12', '2000.32', '-1000.20')],
+        [new DashboardEvolutionPointData('2026-10-15', '1000.12', '2000.32', '-1000.20', '2000.32', '0.00', '-1000.20')],
     ));
     mock(GetDashboardOperationalIndicators::class)->shouldReceive('handle')->andReturn(new DashboardOperationalData(
         [new DashboardTopArticleData(1, $text, '1.125', '1210.15')],

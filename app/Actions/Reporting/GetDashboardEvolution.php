@@ -80,19 +80,28 @@ class GetDashboardEvolution
         }
 
         $revenueByPeriod = $this->sumByPeriod($this->getDashboardRevenues->netRevenueCentsByDay($from, $to, $branchId, $channel), $format);
-        $expensesByPeriod = $this->sumByPeriod($this->getDashboardExpenses->accruedCentsByDay($from->toDateString(), $to->toDateString()), $format);
+        $expensesBreakdown = $this->getDashboardExpenses->accruedBreakdownCentsByDay($from->toDateString(), $to->toDateString());
+        $chargesByPeriod = $this->sumByPeriod($expensesBreakdown['charges'], $format);
+        $creditsByPeriod = $this->sumByPeriod($expensesBreakdown['credits'], $format);
 
         $series = [];
+        $cumulativeCents = 0;
 
         foreach ($periods as $period) {
             $revenueCents = $revenueByPeriod[$period] ?? 0;
-            $expensesCents = $expensesByPeriod[$period] ?? 0;
+            $chargesCents = $chargesByPeriod[$period] ?? 0;
+            $creditsCents = $creditsByPeriod[$period] ?? 0;
+            $netResultCents = $revenueCents - $chargesCents + $creditsCents;
+            $cumulativeCents += $netResultCents;
 
             $series[] = new DashboardEvolutionPointData(
                 period: $period,
                 net_revenue: $this->centsToMoney($revenueCents),
-                accrued_expenses: $this->centsToMoney($expensesCents),
-                net_result: $this->centsToMoney($revenueCents - $expensesCents),
+                accrued_expenses: $this->centsToMoney($chargesCents - $creditsCents),
+                net_result: $this->centsToMoney($netResultCents),
+                accrued_charges: $this->centsToMoney($chargesCents),
+                credit_notes: $this->centsToMoney($creditsCents),
+                cumulative_net_result: $this->centsToMoney($cumulativeCents),
             );
         }
 

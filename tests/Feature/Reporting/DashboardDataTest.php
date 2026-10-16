@@ -17,7 +17,7 @@ test('dashboard serializes evolution and operational blocks without losing decim
             net_result: '-0.01',
             net_margin_pct: -0.5,
             net_result_variation_pct: null,
-            series: [new DashboardEvolutionPointData('2026-10-01', '2.00', '2.01', '-0.01')],
+            series: [new DashboardEvolutionPointData('2026-10-01', '2.00', '2.01', '-0.01', '2.51', '0.50', '-0.01')],
         ),
         operational: new DashboardOperationalData(
             top_articles: [new DashboardTopArticleData(1, 'Yerba a granel', '1.125', '9999999999.99')],
@@ -38,6 +38,9 @@ test('dashboard serializes evolution and operational blocks without losing decim
             'net_revenue' => '2.00',
             'accrued_expenses' => '2.01',
             'net_result' => '-0.01',
+            'accrued_charges' => '2.51',
+            'credit_notes' => '0.50',
+            'cumulative_net_result' => '-0.01',
         ]],
     ])->and($serialized['operational'])->toBe([
         'top_articles' => [[
