@@ -4,9 +4,12 @@ namespace App\Actions\Ecommerce;
 
 use App\Enums\Ecommerce\DeliveryMethod;
 use App\Enums\Ecommerce\WebOrderStatus;
+use App\Models\Catalog\Article;
 use App\Models\Customers\Customer;
 use App\Models\Ecommerce\CartItem;
 use App\Models\Ecommerce\WebOrder;
+use App\Models\Inventory\StockBalance;
+use App\Models\Inventory\Warehouse;
 use App\Models\Organization\Branch;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -31,6 +34,7 @@ class PlaceWebOrder
     public function __construct(
         private readonly ResolveCartLine $resolveCartLine,
         private readonly ClearCart $clearCart,
+        private readonly GetOnlineAvailability $getOnlineAvailability,
     ) {}
 
     /**
@@ -123,6 +127,27 @@ class PlaceWebOrder
                 'cart' => 'No se puede confirmar el pedido porque hay artículos no disponibles: '
                     .implode(', ', $unavailable).'. Quitalos del carrito para continuar.',
             ]);
+        }
+
+        // Pessimistic ordered lock on articles to prevent race conditions without locking aggregates
+        $articleIds = $cartItems->pluck('article_id')->unique()->sort()->values()->all();
+        Article::query()->whereIn('id', $articleIds)->orderBy('id')->lockForUpdate()->get();
+
+        $warehouse = Warehouse::query()->online()->active()->first();
+        StockBalance::query()->where('warehouse_id', $warehouse?->id)
+            ->whereIn('article_id', $articleIds)->orderBy('article_id')->lockForUpdate()->get();
+
+        $availabilities = $this->getOnlineAvailability->forArticles($articleIds);
+
+        foreach ($cartItems as $item) {
+            $availability = $availabilities[$item->article_id] ?? null;
+            $availableStr = $availability !== null ? $availability->availableQuantity : '0.000';
+
+            if (bccomp($availableStr, '0', 3) <= 0 || bccomp($item->quantity, $availableStr, 3) > 0) {
+                throw ValidationException::withMessages([
+                    'cart' => "No se puede confirmar el pedido porque no hay stock suficiente para: {$item->article->description} (solicitado: {$item->quantity}, disponible: {$availableStr}).",
+                ]);
+            }
         }
 
         $amount = number_format($itemsAmount, 2, '.', '');

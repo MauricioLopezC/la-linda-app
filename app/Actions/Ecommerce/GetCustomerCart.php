@@ -12,6 +12,7 @@ class GetCustomerCart
 {
     public function __construct(
         private readonly ResolveCartLine $resolveCartLine,
+        private readonly GetOnlineAvailability $getOnlineAvailability,
     ) {}
 
     /**
@@ -25,9 +26,11 @@ class GetCustomerCart
             ->orderBy('id')
             ->get();
 
+        $availabilities = $this->getOnlineAvailability->forArticles($cartItems->pluck('article'));
+
         $itemsData = [];
         $totalAmount = 0.0;
-        $totalQuantity = 0.0;
+        $totalQuantity = '0.000';
         $hasUnavailable = false;
 
         foreach ($cartItems as $item) {
@@ -36,10 +39,28 @@ class GetCustomerCart
             $unavailableReason = $line['unavailable_reason'];
             $isAvailable = $resolvedPrice !== null;
 
+            $availability = $availabilities[$item->article_id] ?? null;
+            $availableQty = $availability !== null ? $availability->availableQuantity : '0.000';
+            $statusStr = $availability !== null ? $availability->status->value : 'sin_stock';
+
+            $qty = (float) $item->quantity;
+            $totalQuantity = bcadd($totalQuantity, $item->quantity, 3);
+
+            if ($isAvailable) {
+                if (bccomp($availableQty, '0', 3) <= 0) {
+                    $isAvailable = false;
+                    $unavailableReason = 'Sin stock disponible';
+                } elseif (bccomp($item->quantity, $availableQty, 3) > 0) {
+                    $isAvailable = false;
+                    $uom = $item->article->unitOfMeasure->abbreviation ?? 'u.';
+                    $unavailableReason = "Stock insuficiente (disponible: {$availableQty} {$uom})";
+                }
+            }
+
+            $canAdjustQuantity = $resolvedPrice !== null && bccomp($availableQty, '0', 3) > 0;
+
             $unitPriceStr = $resolvedPrice?->unit_price;
             $subtotalStr = '0.00';
-            $qty = (float) $item->quantity;
-            $totalQuantity += $qty;
 
             if ($isAvailable && $unitPriceStr !== null) {
                 $lineSubtotal = round($qty * (float) $unitPriceStr, 2);
@@ -55,6 +76,9 @@ class GetCustomerCart
                 subtotal: $subtotalStr,
                 isAvailable: $isAvailable,
                 unavailableReason: $unavailableReason,
+                availableQuantity: $availableQty,
+                availabilityStatus: $statusStr,
+                canAdjustQuantity: $canAdjustQuantity,
             );
         }
 
@@ -63,7 +87,7 @@ class GetCustomerCart
             total: number_format($totalAmount, 2, '.', ''),
             formatted_total: '$ '.number_format($totalAmount, 2, ',', '.'),
             lines_count: count($cartItems),
-            total_quantity: number_format($totalQuantity, 3, '.', ''),
+            total_quantity: $totalQuantity,
             has_unavailable_items: $hasUnavailable,
         );
     }

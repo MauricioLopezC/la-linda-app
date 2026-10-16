@@ -36,6 +36,7 @@ use App\Http\Controllers\Sales\PaymentMethodController;
 use App\Http\Controllers\Sales\PointOfSaleController;
 use App\Http\Controllers\Sales\SaleController;
 use App\Http\Controllers\Security\RoleHomeController;
+use App\Http\Middleware\Ecommerce\ReconcileExpiredReservations;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'welcome')->name('home');
@@ -253,7 +254,7 @@ Route::middleware(['internal.staff', 'verified'])->group(function () {
 
 Route::post('webhooks/mercadopago', MercadoPagoWebhookController::class)->name('webhooks.mercadopago');
 
-Route::prefix('tienda')->name('tienda.')->group(function () {
+Route::prefix('tienda')->name('tienda.')->middleware(ReconcileExpiredReservations::class)->group(function () {
     Route::get('/', [StoreHomeController::class, 'index'])->name('home');
     Route::get('registro', [CustomerRegistrationController::class, 'create'])->name('register');
     Route::post('registro', [CustomerRegistrationController::class, 'store'])->name('register.store');

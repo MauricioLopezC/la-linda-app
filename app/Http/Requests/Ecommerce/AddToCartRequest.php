@@ -23,7 +23,7 @@ class AddToCartRequest extends FormRequest
     {
         return [
             'article_id' => ['required', 'integer', 'exists:articles,id'],
-            'quantity' => ['required', 'numeric', 'gt:0'],
+            'quantity' => ['required', 'numeric', 'gt:0', 'decimal:0,3', 'max:999999999.999'],
         ];
     }
 
@@ -37,6 +37,7 @@ class AddToCartRequest extends FormRequest
             'article_id.exists' => 'El artículo seleccionado no existe.',
             'quantity.required' => 'La cantidad es obligatoria.',
             'quantity.numeric' => 'La cantidad debe ser un valor numérico.',
+            'quantity.decimal' => 'La cantidad admite hasta tres decimales.',
             'quantity.gt' => 'La cantidad debe ser mayor a cero.',
         ];
     }

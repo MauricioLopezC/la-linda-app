@@ -5,6 +5,7 @@ namespace App\Actions\Ecommerce;
 use App\Enums\Ecommerce\WebOrderStatus;
 use App\Enums\Sales\SaleChannel;
 use App\Enums\Sales\SaleStatus;
+use App\Models\Catalog\Article;
 use App\Models\Ecommerce\WebOrder;
 use App\Models\Ecommerce\WebOrderItem;
 use App\Models\Inventory\StockBalance;
@@ -39,6 +40,9 @@ class DeliverWebOrder
                     'status' => 'Solo se puede entregar un pedido en preparación.',
                 ]);
             }
+
+            $articleIds = $lockedOrder->items()->orderBy('article_id')->pluck('article_id')->all();
+            Article::query()->whereIn('id', $articleIds)->orderBy('id')->lockForUpdate()->get();
 
             $lockedOrder->loadMissing(['sale.pointOfSale.warehouse', 'sale.stockMovement.type', 'sale.stockMovement.warehouse', 'items.article']);
 

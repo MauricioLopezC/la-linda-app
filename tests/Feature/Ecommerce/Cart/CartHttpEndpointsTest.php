@@ -8,6 +8,8 @@ use App\Models\Catalog\Category;
 use App\Models\Catalog\UnitOfMeasure;
 use App\Models\Customers\Customer;
 use App\Models\Ecommerce\CartItem;
+use App\Models\Inventory\StockBalance;
+use App\Models\Inventory\Warehouse;
 use App\Models\Pricing\PriceList;
 use App\Models\Pricing\PriceListItem;
 use App\Models\User;
@@ -45,6 +47,15 @@ beforeEach(function () {
         'role' => UserRole::Cliente,
         'customer_id' => $this->otherCustomer->id,
     ]);
+
+    $this->onlineWarehouse = Warehouse::factory()->online()->create();
+    $this->setStock = function (Article $article, string $qty = '50.000'): void {
+        StockBalance::factory()->create([
+            'warehouse_id' => $this->onlineWarehouse->id,
+            'article_id' => $article->id,
+            'quantity' => $qty,
+        ]);
+    };
 });
 
 test('unauthenticated guest is redirected to login when accessing cart routes', function () {
@@ -69,6 +80,8 @@ test('authenticated client can view their cart', function () {
         'article_id' => $article->id,
         'price' => '800.00',
     ]);
+
+    ($this->setStock)($article);
 
     CartItem::factory()->create([
         'customer_id' => $this->customer->id,
@@ -106,6 +119,8 @@ test('authenticated client can add an article to their cart', function () {
         'price' => '450.00',
     ]);
 
+    ($this->setStock)($article);
+
     $response = $this->actingAs($this->clientUser)->post(route('tienda.cart.store'), [
         'article_id' => $article->id,
         'quantity' => 3,
@@ -134,6 +149,8 @@ test('adding an existing article increments quantity in the database', function 
         'article_id' => $article->id,
         'price' => '450.00',
     ]);
+
+    ($this->setStock)($article);
 
     CartItem::factory()->create([
         'customer_id' => $this->customer->id,
@@ -226,6 +243,8 @@ test('client can update cart item quantity', function () {
         'category_id' => $this->category->id,
         'unit_of_measure_id' => $this->unitDiscrete->id,
     ]);
+
+    ($this->setStock)($article);
 
     $cartItem = CartItem::factory()->create([
         'customer_id' => $this->customer->id,

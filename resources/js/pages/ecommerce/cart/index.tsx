@@ -31,6 +31,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
+import { nextQuantity, quantityLimit } from '@/lib/ecommerce-quantity';
 import { home } from '@/routes/tienda';
 import * as cartRoutes from '@/routes/tienda/cart';
 import * as checkoutRoutes from '@/routes/tienda/checkout';
@@ -76,11 +77,11 @@ export default function CartIndex({ cart }: Props) {
 
   const handleUpdateQuantity = (item: CartItem, delta: number) => {
     const current = parseFloat(item.quantity);
-    const step = item.allows_decimals ? 0.5 : 1;
-    const min = item.allows_decimals ? 0.5 : 1;
-    const newQty = Math.max(
-      min,
-      Math.round((current + delta * step) * 10) / 10,
+    const newQty = nextQuantity(
+      current,
+      delta,
+      item.available_quantity,
+      item.allows_decimals,
     );
 
     if (newQty === current) {
@@ -151,7 +152,7 @@ export default function CartIndex({ cart }: Props) {
 
     if (cart.has_unavailable_items) {
       toast.error(
-        'Quitá los artículos no disponibles del carrito para confirmar el pedido.',
+        'Ajustá o quitá los artículos no disponibles del carrito para confirmar el pedido.',
       );
 
       return;
@@ -212,9 +213,9 @@ export default function CartIndex({ cart }: Props) {
                     Atención: Hay artículos no disponibles
                   </AlertTitle>
                   <AlertDescription className="text-xs">
-                    Algunos artículos en tu carrito ya no están disponibles para
-                    la venta online (sin precio vigente o dados de baja). Se
-                    muestran señalizados y han sido excluidos del total a pagar.
+                    Hay artículos sin stock suficiente, sin precio vigente o
+                    dados de baja. Ajustá las cantidades al máximo disponible o
+                    quitá las líneas señalizadas para continuar.
                   </AlertDescription>
                 </Alert>
               )}
@@ -249,8 +250,17 @@ export default function CartIndex({ cart }: Props) {
                   {cart.items.map((item) => {
                     const isBusy = updatingItemId === item.id;
                     const qtyNum = parseFloat(item.quantity);
-                    const minQty = item.allows_decimals ? 0.5 : 1;
-                    const canDecrease = qtyNum > minQty;
+                    const maximum = quantityLimit(
+                      item.available_quantity,
+                      item.allows_decimals,
+                    );
+                    const canDecrease =
+                      nextQuantity(
+                        qtyNum,
+                        -1,
+                        item.available_quantity,
+                        item.allows_decimals,
+                      ) < qtyNum;
 
                     return (
                       <div
@@ -322,7 +332,7 @@ export default function CartIndex({ cart }: Props) {
                         {/* Controls & Subtotal */}
                         <div className="flex items-center justify-between gap-4 border-t border-border/50 pt-3 sm:border-t-0 sm:pt-0">
                           {/* Quantity Controls */}
-                          {item.is_available ? (
+                          {item.can_adjust_quantity && maximum > 0 ? (
                             <div className="flex items-center rounded-lg border border-border bg-muted/30 p-0.5">
                               <Button
                                 type="button"
@@ -331,7 +341,11 @@ export default function CartIndex({ cart }: Props) {
                                 className="size-7 rounded-md text-muted-foreground hover:text-foreground"
                                 disabled={isBusy || !canDecrease}
                                 onClick={() => handleUpdateQuantity(item, -1)}
-                                title="Disminuir cantidad"
+                                title={
+                                  qtyNum > maximum
+                                    ? 'Ajustar al máximo disponible'
+                                    : 'Disminuir cantidad'
+                                }
                               >
                                 <Minus className="size-3" />
                               </Button>
@@ -343,9 +357,17 @@ export default function CartIndex({ cart }: Props) {
                                 variant="ghost"
                                 size="icon"
                                 className="size-7 rounded-md text-muted-foreground hover:text-foreground"
-                                disabled={isBusy}
+                                disabled={
+                                  isBusy ||
+                                  !item.is_available ||
+                                  qtyNum >= maximum
+                                }
                                 onClick={() => handleUpdateQuantity(item, 1)}
-                                title="Aumentar cantidad"
+                                title={
+                                  qtyNum >= maximum
+                                    ? 'Stock máximo disponible alcanzado'
+                                    : 'Aumentar cantidad'
+                                }
                               >
                                 <Plus className="size-3" />
                               </Button>

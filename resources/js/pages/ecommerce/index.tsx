@@ -29,6 +29,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  clampQuantity,
+  nextQuantity,
+  quantityLimit,
+} from '@/lib/ecommerce-quantity';
 import { login } from '@/routes';
 import { home } from '@/routes/tienda';
 import * as cartRoutes from '@/routes/tienda/cart';
@@ -118,10 +123,19 @@ function ArticleCard({
     id: number,
     delta: number,
     allowsDecimals: boolean,
+    maximum: string,
   ) => void;
   onAddToCart: (article: Article, qty: number) => void;
   onPreview: (article: Article) => void;
 }) {
+  const isOutOfStock =
+    article.availability_status === 'sin_stock' ||
+    quantityLimit(article.available_quantity, article.allows_decimals) <= 0;
+  const availableQty = quantityLimit(
+    article.available_quantity,
+    article.allows_decimals,
+  );
+
   return (
     <div className="group flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-2xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
       {/* Image Area */}
@@ -166,13 +180,37 @@ function ArticleCard({
       {/* Article Info Body */}
       <div className="flex flex-1 flex-col justify-between gap-3 p-4">
         <div className="space-y-1">
-          {article.brand_name ? (
-            <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-              {article.brand_name}
-            </span>
-          ) : (
-            <span className="text-xs text-transparent select-none">-</span>
-          )}
+          <div className="flex items-center justify-between gap-2">
+            {article.brand_name ? (
+              <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+                {article.brand_name}
+              </span>
+            ) : (
+              <span className="text-xs text-transparent select-none">-</span>
+            )}
+            {article.availability_status === 'sin_stock' ? (
+              <Badge
+                variant="destructive"
+                className="text-[10px] font-semibold"
+              >
+                Sin stock
+              </Badge>
+            ) : article.availability_status === 'ultimas_unidades' ? (
+              <Badge
+                variant="outline"
+                className="border-amber-500/40 bg-amber-500/10 text-[10px] font-medium text-amber-700 dark:text-amber-400"
+              >
+                Últimas unidades
+              </Badge>
+            ) : (
+              <Badge
+                variant="outline"
+                className="border-emerald-500/40 bg-emerald-500/10 text-[10px] font-medium text-emerald-700 dark:text-emerald-400"
+              >
+                Disponible
+              </Badge>
+            )}
+          </div>
           <h3
             className="line-clamp-2 min-h-[2.75rem] cursor-pointer text-base leading-snug font-bold text-foreground transition-colors hover:text-primary"
             title={article.description}
@@ -213,9 +251,22 @@ function ArticleCard({
                 size="icon"
                 className="size-7 rounded-md text-muted-foreground hover:text-foreground"
                 onClick={() =>
-                  onUpdateQuantity(article.id, -1, article.allows_decimals)
+                  onUpdateQuantity(
+                    article.id,
+                    -1,
+                    article.allows_decimals,
+                    article.available_quantity,
+                  )
                 }
-                disabled={qty <= (article.allows_decimals ? 0.5 : 1)}
+                disabled={
+                  isOutOfStock ||
+                  nextQuantity(
+                    qty,
+                    -1,
+                    article.available_quantity,
+                    article.allows_decimals,
+                  ) === qty
+                }
                 title="Disminuir cantidad"
               >
                 <Minus className="size-3" />
@@ -229,8 +280,14 @@ function ArticleCard({
                 size="icon"
                 className="size-7 rounded-md text-muted-foreground hover:text-foreground"
                 onClick={() =>
-                  onUpdateQuantity(article.id, 1, article.allows_decimals)
+                  onUpdateQuantity(
+                    article.id,
+                    1,
+                    article.allows_decimals,
+                    article.available_quantity,
+                  )
                 }
+                disabled={isOutOfStock || qty >= availableQty}
                 title="Aumentar cantidad"
               >
                 <Plus className="size-3" />
@@ -239,12 +296,19 @@ function ArticleCard({
 
             <Button
               type="button"
-              disabled={isAdding}
+              disabled={isOutOfStock || isAdding}
+              variant={isOutOfStock ? 'secondary' : 'default'}
               className="h-8 flex-1 gap-1.5 text-xs font-semibold"
               onClick={() => onAddToCart(article, qty)}
             >
-              <ShoppingCart className="size-3.5" />
-              {isAdding ? 'Añadiendo...' : 'Añadir'}
+              {isOutOfStock ? (
+                'Sin stock'
+              ) : (
+                <>
+                  <ShoppingCart className="size-3.5" />
+                  {isAdding ? 'Añadiendo...' : 'Añadir'}
+                </>
+              )}
             </Button>
           </div>
         </div>
@@ -273,37 +337,35 @@ export default function StoreHome({
   // Quantities state per article
   const [quantities, setQuantities] = useState<Record<number, number>>({});
 
-  const getArticleQty = (
-    articleId: number,
-    allowsDecimals: boolean,
-  ): number => {
-    return quantities[articleId] ?? (allowsDecimals ? 1 : 1);
-  };
+  const getArticleQty = (article: Article): number =>
+    clampQuantity(
+      quantities[article.id] ?? 1,
+      article.available_quantity,
+      article.allows_decimals,
+    );
 
   const updateQuantity = (
     articleId: number,
     delta: number,
     allowsDecimals: boolean,
+    maximum: string,
   ) => {
-    setQuantities((prev) => {
-      const current = prev[articleId] ?? 1;
-      const step = allowsDecimals ? 0.5 : 1;
-      const min = allowsDecimals ? 0.5 : 1;
-      const updated = Math.max(
-        min,
-        Math.round((current + delta * step) * 10) / 10,
-      );
-
-      return { ...prev, [articleId]: updated };
-    });
+    setQuantities((prev) => ({
+      ...prev,
+      [articleId]: nextQuantity(
+        prev[articleId] ?? 1,
+        delta,
+        maximum,
+        allowsDecimals,
+      ),
+    }));
   };
 
   // Loading state when adding article to cart
   const [loadingArticleId, setLoadingArticleId] = useState<number | null>(null);
 
   const handleAddToCart = (article: Article, explicitQty?: number) => {
-    const qty =
-      explicitQty ?? getArticleQty(article.id, article.allows_decimals);
+    const qty = explicitQty ?? getArticleQty(article);
 
     if (!user) {
       toast.info('Iniciá sesión para armar tu carrito de compras', {
@@ -535,7 +597,7 @@ export default function StoreHome({
               <ArticleCard
                 key={article.id}
                 article={article}
-                qty={getArticleQty(article.id, article.allows_decimals)}
+                qty={getArticleQty(article)}
                 isAdding={loadingArticleId === article.id}
                 onUpdateQuantity={updateQuantity}
                 onAddToCart={handleAddToCart}
@@ -582,7 +644,7 @@ export default function StoreHome({
                     <ArticleCard
                       key={article.id}
                       article={article}
-                      qty={getArticleQty(article.id, article.allows_decimals)}
+                      qty={getArticleQty(article)}
                       isAdding={loadingArticleId === article.id}
                       onUpdateQuantity={updateQuantity}
                       onAddToCart={handleAddToCart}
@@ -692,6 +754,36 @@ export default function StoreHome({
                         : 'No (entero)'}
                     </span>
                   </div>
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-foreground">
+                      Disponibilidad:
+                    </span>
+                    <div>
+                      {previewArticle.availability_status === 'sin_stock' ? (
+                        <Badge
+                          variant="destructive"
+                          className="text-[10px] font-semibold"
+                        >
+                          Sin stock
+                        </Badge>
+                      ) : previewArticle.availability_status ===
+                        'ultimas_unidades' ? (
+                        <Badge
+                          variant="outline"
+                          className="border-amber-500/40 bg-amber-500/10 text-[10px] font-medium text-amber-700 dark:text-amber-400"
+                        >
+                          Últimas unidades
+                        </Badge>
+                      ) : (
+                        <Badge
+                          variant="outline"
+                          className="border-emerald-500/40 bg-emerald-500/10 text-[10px] font-medium text-emerald-700 dark:text-emerald-400"
+                        >
+                          Disponible
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
                 {/* Price and Cart Actions */}
@@ -714,68 +806,102 @@ export default function StoreHome({
                   </div>
 
                   {/* Quantity and Action Button */}
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center rounded-lg border border-border bg-muted/30 p-1">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="size-8 rounded-md"
-                        onClick={() =>
-                          updateQuantity(
-                            previewArticle.id,
-                            -1,
-                            previewArticle.allows_decimals,
-                          )
-                        }
-                        disabled={
-                          getArticleQty(
-                            previewArticle.id,
-                            previewArticle.allows_decimals,
-                          ) <= (previewArticle.allows_decimals ? 0.5 : 1)
-                        }
-                      >
-                        <Minus className="size-3.5" />
-                      </Button>
-                      <span className="w-10 text-center text-sm font-semibold tabular-nums">
-                        {getArticleQty(
-                          previewArticle.id,
-                          previewArticle.allows_decimals,
-                        )}
-                      </span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="size-8 rounded-md"
-                        onClick={() =>
-                          updateQuantity(
-                            previewArticle.id,
-                            1,
-                            previewArticle.allows_decimals,
-                          )
-                        }
-                      >
-                        <Plus className="size-3.5" />
-                      </Button>
-                    </div>
+                  {(() => {
+                    const isPreviewOutOfStock =
+                      previewArticle.availability_status === 'sin_stock' ||
+                      quantityLimit(
+                        previewArticle.available_quantity,
+                        previewArticle.allows_decimals,
+                      ) <= 0;
+                    const previewAvailableQty = quantityLimit(
+                      previewArticle.available_quantity,
+                      previewArticle.allows_decimals,
+                    );
+                    const currentQty = getArticleQty(previewArticle);
 
-                    <Button
-                      type="button"
-                      size="default"
-                      disabled={loadingArticleId === previewArticle.id}
-                      className="flex-1 gap-2"
-                      onClick={() => {
-                        handleAddToCart(previewArticle);
-                        setPreviewArticle(null);
-                      }}
-                    >
-                      <ShoppingCart className="size-4" />
-                      {loadingArticleId === previewArticle.id
-                        ? 'Añadiendo...'
-                        : 'Añadir al carrito'}
-                    </Button>
-                  </div>
+                    return (
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center rounded-lg border border-border bg-muted/30 p-1">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="size-8 rounded-md"
+                            onClick={() =>
+                              updateQuantity(
+                                previewArticle.id,
+                                -1,
+                                previewArticle.allows_decimals,
+                                previewArticle.available_quantity,
+                              )
+                            }
+                            disabled={
+                              isPreviewOutOfStock ||
+                              nextQuantity(
+                                currentQty,
+                                -1,
+                                previewArticle.available_quantity,
+                                previewArticle.allows_decimals,
+                              ) === currentQty
+                            }
+                          >
+                            <Minus className="size-3.5" />
+                          </Button>
+                          <span className="w-10 text-center text-sm font-semibold tabular-nums">
+                            {currentQty}
+                          </span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="size-8 rounded-md"
+                            onClick={() =>
+                              updateQuantity(
+                                previewArticle.id,
+                                1,
+                                previewArticle.allows_decimals,
+                                previewArticle.available_quantity,
+                              )
+                            }
+                            disabled={
+                              isPreviewOutOfStock ||
+                              currentQty >= previewAvailableQty
+                            }
+                          >
+                            <Plus className="size-3.5" />
+                          </Button>
+                        </div>
+
+                        <Button
+                          type="button"
+                          size="default"
+                          disabled={
+                            isPreviewOutOfStock ||
+                            loadingArticleId === previewArticle.id
+                          }
+                          variant={
+                            isPreviewOutOfStock ? 'secondary' : 'default'
+                          }
+                          className="flex-1 gap-2"
+                          onClick={() => {
+                            handleAddToCart(previewArticle);
+                            setPreviewArticle(null);
+                          }}
+                        >
+                          {isPreviewOutOfStock ? (
+                            'Sin stock'
+                          ) : (
+                            <>
+                              <ShoppingCart className="size-4" />
+                              {loadingArticleId === previewArticle.id
+                                ? 'Añadiendo...'
+                                : 'Añadir al carrito'}
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             </div>

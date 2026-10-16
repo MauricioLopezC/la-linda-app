@@ -18,7 +18,7 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property int $customer_id
  * @property int $article_id
- * @property string $quantity
+ * @property numeric-string $quantity
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property Customer $customer

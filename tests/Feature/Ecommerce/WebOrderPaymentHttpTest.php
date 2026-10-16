@@ -11,6 +11,7 @@ use App\Models\Ecommerce\CartItem;
 use App\Models\Ecommerce\CustomerAccount;
 use App\Models\Ecommerce\WebOrder;
 use App\Models\Ecommerce\WebOrderItem;
+use App\Models\Inventory\StockBalance;
 use App\Models\Inventory\Warehouse;
 use App\Models\Organization\Branch;
 use App\Models\Pricing\PriceList;
@@ -61,6 +62,11 @@ beforeEach(function () {
     $this->onlineWarehouse = Warehouse::factory()->online()->create([
         'branch_id' => $this->branch->id,
         'is_active' => true,
+    ]);
+    StockBalance::factory()->create([
+        'warehouse_id' => $this->onlineWarehouse->id,
+        'article_id' => $this->article->id,
+        'quantity' => '100.000',
     ]);
     $this->onlinePos = PointOfSale::factory()->create([
         'warehouse_id' => $this->onlineWarehouse->id,
@@ -225,4 +231,27 @@ test('redirects to order show without enabling checkout when order is accredited
 
     expect($order->fresh()->status)->toBe(WebOrderStatus::Paid)
         ->and($order->fresh()->mp_preference_id)->toBeNull();
+});
+
+test('reports insufficient stock when retrying payment without creating a checkout', function () {
+    Http::preventStrayRequests();
+    Http::fake();
+    StockBalance::query()->where('article_id', $this->article->id)->update(['quantity' => '1.000']);
+    $order = WebOrder::factory()->create([
+        'customer_id' => $this->customer->id,
+        'pickup_branch_id' => $this->branch->id,
+        'items_amount' => '4000.00',
+        'total_amount' => '4000.00',
+    ]);
+    WebOrderItem::factory()->create([
+        'web_order_id' => $order->id, 'article_id' => $this->article->id,
+        'quantity' => '2.000', 'unit_price' => '2000.00',
+        'price_list_id' => $this->onlineList->id, 'line_total' => '4000.00',
+    ]);
+
+    $this->actingAs($this->clientUser)->post(route('tienda.orders.pay', $order))
+        ->assertRedirect(route('tienda.orders.show', $order))
+        ->assertSessionHas('error', fn (string $message): bool => str_contains($message, 'disponible: 1.000'));
+    Http::assertNothingSent();
+    expect($order->fresh()->stock_reserved_until)->toBeNull();
 });

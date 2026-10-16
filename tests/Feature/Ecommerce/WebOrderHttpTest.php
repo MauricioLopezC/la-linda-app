@@ -8,6 +8,8 @@ use App\Models\Customers\Customer;
 use App\Models\Ecommerce\CartItem;
 use App\Models\Ecommerce\WebOrder;
 use App\Models\Ecommerce\WebOrderItem;
+use App\Models\Inventory\StockBalance;
+use App\Models\Inventory\Warehouse;
 use App\Models\Organization\Branch;
 use App\Models\Pricing\PriceList;
 use App\Models\Pricing\PriceListItem;
@@ -41,6 +43,16 @@ beforeEach(function () {
         'price_list_id' => $this->onlineList->id,
         'article_id' => $this->article->id,
         'price' => '1500.00',
+    ]);
+
+    $this->onlineWarehouse = Warehouse::factory()->online()->create([
+        'branch_id' => $this->branch->id,
+        'is_active' => true,
+    ]);
+    StockBalance::factory()->create([
+        'warehouse_id' => $this->onlineWarehouse->id,
+        'article_id' => $this->article->id,
+        'quantity' => '100.000',
     ]);
 });
 
@@ -93,6 +105,7 @@ test('placing the order redirects to mercado pago and empties the cart', functio
     Http::fake([
         '*' => Http::response([
             'id' => 'pref-test-111',
+            'init_point' => 'https://www.mercadopago.test/pay',
             'sandbox_init_point' => 'https://sandbox.mercadopago.com/checkout/v1/redirect?pref_id=pref-test-111',
         ], 201),
     ]);
@@ -129,6 +142,7 @@ test('placing a delivery order ignores client shipping cost and freezes customer
     Http::fake([
         '*' => Http::response([
             'id' => 'pref-test-222',
+            'init_point' => 'https://www.mercadopago.test/pay',
             'sandbox_init_point' => 'https://sandbox.mercadopago.com/checkout/v1/redirect?pref_id=pref-test-222',
         ], 201),
     ]);
