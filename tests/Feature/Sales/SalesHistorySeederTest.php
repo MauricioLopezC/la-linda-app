@@ -33,7 +33,7 @@ it('simulates invoiced and paid counter and online sales with every cash session
     $counterSales = Sale::query()->where('channel', SaleChannel::Mostrador)->where('status', SaleStatus::Confirmed)->count();
     $onlineSales = Sale::query()->where('channel', SaleChannel::Online)->where('status', SaleStatus::Confirmed)->count();
 
-    expect($counterSales)->toBeGreaterThan(80)
+    expect($counterSales)->toBeGreaterThan(40)
         ->and($onlineSales)->toBeGreaterThan(5)
         ->and(Sale::query()->min('confirmed_at'))->toStartWith('2026-10-06')
         ->and(PaymentOrder::query()->exists())->toBeFalse();

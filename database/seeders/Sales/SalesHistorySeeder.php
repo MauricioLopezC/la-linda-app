@@ -88,9 +88,9 @@ class SalesHistorySeeder extends Seeder
      * @var list<array{warehouse: string, number: int, opens: string, closes: string, base_sales: int, cashier_email: string, cashier_name: string, branch: string}>
      */
     private const array TILLS = [
-        ['warehouse' => 'Depósito Central', 'number' => 1, 'opens' => '08:00', 'closes' => '21:00', 'base_sales' => 7, 'cashier_email' => 'cajero', 'cashier_name' => 'Cajero', 'branch' => 'Sucursal Centro'],
-        ['warehouse' => 'Depósito Central', 'number' => 2, 'opens' => '09:30', 'closes' => '20:30', 'base_sales' => 5, 'cashier_email' => 'cajero.centro2', 'cashier_name' => 'Lucía Fernández', 'branch' => 'Sucursal Centro'],
-        ['warehouse' => 'Depósito Norte', 'number' => 1, 'opens' => '08:30', 'closes' => '20:30', 'base_sales' => 6, 'cashier_email' => 'cajero.norte', 'cashier_name' => 'Diego Romero', 'branch' => 'Sucursal Norte'],
+        ['warehouse' => 'Depósito Central', 'number' => 1, 'opens' => '08:00', 'closes' => '21:00', 'base_sales' => 3, 'cashier_email' => 'cajero', 'cashier_name' => 'Cajero', 'branch' => 'Sucursal Centro'],
+        ['warehouse' => 'Depósito Central', 'number' => 2, 'opens' => '09:30', 'closes' => '20:30', 'base_sales' => 2, 'cashier_email' => 'cajero.centro2', 'cashier_name' => 'Lucía Fernández', 'branch' => 'Sucursal Centro'],
+        ['warehouse' => 'Depósito Norte', 'number' => 1, 'opens' => '08:30', 'closes' => '20:30', 'base_sales' => 3, 'cashier_email' => 'cajero.norte', 'cashier_name' => 'Diego Romero', 'branch' => 'Sucursal Norte'],
     ];
 
     /** Sales volume by ISO day of week (1 = Monday): weekends are busier. */
@@ -462,7 +462,7 @@ class SalesHistorySeeder extends Seeder
         $warehouseId = $pointOfSale->warehouse_id;
         $balances = StockBalance::query()->where('warehouse_id', $warehouseId)->pluck('quantity', 'article_id');
 
-        foreach ($this->pickBasket($this->articles, $this->random->getInt(1, 6)) as $article) {
+        foreach ($this->pickBasket($this->articles, $this->random->getInt(2, 5)) as $article) {
             $quantity = $this->lineQuantity($article, $customer !== null);
 
             if ((float) ($balances[$article->id] ?? 0) < $quantity) {
@@ -575,9 +575,9 @@ class SalesHistorySeeder extends Seeder
             return [];
         }
 
-        // The web store grows faster than the counter: from ~1 to ~4 orders a day.
+        // The web store grows faster than the counter: from ~1 every two days to ~2 a day.
         $progress = self::startsAt()->diffInDays($day) / max(1, $totalDays);
-        $ordersCount = (int) round((1 + 3 * $progress) * self::WEEKDAY_FACTOR[$day->dayOfWeekIso] * $this->random->getFloat(0.5, 1.5));
+        $ordersCount = (int) round((0.5 + 1.5 * $progress) * self::WEEKDAY_FACTOR[$day->dayOfWeekIso] * $this->random->getFloat(0.5, 1.5));
         $events = [];
 
         for ($i = 0; $i < $ordersCount; $i++) {
