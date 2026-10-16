@@ -94,8 +94,9 @@ class ProcessMercadoPagoPaymentNotification
             ];
         }
 
+        $orderId = explode(':', $externalReference, 2)[0];
         /** @var WebOrder|null $order */
-        $order = WebOrder::query()->find($externalReference);
+        $order = ctype_digit($orderId) ? WebOrder::query()->find($orderId) : null;
 
         if ($order === null) {
             Log::warning("Mercado Pago webhook: order with ID {$externalReference} not found.");

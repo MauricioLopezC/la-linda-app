@@ -17,11 +17,18 @@ class CreateMercadoPagoPreference
 {
     use ConvertsMoneyToCents;
 
+    public function __construct(
+        private readonly ReserveWebOrderStock $reserveStock,
+        private readonly ReconcileWebOrderReservation $reconcileReservation,
+    ) {}
+
     /**
      * @return array{id: string, init_point: string, sandbox_init_point: string, redirect_url: string}
      */
     public function execute(WebOrder $order): array
     {
+        $order->refresh();
+
         if ($order->status !== WebOrderStatus::Pending) {
             throw new RuntimeException("Solo se pueden generar preferencias para pedidos pendientes de pago (pedido N.º {$order->formattedNumber()}).");
         }
@@ -91,6 +98,27 @@ class CreateMercadoPagoPreference
             'notification_url' => route('webhooks.mercadopago'),
         ];
 
+        if ($order->stock_reserved_until !== null && ! $order->stock_reserved_until->isFuture()) {
+            $this->reconcileReservation->execute($order);
+        }
+
+        $order = $this->reserveStock->execute($order);
+
+        if ($order->mp_init_point !== null) {
+            return [
+                'id' => (string) $order->mp_preference_id,
+                'init_point' => $order->mp_init_point,
+                'sandbox_init_point' => $order->mp_sandbox_init_point ?? $order->mp_init_point,
+                'redirect_url' => (bool) config('services.mercadopago.sandbox', true)
+                    ? ($order->mp_sandbox_init_point ?? $order->mp_init_point) : $order->mp_init_point,
+            ];
+        }
+
+        $payload['external_reference'] = "{$order->id}:{$order->payment_reservation_token}";
+        $payload['expires'] = true;
+        $payload['expiration_date_from'] = now()->toIso8601String();
+        $payload['expiration_date_to'] = $order->stock_reserved_until?->toIso8601String();
+
         $baseUrl = (string) config('services.mercadopago.base_url', 'https://api.mercadopago.com');
         $response = Http::baseUrl($baseUrl)
             ->withToken($accessToken)
@@ -98,7 +126,6 @@ class CreateMercadoPagoPreference
             ->asJson()
             ->timeout(10)
             ->connectTimeout(3)
-            ->retry([100, 500, 1000])
             ->post('/checkout/preferences', $payload);
 
         if (! $response->successful()) {
@@ -114,21 +141,30 @@ class CreateMercadoPagoPreference
         }
 
         $initPoint = (string) ($data['init_point'] ?? '');
+
+        if ($initPoint === '') {
+            throw new RuntimeException('Mercado Pago no retornó una URL de checkout válida.');
+        }
         $sandboxInitPoint = (string) ($data['sandbox_init_point'] ?? $initPoint);
         $isSandbox = (bool) config('services.mercadopago.sandbox', true);
 
         // Atomically lock and verify order status before persisting preference
-        $isStillPending = DB::transaction(function () use ($order, $preferenceId): bool {
+        $isStillPending = DB::transaction(function () use ($order, $preferenceId, $initPoint, $sandboxInitPoint): bool {
             /** @var WebOrder $lockedOrder */
             $lockedOrder = WebOrder::query()->whereKey($order->id)->lockForUpdate()->firstOrFail();
 
-            if ($lockedOrder->status !== WebOrderStatus::Pending) {
+            if ($lockedOrder->status !== WebOrderStatus::Pending
+                || $lockedOrder->payment_reservation_token !== $order->payment_reservation_token) {
                 return false;
             }
 
-            $lockedOrder->update(['mp_preference_id' => $preferenceId]);
+            $lockedOrder->update([
+                'mp_preference_id' => $preferenceId,
+                'mp_init_point' => $initPoint,
+                'mp_sandbox_init_point' => $sandboxInitPoint,
+            ]);
 
-            return true;
+            return $lockedOrder->stock_reserved_until !== null && $lockedOrder->stock_reserved_until->isFuture();
         });
 
         if (! $isStillPending) {

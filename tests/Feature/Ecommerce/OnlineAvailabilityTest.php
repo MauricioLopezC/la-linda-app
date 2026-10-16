@@ -96,7 +96,6 @@ test('calculates available quantity by subtracting paid and in preparation order
     $result = $this->action->forArticle($article);
 
     expect($result->availableQuantity)->toBe('7.000')
-        ->and($result->numericQuantity)->toBe(7.0)
         ->and($result->status)->toBe(OnlineAvailabilityStatus::Available)
         ->and($result->isAvailable)->toBeTrue();
 });
@@ -149,7 +148,6 @@ test('determines status as OutOfStock when available quantity is zero or exhaust
     $result = $this->action->forArticle($article);
 
     expect($result->availableQuantity)->toBe('0.000')
-        ->and($result->numericQuantity)->toBe(0.0)
         ->and($result->status)->toBe(OnlineAvailabilityStatus::OutOfStock)
         ->and($result->status->label())->toBe('Sin stock')
         ->and($result->isAvailable)->toBeFalse();

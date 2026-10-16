@@ -22,7 +22,7 @@ class UpdateCartItemQuantityRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'quantity' => ['required', 'numeric', 'gt:0'],
+            'quantity' => ['required', 'numeric', 'gt:0', 'decimal:0,3', 'max:999999999.999'],
         ];
     }
 
@@ -34,6 +34,7 @@ class UpdateCartItemQuantityRequest extends FormRequest
         return [
             'quantity.required' => 'La cantidad es obligatoria.',
             'quantity.numeric' => 'La cantidad debe ser un valor numérico.',
+            'quantity.decimal' => 'La cantidad admite hasta tres decimales.',
             'quantity.gt' => 'La cantidad debe ser mayor a cero.',
         ];
     }

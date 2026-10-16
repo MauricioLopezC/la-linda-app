@@ -105,6 +105,7 @@ test('placing the order redirects to mercado pago and empties the cart', functio
     Http::fake([
         '*' => Http::response([
             'id' => 'pref-test-111',
+            'init_point' => 'https://www.mercadopago.test/pay',
             'sandbox_init_point' => 'https://sandbox.mercadopago.com/checkout/v1/redirect?pref_id=pref-test-111',
         ], 201),
     ]);
@@ -141,6 +142,7 @@ test('placing a delivery order ignores client shipping cost and freezes customer
     Http::fake([
         '*' => Http::response([
             'id' => 'pref-test-222',
+            'init_point' => 'https://www.mercadopago.test/pay',
             'sandbox_init_point' => 'https://sandbox.mercadopago.com/checkout/v1/redirect?pref_id=pref-test-222',
         ], 201),
     ]);

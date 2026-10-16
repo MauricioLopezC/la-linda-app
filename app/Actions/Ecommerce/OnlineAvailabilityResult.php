@@ -6,9 +6,9 @@ use App\Enums\Ecommerce\OnlineAvailabilityStatus;
 
 readonly class OnlineAvailabilityResult
 {
+    /** @param numeric-string $availableQuantity */
     public function __construct(
         public string $availableQuantity,
-        public float $numericQuantity,
         public OnlineAvailabilityStatus $status,
         public bool $isAvailable,
     ) {}

@@ -29,6 +29,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  clampQuantity,
+  nextQuantity,
+  quantityLimit,
+} from '@/lib/ecommerce-quantity';
 import { login } from '@/routes';
 import { home } from '@/routes/tienda';
 import * as cartRoutes from '@/routes/tienda/cart';
@@ -118,14 +123,18 @@ function ArticleCard({
     id: number,
     delta: number,
     allowsDecimals: boolean,
+    maximum: string,
   ) => void;
   onAddToCart: (article: Article, qty: number) => void;
   onPreview: (article: Article) => void;
 }) {
   const isOutOfStock =
     article.availability_status === 'sin_stock' ||
-    parseFloat(article.available_quantity) <= 0;
-  const availableQty = parseFloat(article.available_quantity);
+    quantityLimit(article.available_quantity, article.allows_decimals) <= 0;
+  const availableQty = quantityLimit(
+    article.available_quantity,
+    article.allows_decimals,
+  );
 
   return (
     <div className="group flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-2xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
@@ -242,10 +251,21 @@ function ArticleCard({
                 size="icon"
                 className="size-7 rounded-md text-muted-foreground hover:text-foreground"
                 onClick={() =>
-                  onUpdateQuantity(article.id, -1, article.allows_decimals)
+                  onUpdateQuantity(
+                    article.id,
+                    -1,
+                    article.allows_decimals,
+                    article.available_quantity,
+                  )
                 }
                 disabled={
-                  isOutOfStock || qty <= (article.allows_decimals ? 0.5 : 1)
+                  isOutOfStock ||
+                  nextQuantity(
+                    qty,
+                    -1,
+                    article.available_quantity,
+                    article.allows_decimals,
+                  ) === qty
                 }
                 title="Disminuir cantidad"
               >
@@ -260,7 +280,12 @@ function ArticleCard({
                 size="icon"
                 className="size-7 rounded-md text-muted-foreground hover:text-foreground"
                 onClick={() =>
-                  onUpdateQuantity(article.id, 1, article.allows_decimals)
+                  onUpdateQuantity(
+                    article.id,
+                    1,
+                    article.allows_decimals,
+                    article.available_quantity,
+                  )
                 }
                 disabled={isOutOfStock || qty >= availableQty}
                 title="Aumentar cantidad"
@@ -312,37 +337,35 @@ export default function StoreHome({
   // Quantities state per article
   const [quantities, setQuantities] = useState<Record<number, number>>({});
 
-  const getArticleQty = (
-    articleId: number,
-    allowsDecimals: boolean,
-  ): number => {
-    return quantities[articleId] ?? (allowsDecimals ? 1 : 1);
-  };
+  const getArticleQty = (article: Article): number =>
+    clampQuantity(
+      quantities[article.id] ?? 1,
+      article.available_quantity,
+      article.allows_decimals,
+    );
 
   const updateQuantity = (
     articleId: number,
     delta: number,
     allowsDecimals: boolean,
+    maximum: string,
   ) => {
-    setQuantities((prev) => {
-      const current = prev[articleId] ?? 1;
-      const step = allowsDecimals ? 0.5 : 1;
-      const min = allowsDecimals ? 0.5 : 1;
-      const updated = Math.max(
-        min,
-        Math.round((current + delta * step) * 10) / 10,
-      );
-
-      return { ...prev, [articleId]: updated };
-    });
+    setQuantities((prev) => ({
+      ...prev,
+      [articleId]: nextQuantity(
+        prev[articleId] ?? 1,
+        delta,
+        maximum,
+        allowsDecimals,
+      ),
+    }));
   };
 
   // Loading state when adding article to cart
   const [loadingArticleId, setLoadingArticleId] = useState<number | null>(null);
 
   const handleAddToCart = (article: Article, explicitQty?: number) => {
-    const qty =
-      explicitQty ?? getArticleQty(article.id, article.allows_decimals);
+    const qty = explicitQty ?? getArticleQty(article);
 
     if (!user) {
       toast.info('Iniciá sesión para armar tu carrito de compras', {
@@ -574,7 +597,7 @@ export default function StoreHome({
               <ArticleCard
                 key={article.id}
                 article={article}
-                qty={getArticleQty(article.id, article.allows_decimals)}
+                qty={getArticleQty(article)}
                 isAdding={loadingArticleId === article.id}
                 onUpdateQuantity={updateQuantity}
                 onAddToCart={handleAddToCart}
@@ -621,7 +644,7 @@ export default function StoreHome({
                     <ArticleCard
                       key={article.id}
                       article={article}
-                      qty={getArticleQty(article.id, article.allows_decimals)}
+                      qty={getArticleQty(article)}
                       isAdding={loadingArticleId === article.id}
                       onUpdateQuantity={updateQuantity}
                       onAddToCart={handleAddToCart}
@@ -786,14 +809,15 @@ export default function StoreHome({
                   {(() => {
                     const isPreviewOutOfStock =
                       previewArticle.availability_status === 'sin_stock' ||
-                      parseFloat(previewArticle.available_quantity) <= 0;
-                    const previewAvailableQty = parseFloat(
+                      quantityLimit(
+                        previewArticle.available_quantity,
+                        previewArticle.allows_decimals,
+                      ) <= 0;
+                    const previewAvailableQty = quantityLimit(
                       previewArticle.available_quantity,
-                    );
-                    const currentQty = getArticleQty(
-                      previewArticle.id,
                       previewArticle.allows_decimals,
                     );
+                    const currentQty = getArticleQty(previewArticle);
 
                     return (
                       <div className="flex items-center gap-3">
@@ -808,12 +832,17 @@ export default function StoreHome({
                                 previewArticle.id,
                                 -1,
                                 previewArticle.allows_decimals,
+                                previewArticle.available_quantity,
                               )
                             }
                             disabled={
                               isPreviewOutOfStock ||
-                              currentQty <=
-                                (previewArticle.allows_decimals ? 0.5 : 1)
+                              nextQuantity(
+                                currentQty,
+                                -1,
+                                previewArticle.available_quantity,
+                                previewArticle.allows_decimals,
+                              ) === currentQty
                             }
                           >
                             <Minus className="size-3.5" />
@@ -831,6 +860,7 @@ export default function StoreHome({
                                 previewArticle.id,
                                 1,
                                 previewArticle.allows_decimals,
+                                previewArticle.available_quantity,
                               )
                             }
                             disabled={

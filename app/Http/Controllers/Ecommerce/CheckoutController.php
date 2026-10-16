@@ -15,6 +15,7 @@ use App\Models\Organization\Branch;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
@@ -80,6 +81,9 @@ class CheckoutController extends Controller
             }
 
             return Inertia::location($preference['redirect_url']);
+        } catch (ValidationException $exception) {
+            return redirect()->route('tienda.orders.show', $order)
+                ->with('error', $exception->validator->errors()->first());
         } catch (\Throwable $exception) {
             if ($order->fresh()->status === WebOrderStatus::Paid) {
                 return redirect()->route('tienda.orders.show', $order)

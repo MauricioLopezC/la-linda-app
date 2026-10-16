@@ -1,6 +1,8 @@
 <?php
 
 return [
+    'reservation_minutes' => (int) env('ECOMMERCE_RESERVATION_MINUTES', 15),
+
     /*
      * Costo fijo de envío a domicilio para la tienda online (HU-049).
      * Configurable mediante variable de entorno ECOMMERCE_SHIPPING_COST.

@@ -28,6 +28,7 @@ class CartItemData extends Data
         public ?string $unavailable_reason,
         public string $available_quantity,
         public string $availability_status,
+        public bool $can_adjust_quantity,
     ) {}
 
     public static function fromModel(
@@ -38,6 +39,7 @@ class CartItemData extends Data
         ?string $unavailableReason,
         string $availableQuantity = '0.000',
         string $availabilityStatus = 'disponible',
+        bool $canAdjustQuantity = false,
     ): self {
         $article = $item->article;
         $formattedUnitPrice = $unitPrice !== null
@@ -66,6 +68,7 @@ class CartItemData extends Data
             unavailable_reason: $unavailableReason,
             available_quantity: $availableQuantity,
             availability_status: $availabilityStatus,
+            can_adjust_quantity: $canAdjustQuantity,
         );
     }
 }

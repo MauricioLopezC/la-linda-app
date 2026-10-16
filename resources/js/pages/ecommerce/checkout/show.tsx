@@ -117,7 +117,7 @@ export default function CheckoutShow({
             </AlertTitle>
             <AlertDescription className="text-xs">
               {cartError ??
-                'Hay artículos no disponibles en tu carrito. Quitalos para continuar.'}
+                'Hay artículos no disponibles en tu carrito. Ajustá las cantidades o quitalos para continuar.'}
             </AlertDescription>
           </Alert>
         )}
