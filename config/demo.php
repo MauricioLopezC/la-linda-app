@@ -34,4 +34,17 @@ return [
     'staff_email_domain' => env('DEMO_STAFF_EMAIL_DOMAIN', 'example.com'),
     'staff_password' => env('DEMO_STAFF_PASSWORD', env('DEMO_ADMIN_PASSWORD', 'password')),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Sales History
+    |--------------------------------------------------------------------------
+    |
+    | Days of operation simulated by SalesHistorySeeder (counter sales, online
+    | orders and supplier restocking up to today), so the management dashboard
+    | has history to show. 0 skips it; the test suite does so to stay fast.
+    |
+    */
+
+    'sales_history_days' => (int) env('DEMO_SALES_HISTORY_DAYS', 183),
+
 ];

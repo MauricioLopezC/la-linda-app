@@ -89,14 +89,35 @@ class GetDashboardExpenses
     /**
      * Accrued expenses (supplier invoices + debit notes − credit notes, not cancelled) between
      * two dates, in cents and keyed by `Y-m-d` issue date; days without vouchers are left out.
-     * EPIC-20 builds its evolution series and the previous-period net result from it.
+     * EPIC-20 builds the previous-period net result from it.
      *
      * @return array<string, int>
      */
     public function accruedCentsByDay(string $dateFrom, string $dateTo): array
     {
-        /** @var array<string, int> $accruedByDay */
-        $accruedByDay = [];
+        $breakdown = $this->accruedBreakdownCentsByDay($dateFrom, $dateTo);
+        $accruedByDay = $breakdown['charges'];
+
+        foreach ($breakdown['credits'] as $day => $cents) {
+            $accruedByDay[$day] = ($accruedByDay[$day] ?? 0) - $cents;
+        }
+
+        ksort($accruedByDay);
+
+        return $accruedByDay;
+    }
+
+    /**
+     * Same vouchers as {@see self::accruedCentsByDay()}, but with charges (invoices + debit notes)
+     * and credit notes kept apart, both as positive cents keyed by `Y-m-d` issue date. The
+     * EPIC-20 chart draws charges below zero and credit notes above it, since they improve the
+     * result.
+     *
+     * @return array{charges: array<string, int>, credits: array<string, int>}
+     */
+    public function accruedBreakdownCentsByDay(string $dateFrom, string $dateTo): array
+    {
+        $breakdown = ['charges' => [], 'credits' => []];
         $vouchers = SupplierVoucher::query()
             ->select(['id', 'type', 'issue_date', 'total_amount'])
             ->whereIn('type', [SupplierVoucherType::Invoice, SupplierVoucherType::DebitNote, SupplierVoucherType::CreditNote])
@@ -105,12 +126,11 @@ class GetDashboardExpenses
             ->whereDate('issue_date', '<=', $dateTo);
 
         foreach ($vouchers->lazyById(500) as $voucher) {
-            $amountCents = $this->moneyToCents($voucher->total_amount);
+            $kind = $voucher->type === SupplierVoucherType::CreditNote ? 'credits' : 'charges';
             $day = $voucher->issue_date->toDateString();
-            $accruedByDay[$day] = ($accruedByDay[$day] ?? 0)
-                + ($voucher->type === SupplierVoucherType::CreditNote ? -$amountCents : $amountCents);
+            $breakdown[$kind][$day] = ($breakdown[$kind][$day] ?? 0) + $this->moneyToCents($voucher->total_amount);
         }
 
-        return $accruedByDay;
+        return $breakdown;
     }
 }

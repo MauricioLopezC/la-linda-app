@@ -76,11 +76,11 @@ test('short ranges are charted day by day with every day present', function () {
     $evolution = dashboardEvolutionFor(['date_from' => '2026-10-01', 'date_to' => '2026-10-05']);
 
     expect(collect($evolution->series)->map->toArray()->all())->toBe([
-        ['period' => '2026-10-01', 'net_revenue' => '0.00', 'accrued_expenses' => '0.00', 'net_result' => '0.00'],
-        ['period' => '2026-10-02', 'net_revenue' => '1500.00', 'accrued_expenses' => '0.00', 'net_result' => '1500.00'],
-        ['period' => '2026-10-03', 'net_revenue' => '0.00', 'accrued_expenses' => '0.00', 'net_result' => '0.00'],
-        ['period' => '2026-10-04', 'net_revenue' => '0.00', 'accrued_expenses' => '300.00', 'net_result' => '-300.00'],
-        ['period' => '2026-10-05', 'net_revenue' => '0.00', 'accrued_expenses' => '0.00', 'net_result' => '0.00'],
+        ['period' => '2026-10-01', 'net_revenue' => '0.00', 'accrued_expenses' => '0.00', 'net_result' => '0.00', 'accrued_charges' => '0.00', 'credit_notes' => '0.00', 'cumulative_net_result' => '0.00'],
+        ['period' => '2026-10-02', 'net_revenue' => '1500.00', 'accrued_expenses' => '0.00', 'net_result' => '1500.00', 'accrued_charges' => '0.00', 'credit_notes' => '0.00', 'cumulative_net_result' => '1500.00'],
+        ['period' => '2026-10-03', 'net_revenue' => '0.00', 'accrued_expenses' => '0.00', 'net_result' => '0.00', 'accrued_charges' => '0.00', 'credit_notes' => '0.00', 'cumulative_net_result' => '1500.00'],
+        ['period' => '2026-10-04', 'net_revenue' => '0.00', 'accrued_expenses' => '300.00', 'net_result' => '-300.00', 'accrued_charges' => '300.00', 'credit_notes' => '0.00', 'cumulative_net_result' => '1200.00'],
+        ['period' => '2026-10-05', 'net_revenue' => '0.00', 'accrued_expenses' => '0.00', 'net_result' => '0.00', 'accrued_charges' => '0.00', 'credit_notes' => '0.00', 'cumulative_net_result' => '1200.00'],
     ])
         ->and($evolution->net_result)->toBe('1200.00')
         ->and($evolution->net_margin_pct)->toBe(80.0);
@@ -95,10 +95,10 @@ test('long ranges are charted month by month with empty months filled with zero'
     $evolution = dashboardEvolutionFor(['date_from' => '2026-07-01', 'date_to' => '2026-10-14']);
 
     expect(collect($evolution->series)->map->toArray()->all())->toBe([
-        ['period' => '2026-07', 'net_revenue' => '2000.00', 'accrued_expenses' => '0.00', 'net_result' => '2000.00'],
-        ['period' => '2026-08', 'net_revenue' => '0.00', 'accrued_expenses' => '0.00', 'net_result' => '0.00'],
-        ['period' => '2026-09', 'net_revenue' => '1000.00', 'accrued_expenses' => '300.00', 'net_result' => '700.00'],
-        ['period' => '2026-10', 'net_revenue' => '0.00', 'accrued_expenses' => '0.00', 'net_result' => '0.00'],
+        ['period' => '2026-07', 'net_revenue' => '2000.00', 'accrued_expenses' => '0.00', 'net_result' => '2000.00', 'accrued_charges' => '0.00', 'credit_notes' => '0.00', 'cumulative_net_result' => '2000.00'],
+        ['period' => '2026-08', 'net_revenue' => '0.00', 'accrued_expenses' => '0.00', 'net_result' => '0.00', 'accrued_charges' => '0.00', 'credit_notes' => '0.00', 'cumulative_net_result' => '2000.00'],
+        ['period' => '2026-09', 'net_revenue' => '1000.00', 'accrued_expenses' => '300.00', 'net_result' => '700.00', 'accrued_charges' => '400.00', 'credit_notes' => '100.00', 'cumulative_net_result' => '2700.00'],
+        ['period' => '2026-10', 'net_revenue' => '0.00', 'accrued_expenses' => '0.00', 'net_result' => '0.00', 'accrued_charges' => '0.00', 'credit_notes' => '0.00', 'cumulative_net_result' => '2700.00'],
     ]);
 });
 
@@ -124,9 +124,11 @@ test('net result matches the difference between the revenues and expenses blocks
             ->has('evolution.series', 2)
             ->where('evolution.series.0', [
                 'period' => '2026-09', 'net_revenue' => '10000.00', 'accrued_expenses' => '4000.10', 'net_result' => '5999.90',
+                'accrued_charges' => '4000.10', 'credit_notes' => '0.00', 'cumulative_net_result' => '5999.90',
             ])
             ->where('evolution.series.1', [
                 'period' => '2026-10', 'net_revenue' => '5000.55', 'accrued_expenses' => '250.00', 'net_result' => '4750.55',
+                'accrued_charges' => '250.00', 'credit_notes' => '0.00', 'cumulative_net_result' => '10750.45',
             ]));
 });
 
@@ -170,4 +172,19 @@ test('branch and channel filters narrow the revenue side only', function () {
         ->and($byChannel->net_result)->toBe('3900.00')
         ->and($byChannel->series[1]->net_revenue)->toBe('0.00')
         ->and($byChannel->series[2]->net_revenue)->toBe('4000.00');
+});
+
+test('credit notes are kept apart from charges and the cumulative result ends at the period net result', function () {
+    confirmedSaleForEvolution($this->centralCounter, '1000.00', '2026-10-01 12:00:00');
+    SupplierVoucher::factory()->invoice()->create(['issue_date' => '2026-10-01', 'due_date' => null, 'total_amount' => '400.00']);
+    SupplierVoucher::factory()->debitNote()->create(['issue_date' => '2026-10-01', 'due_date' => null, 'total_amount' => '50.00']);
+    SupplierVoucher::factory()->creditNote()->create(['issue_date' => '2026-10-02', 'total_amount' => '150.00']);
+
+    $evolution = dashboardEvolutionFor(['date_from' => '2026-10-01', 'date_to' => '2026-10-02']);
+
+    expect(collect($evolution->series)->map->toArray()->all())->toBe([
+        ['period' => '2026-10-01', 'net_revenue' => '1000.00', 'accrued_expenses' => '450.00', 'net_result' => '550.00', 'accrued_charges' => '450.00', 'credit_notes' => '0.00', 'cumulative_net_result' => '550.00'],
+        ['period' => '2026-10-02', 'net_revenue' => '0.00', 'accrued_expenses' => '-150.00', 'net_result' => '150.00', 'accrued_charges' => '0.00', 'credit_notes' => '150.00', 'cumulative_net_result' => '700.00'],
+    ])
+        ->and($evolution->net_result)->toBe('700.00');
 });

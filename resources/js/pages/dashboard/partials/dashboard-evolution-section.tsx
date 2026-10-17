@@ -3,6 +3,7 @@ import {
   CartesianGrid,
   ComposedChart,
   Line,
+  ReferenceLine,
   XAxis,
   YAxis,
 } from 'recharts';
@@ -36,9 +37,29 @@ const description =
 
 const chartConfig = {
   net_revenue: { label: 'Ingresos', color: 'var(--chart-1)' },
-  accrued_expenses: { label: 'Egresos', color: 'var(--chart-2)' },
-  net_result: { label: 'Saldo neto', color: 'var(--chart-3)' },
+  credit_notes: { label: 'Notas de crédito', color: 'var(--chart-4)' },
+  accrued_charges: {
+    label: 'Facturas y notas de débito',
+    color: 'var(--chart-2)',
+  },
+  cumulative_net_result: {
+    label: 'Resultado acumulado',
+    color: 'var(--chart-3)',
+  },
 } satisfies ChartConfig;
+
+type ChartSeriesKey = keyof typeof chartConfig;
+
+function TooltipRow({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="flex w-full justify-between gap-4">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="font-mono font-medium tabular-nums">
+        {formatCurrency(value)}
+      </span>
+    </div>
+  );
+}
 
 function formatPercentage(value: number): string {
   return `${value.toLocaleString('es-AR', { maximumFractionDigits: 1 })} %`;
@@ -92,9 +113,12 @@ export default function DashboardEvolutionSection({
   const chartData = evolution.series.map((point) => ({
     period: formatPeriod(point.period),
     net_revenue: Number(point.net_revenue),
-    accrued_expenses: Number(point.accrued_expenses),
+    credit_notes: Number(point.credit_notes),
+    accrued_charges: -Number(point.accrued_charges),
     net_result: Number(point.net_result),
+    cumulative_net_result: Number(point.cumulative_net_result),
   }));
+  const isMonthly = evolution.series[0]?.period.length === 7;
 
   return (
     <Card>
@@ -130,6 +154,12 @@ export default function DashboardEvolutionSection({
             El resultado neto resta los egresos devengados del bloque de egresos
             a los ingresos netos sin IVA del bloque de ingresos.
           </p>
+          <p>
+            En el gráfico, lo que suma al resultado va hacia arriba (ventas y
+            notas de crédito de proveedores) y lo que resta va hacia abajo
+            (facturas y notas de débito). La línea acumula el resultado desde el
+            inicio del período y termina en el resultado neto.
+          </p>
           {(filters.branch_id !== null || filters.channel !== null) && (
             <p>
               Los filtros de sucursal y canal solo achican los ingresos: las
@@ -141,8 +171,7 @@ export default function DashboardEvolutionSection({
 
         <section aria-labelledby="evolution-chart-title" className="space-y-4">
           <h3 id="evolution-chart-title" className="font-medium">
-            Ingresos vs. egresos por{' '}
-            {evolution.series[0]?.period.length === 7 ? 'mes' : 'día'}
+            Ingresos vs. egresos por {isMonthly ? 'mes' : 'día'}
           </h3>
           <ChartContainer
             config={chartConfig}
@@ -151,6 +180,7 @@ export default function DashboardEvolutionSection({
             <ComposedChart
               accessibilityLayer
               data={chartData}
+              stackOffset="sign"
               margin={{ left: 8, right: 16 }}
             >
               <CartesianGrid vertical={false} />
@@ -169,37 +199,61 @@ export default function DashboardEvolutionSection({
               <ChartTooltip
                 content={
                   <ChartTooltipContent
-                    formatter={(value, name) => (
-                      <div className="flex w-full justify-between gap-4">
-                        <span className="text-muted-foreground">
-                          {chartConfig[name as keyof typeof chartConfig]
-                            ?.label ?? name}
-                        </span>
-                        <span className="font-mono font-medium tabular-nums">
-                          {formatCurrency(Number(value))}
-                        </span>
-                      </div>
-                    )}
+                    formatter={(value, name, item) => {
+                      const key = name as ChartSeriesKey;
+
+                      if (key === 'credit_notes' && Number(value) === 0) {
+                        return null;
+                      }
+
+                      if (key === 'cumulative_net_result') {
+                        return (
+                          <div className="grid w-full gap-1.5 border-t pt-1.5">
+                            <TooltipRow
+                              label={`Saldo del ${isMonthly ? 'mes' : 'día'}`}
+                              value={Number(item.payload?.net_result)}
+                            />
+                            <TooltipRow
+                              label={chartConfig[key].label}
+                              value={Number(value)}
+                            />
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <TooltipRow
+                          label={chartConfig[key]?.label ?? name}
+                          value={Number(value)}
+                        />
+                      );
+                    }}
                   />
                 }
               />
               <ChartLegend content={<ChartLegendContent />} />
+              <ReferenceLine y={0} stroke="var(--border)" />
               <Bar
                 dataKey="net_revenue"
+                stackId="flow"
                 fill="var(--color-net_revenue)"
-                radius={4}
               />
               <Bar
-                dataKey="accrued_expenses"
-                fill="var(--color-accrued_expenses)"
-                radius={4}
+                dataKey="credit_notes"
+                stackId="flow"
+                fill="var(--color-credit_notes)"
+              />
+              <Bar
+                dataKey="accrued_charges"
+                stackId="flow"
+                fill="var(--color-accrued_charges)"
               />
               <Line
-                dataKey="net_result"
-                type="monotone"
-                stroke="var(--color-net_result)"
+                dataKey="cumulative_net_result"
+                type="linear"
+                stroke="var(--color-cumulative_net_result)"
                 strokeWidth={2}
-                dot={false}
+                dot={{ r: 3, fill: 'var(--color-cumulative_net_result)' }}
               />
             </ComposedChart>
           </ChartContainer>
